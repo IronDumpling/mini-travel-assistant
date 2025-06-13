@@ -21,8 +21,6 @@ async def root():
     return {"message": "Welcome to AI Travel Planning Agent API"}
 
 # Import and include routers
-from app.api.endpoints import travel_plans, users, tools
+from app.api.endpoints import travel_plans
 
-app.include_router(travel_plans.router, prefix="/api/v1", tags=["travel-plans"])
-app.include_router(users.router, prefix="/api/v1", tags=["users"])
-app.include_router(tools.router, prefix="/api/v1", tags=["tools"]) 
+app.include_router(travel_plans.router, prefix="/api/v1", tags=["travel-plans"]) 
