@@ -1,0 +1,93 @@
+# 旅游知识分类配置
+
+categories:
+  - id: destinations
+    name: 目的地信息
+    description: 各地旅游目的地的基本信息、景点、文化等
+    subcategories:
+      - id: asia
+        name: 亚洲
+        description: 亚洲地区的旅游目的地
+      - id: europe
+        name: 欧洲
+        description: 欧洲地区的旅游目的地
+      - id: america
+        name: 美洲
+        description: 美洲地区的旅游目的地
+      - id: oceania
+        name: 大洋洲
+        description: 大洋洲地区的旅游目的地
+      - id: africa
+        name: 非洲
+        description: 非洲地区的旅游目的地
+
+  - id: transportation
+    name: 交通信息
+    description: 航班、火车、汽车等交通工具信息
+    subcategories:
+      - id: flights
+        name: 航班
+        description: 航空公司和航班信息
+      - id: trains
+        name: 火车
+        description: 铁路交通信息
+      - id: buses
+        name: 巴士
+        description: 长途巴士信息
+      - id: local_transport
+        name: 本地交通
+        description: 城市内交通信息
+
+  - id: accommodation
+    name: 住宿信息
+    description: 酒店、民宿等住宿选择
+    subcategories:
+      - id: hotels
+        name: 酒店
+        description: 酒店住宿信息
+      - id: hostels
+        name: 青年旅社
+        description: 青年旅社信息
+      - id: bnb
+        name: 民宿
+        description: 民宿和家庭旅馆
+      - id: resorts
+        name: 度假村
+        description: 度假村信息
+
+  - id: activities
+    name: 活动体验
+    description: 各种旅游活动和体验项目
+    subcategories:
+      - id: sightseeing
+        name: 观光
+        description: 观光景点和活动
+      - id: adventure
+        name: 冒险
+        description: 冒险运动和户外活动
+      - id: cultural
+        name: 文化
+        description: 文化体验和活动
+      - id: entertainment
+        name: 娱乐
+        description: 娱乐活动和表演
+
+  - id: practical
+    name: 实用信息
+    description: 签证、货币、天气、安全等实用信息
+    subcategories:
+      - id: visa
+        name: 签证
+        description: 签证申请和要求
+      - id: currency
+        name: 货币
+        description: 汇率和支付方式
+      - id: weather
+        name: 天气
+        description: 气候和天气信息
+      - id: safety
+        name: 安全
+        description: 安全提醒和注意事项
+      - id: health
+        name: 健康
+        description: 健康和医疗信息 
