@@ -99,7 +99,7 @@ app.add_middleware(
 
 # Include all API routes with organized structure
 app.include_router(system_router, tags=["system"])
-app.include_router(sessions_router, tags=["sessions"])
+app.include_router(sessions_router, prefix="/api", tags=["sessions"])
 app.include_router(chat_router, prefix="/api", tags=["chat"])
 app.include_router(plans_router, prefix="/api", tags=["plans"])
 app.include_router(agent_router, prefix="/api", tags=["agent"])
