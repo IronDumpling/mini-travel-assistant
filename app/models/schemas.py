@@ -49,6 +49,15 @@ class DailyPlan(BaseModel):
     activities: List[Activity]
     total_cost: float
 
+class AgentMetadata(BaseModel):
+    """Metadata from agent processing"""
+    confidence: Optional[float] = None
+    actions_taken: List[str] = []
+    refinement_used: bool = False
+    quality_score: Optional[float] = None
+    refinement_iterations: Optional[int] = None
+    processing_time: Optional[float] = None
+
 class TravelPlan(BaseModel):
     id: str
     preferences: TravelPreferences
@@ -56,8 +65,14 @@ class TravelPlan(BaseModel):
     total_cost: float
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    status: str = "draft"  # draft, confirmed, completed
+    status: str = "draft"  # draft, confirmed, completed, generated, generated_with_parsing_error
     feedback: Optional[str] = None
+    
+    # Enhanced fields to support agent features
+    agent_metadata: Optional[AgentMetadata] = None
+    quality_score: Optional[float] = None
+    conversation_context: Optional[str] = None
+    session_id: Optional[str] = None
 
 class PlanUpdate(BaseModel):
     preferences: Optional[TravelPreferences] = None

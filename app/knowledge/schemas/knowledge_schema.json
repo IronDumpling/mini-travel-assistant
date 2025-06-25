@@ -1,0 +1,67 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Travel Knowledge Schema",
+    "description": "旅游知识数据结构定义",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "知识唯一标识符"
+        },
+        "title": {
+            "type": "string",
+            "description": "知识标题"
+        },
+        "content": {
+            "type": "string",
+            "description": "知识详细内容"
+        },
+        "category": {
+            "type": "string",
+            "enum": ["destinations", "transportation", "accommodation", "activities", "practical"],
+            "description": "知识分类"
+        },
+        "location": {
+            "type": "string",
+            "description": "相关地理位置"
+        },
+        "tags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "标签列表"
+        },
+        "language": {
+            "type": "string",
+            "default": "zh",
+            "description": "语言代码"
+        },
+        "source": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "数据源名称"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "数据源URL"
+                },
+                "reliability_score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "可靠性评分"
+                }
+            }
+        },
+        "last_updated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "最后更新时间"
+        }
+    },
+    "required": ["id", "title", "content", "category"]
+} 

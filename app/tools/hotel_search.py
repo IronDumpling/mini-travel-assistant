@@ -1,7 +1,19 @@
-from typing import List, Optional
+"""
+Hotel Search Tool - Hotel Search Tool
+
+Refactored based on the new architecture, integrating the tool base class
+TODO: Improve the following features
+1. Multi-platform hotel price comparison
+2. User review analysis
+3. Location optimization recommendations
+4. Personalized recommendations
+"""
+
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 import aiohttp
 from pydantic import BaseModel
+from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
 
 class Hotel(BaseModel):
     name: str
@@ -11,21 +23,73 @@ class Hotel(BaseModel):
     rating: float
     amenities: List[str]
 
-class HotelSearch:
-    def __init__(self):
-        self.api_key = "YOUR_API_KEY"  # Replace with actual API key
-        self.base_url = "https://api.hotel-search.com/v1"  # Replace with actual API endpoint
+class HotelSearchInput(ToolInput):
+    """Hotel search input"""
+    location: str
+    check_in: datetime
+    check_out: datetime
+    guests: int = 1
+    rooms: int = 1
+    min_rating: Optional[float] = None
+    max_price: Optional[float] = None
+    required_amenities: List[str] = []
 
-    async def search(
+class HotelSearchOutput(ToolOutput):
+    """Hotel search output"""
+    hotels: List[Hotel] = []
+
+class HotelSearchTool(BaseTool):
+    """Hotel search tool class"""
+    
+    def __init__(self):
+        metadata = ToolMetadata(
+            name="hotel_search",
+            description="Search for hotel accommodation information, with multiple filtering conditions",
+            category="accommodation",
+            tags=["hotel", "accommodation", "search", "booking"],
+            timeout=30
+        )
+        super().__init__(metadata)
+        
+        self.api_key = "YOUR_API_KEY"  # TODO: Read from configuration
+        self.base_url = "https://api.hotel-search.com/v1"  # TODO: Support multiple API sources
+
+    async def _execute(self, input_data: HotelSearchInput, context: ToolExecutionContext) -> HotelSearchOutput:
+        """Execute hotel search"""
+        try:
+            hotels = await self._search_hotels(
+                input_data.location,
+                input_data.check_in,
+                input_data.check_out,
+                input_data.guests
+            )
+            
+            # Filter hotels based on search criteria
+            filtered_hotels = self._filter_hotels(hotels, input_data)
+            
+            return HotelSearchOutput(
+                success=True,
+                hotels=filtered_hotels,
+                data={
+                    "total_results": len(hotels),
+                    "filtered_results": len(filtered_hotels)
+                }
+            )
+        except Exception as e:
+            return HotelSearchOutput(
+                success=False,
+                error=str(e),
+                hotels=[]
+            )
+    
+    async def _search_hotels(
         self,
         location: str,
         check_in: datetime,
         check_out: datetime,
         guests: int = 1
     ) -> List[Hotel]:
-        """
-        Search for available hotels using the hotel search API.
-        """
+        """Search for hotels"""
         async with aiohttp.ClientSession() as session:
             params = {
                 "location": location,
@@ -49,11 +113,27 @@ class HotelSearch:
                     return [self._parse_hotel(hotel) for hotel in data["hotels"]]
                 else:
                     return []
+    
+    def _filter_hotels(self, hotels: List[Hotel], criteria: HotelSearchInput) -> List[Hotel]:
+        """Filter hotels based on search criteria"""
+        filtered = hotels
+        
+        if criteria.min_rating:
+            filtered = [h for h in filtered if h.rating >= criteria.min_rating]
+        
+        if criteria.max_price:
+            filtered = [h for h in filtered if h.price_per_night <= criteria.max_price]
+        
+        if criteria.required_amenities:
+            filtered = [
+                h for h in filtered 
+                if all(amenity in h.amenities for amenity in criteria.required_amenities)
+            ]
+        
+        return filtered
 
     def _parse_hotel(self, hotel_data: dict) -> Hotel:
-        """
-        Parse raw hotel data into a Hotel object.
-        """
+        """Parse hotel data"""
         return Hotel(
             name=hotel_data["name"],
             location=hotel_data["location"],
@@ -61,4 +141,17 @@ class HotelSearch:
             currency=hotel_data["currency"],
             rating=float(hotel_data["rating"]),
             amenities=hotel_data["amenities"]
-        ) 
+        )
+    
+    def get_input_schema(self) -> Dict[str, Any]:
+        """Get input schema"""
+        return HotelSearchInput.model_json_schema()
+    
+    def get_output_schema(self) -> Dict[str, Any]:
+        """Get output schema"""
+        return HotelSearchOutput.model_json_schema()
+
+# Register the tool
+from app.tools.base_tool import tool_registry
+hotel_search_tool = HotelSearchTool()
+tool_registry.register(hotel_search_tool) 
