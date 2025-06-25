@@ -12,6 +12,8 @@ openai>=1.3.0
 # RAG和向量数据库
 chromadb>=0.4.0
 sentence-transformers>=2.2.0
+tiktoken>=0.5.0  # For OpenAI token counting
+faiss-cpu>=1.7.0  # Alternative vector database
 
 # Agent框架（可选，根据需要启用）
 # langchain>=0.1.0

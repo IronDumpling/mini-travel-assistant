@@ -22,6 +22,12 @@ from app.tools.base_tool import tool_registry
 from app.agents.base_agent import agent_manager
 from app.memory.conversation_memory import get_conversation_memory
 
+# Import tools to trigger registration
+from app.tools import hotel_search, flight_search, attraction_search
+
+# Import agents to trigger registration  
+from app.agents import travel_agent
+
 # Import API routes
 from app.api.endpoints import travel_plans
 
@@ -102,13 +108,13 @@ async def root():
                 "tools": {
                     "total": tool_status["total_tools"],
                     "categories": len(tool_status.get("categories", {})),
-                    "active": len([tool for tool in tool_status.get("tools", []) 
-                                 if tool.get("status") != "error"])
+                    "active": len([tool for tool in tool_status.get("tools", {}).values() 
+                                 if hasattr(tool, 'get') and tool.get("status") != "error"])
                 },
                 "agents": {
                     "total": agent_status["total_agents"],
-                    "active": len([agent for agent in agent_status.get("agents", []) 
-                                 if agent["status"] != "stopped"])
+                    "active": len([agent for agent in agent_status.get("agents", {}).values() 
+                                 if hasattr(agent, 'get') and agent.get("status") != "stopped"])
                 },
                 "knowledge_base": "Loaded",
                 "memory_system": "Active"
