@@ -9,27 +9,21 @@ Refactored based on the new architecture, integrating all core components:
 - Monitoring and evaluation layer  
 """
 
-from fastapi import FastAPI, Depends
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-import logging
+import uvicorn
+from loguru import logger
 
-# 导入核心组件
-from app.core.llm_service import get_llm_service
-from app.core.rag_engine import get_rag_engine
+# Import core components
 from app.core.knowledge_base import get_knowledge_base
 from app.tools.base_tool import tool_registry
 from app.agents.base_agent import agent_manager
 from app.memory.conversation_memory import get_conversation_memory
 
-# 导入API路由
+# Import API routes
 from app.api.endpoints import travel_plans
-
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -58,7 +52,11 @@ async def lifespan(app: FastAPI):
         # 4. Initialize memory system
         logger.info("🧠 Initializing memory system...")
         conversation_memory = get_conversation_memory()
-        logger.info("✅ Memory system initialized")
+        
+        # Initialize session manager
+        from app.memory.session_manager import get_session_manager
+        session_manager = get_session_manager()
+        logger.info("✅ Memory system initialized with session management")
         
         logger.info("🎉 AI Travel Planning Agent successfully started")
         
@@ -88,7 +86,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/")
 async def root():
     """Root path - system status overview"""
@@ -104,12 +101,14 @@ async def root():
             "components": {
                 "tools": {
                     "total": tool_status["total_tools"],
-                    "categories": tool_status["categories"]
+                    "categories": len(tool_status.get("categories", {})),
+                    "active": len([tool for tool in tool_status.get("tools", []) 
+                                 if tool.get("status") != "error"])
                 },
                 "agents": {
                     "total": agent_status["total_agents"],
-                    "active": sum(1 for agent in agent_status["agents"].values() 
-                                  if agent["status"] != "stopped")
+                    "active": len([agent for agent in agent_status.get("agents", []) 
+                                 if agent["status"] != "stopped"])
                 },
                 "knowledge_base": "Loaded",
                 "memory_system": "Active"
@@ -134,20 +133,23 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "timestamp": "2024-01-01T00:00:00Z",
-        "version": "2.0.0"
+        "timestamp": "2024-01-01T00:00:00Z"
     }
-
 
 @app.get("/system/status")
 async def system_status():
     """Detailed system status"""
     try:
+        from app.memory.session_manager import get_session_manager
+        session_manager = get_session_manager()
+        
         return {
             "tools": tool_registry.get_registry_status(),
             "agents": agent_manager.get_system_status(),
             "memory": {
-                "conversation_sessions": len(get_conversation_memory().sessions)
+                "conversation_memory": "active",
+                "session_manager": "active",
+                "session_stats": session_manager.get_session_stats()
             }
         }
     except Exception as e:
@@ -156,16 +158,73 @@ async def system_status():
             content={"error": f"Failed to retrieve system status: {str(e)}"}
         )
 
+@app.get("/sessions")
+async def list_sessions():
+    """List all sessions"""
+    try:
+        from app.memory.session_manager import get_session_manager
+        session_manager = get_session_manager()
+        
+        sessions = session_manager.list_sessions()
+        return {
+            "sessions": [session.model_dump() for session in sessions],
+            "current_session": session_manager.current_session_id,
+            "total": len(sessions)
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to retrieve sessions: {str(e)}"}
+        )
+
+@app.post("/sessions")
+async def create_session(title: str = None, description: str = None):
+    """Create a new session"""
+    try:
+        from app.memory.session_manager import get_session_manager
+        session_manager = get_session_manager()
+        
+        session_id = session_manager.create_session(title=title, description=description)
+        session = session_manager.get_current_session()
+        
+        return {
+            "session_id": session_id,
+            "session": session.model_dump() if session else None,
+            "message": "Session created successfully"
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to create session: {str(e)}"}
+        )
+
+@app.put("/sessions/{session_id}/switch")
+async def switch_session(session_id: str):
+    """Switch to a different session"""
+    try:
+        from app.memory.session_manager import get_session_manager
+        session_manager = get_session_manager()
+        
+        success = session_manager.switch_session(session_id)
+        if success:
+            return {"message": f"Switched to session {session_id}"}
+        else:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Session not found"}
+            )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to switch session: {str(e)}"}
+        )
 
 # Include API routes
 app.include_router(
     travel_plans.router, 
     prefix="/api/v1", 
-    tags=["travel-plans"]
+    tags=["travel_plans"]
 )
 
-# TODO: 添加更多API路由
-# app.include_router(knowledge_router, prefix="/api/v1", tags=["knowledge"])
-# app.include_router(agents_router, prefix="/api/v1", tags=["agents"])
-# app.include_router(tools_router, prefix="/api/v1", tags=["tools"])
-# app.include_router(memory_router, prefix="/api/v1", tags=["memory"]) 
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000) 
