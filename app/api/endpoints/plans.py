@@ -1,108 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List, Optional
-from pydantic import BaseModel
+"""
+Travel Plans Endpoints - Structured travel plan CRUD operations
+"""
+
+from fastapi import APIRouter, HTTPException
+from typing import List
 from app.models.schemas import TravelPreferences, TravelPlan, PlanUpdate, Activity, DailyPlan, AgentMetadata, Budget, TripStyle
 from app.agents.travel_agent import TravelAgent
 from app.agents.base_agent import AgentMessage, AgentResponse
-from app.memory.session_manager import get_session_manager
-import json
 import re
 from datetime import datetime, timedelta
 
 router = APIRouter()
-
-class ChatMessage(BaseModel):
-    """Chat message for conversational travel planning"""
-    message: str
-    session_id: Optional[str] = None
-    enable_refinement: bool = True
-
-class ChatResponse(BaseModel):
-    """Response from the travel agent"""
-    success: bool
-    content: str
-    confidence: float
-    actions_taken: List[str]
-    next_steps: List[str]
-    session_id: str
-    refinement_details: Optional[dict] = None
-
-class RefinementConfig(BaseModel):
-    """Configuration for self-refinement"""
-    enabled: bool = True
-    quality_threshold: float = 0.75
-    max_iterations: int = 3
-
-@router.post("/chat", response_model=ChatResponse)
-async def chat_with_agent(message: ChatMessage):
-    """
-    Chat with the travel agent using natural language.
-    This is the main endpoint that leverages the self-refine loop.
-    """
-    try:
-        # Get or create session
-        session_manager = get_session_manager()
-        if message.session_id:
-            session_manager.switch_session(message.session_id)
-        else:
-            session_id = session_manager.create_session(
-                title=f"Travel Planning - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                description="AI-powered travel planning conversation"
-            )
-            message.session_id = session_id
-
-        # Create travel agent
-        agent = TravelAgent()
-        agent.configure_refinement(enabled=message.enable_refinement)
-        
-        # Create agent message
-        agent_message = AgentMessage(
-            sender="user",
-            receiver="travel_agent",
-            content=message.message,
-            metadata={"session_id": message.session_id}
-        )
-        
-        # Process with self-refinement
-        if message.enable_refinement:
-            response = await agent.plan_travel(agent_message)
-        else:
-            response = await agent.process_message(agent_message)
-        
-        # Store conversation in session
-        session_manager.add_message(
-            user_message=message.message,
-            agent_response=response.content,
-            metadata={
-                "confidence": response.confidence,
-                "actions_taken": response.actions_taken,
-                "refinement_used": message.enable_refinement
-            }
-        )
-        
-        # Prepare response
-        chat_response = ChatResponse(
-            success=response.success,
-            content=response.content,
-            confidence=response.confidence,
-            actions_taken=response.actions_taken,
-            next_steps=response.next_steps,
-            session_id=message.session_id
-        )
-        
-        # Add refinement details if available
-        if "refinement_iteration" in response.metadata:
-            chat_response.refinement_details = {
-                "final_iteration": response.metadata["refinement_iteration"],
-                "final_quality_score": response.metadata["quality_score"],
-                "refinement_status": response.metadata["refinement_status"],
-                "quality_dimensions": agent.get_quality_dimensions()
-            }
-        
-        return chat_response
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 @router.post("/plans", response_model=TravelPlan)
 async def create_travel_plan(preferences: TravelPreferences):
@@ -179,8 +87,8 @@ async def update_travel_plan(plan_id: str, update: PlanUpdate):
                         destination="Unknown",
                         start_date=datetime.utcnow(),
                         end_date=datetime.utcnow() + timedelta(days=1),
-                                                 budget=Budget(total=0, currency="USD"),
-                                                 trip_style=TripStyle.RELAXED,
+                        budget=Budget(total=0, currency="USD"),
+                        trip_style=TripStyle.RELAXED,
                         travelers=[],
                         interests=[],
                         goals=[]
@@ -205,44 +113,16 @@ async def delete_travel_plan(plan_id: str):
     # TODO: Implement plan deletion
     raise HTTPException(status_code=404, detail="Plan deletion not yet implemented")
 
-@router.post("/agent/configure")
-async def configure_agent_refinement(config: RefinementConfig):
+@router.get("/plans")
+async def list_travel_plans(limit: int = 10, offset: int = 0):
     """
-    Configure the self-refinement settings for the travel agent.
+    List all travel plans with pagination.
+    TODO: Implement plan listing from storage
     """
-    try:
-        # This would typically be stored per session or user
-        # For now, return the configuration
-        return {
-            "message": "Agent refinement configured",
-            "config": config.model_dump(),
-            "note": "Configuration applied to new agent instances"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Configuration failed: {str(e)}")
+    # TODO: Implement plan listing
+    raise HTTPException(status_code=404, detail="Plan listing not yet implemented")
 
-@router.get("/agent/status")
-async def get_agent_status():
-    """
-    Get the current status and capabilities of the travel agent.
-    """
-    try:
-        agent = TravelAgent()
-        status = agent.get_status()
-        
-        return {
-            "agent_info": {
-                "name": status["name"],
-                "description": status["description"],
-                "capabilities": status["capabilities"],
-                "tools": status["tools"]
-            },
-            "refinement_config": status["refinement_config"],
-            "quality_dimensions": agent.get_quality_dimensions(),
-            "system_status": "operational"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
+# Helper functions (moved from travel_plans.py)
 
 async def _parse_agent_response_to_plan(response: AgentResponse, preferences: TravelPreferences) -> TravelPlan:
     """

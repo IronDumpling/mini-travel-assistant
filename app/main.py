@@ -12,7 +12,6 @@ Refactored based on the new architecture, integrating all core components:
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 import uvicorn
 from loguru import logger
 
@@ -29,7 +28,13 @@ from app.tools import hotel_search, flight_search, attraction_search
 from app.agents import travel_agent
 
 # Import API routes
-from app.api.endpoints import travel_plans
+from app.api.endpoints import (
+    system_router,
+    sessions_router,
+    chat_router,
+    plans_router,
+    agent_router
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -92,145 +97,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    """Root path - system status overview"""
-    try:
-        # Get status of each component
-        tool_status = tool_registry.get_registry_status()
-        agent_status = agent_manager.get_system_status()
-        
-        return {
-            "message": "Welcome to AI Travel Planning Agent v2.0",
-            "status": "Running",
-            "architecture": "Six-layer AI Agent architecture",
-            "components": {
-                "tools": {
-                    "total": tool_status["total_tools"],
-                    "categories": len(tool_status.get("categories", {})),
-                    "active": len([tool for tool in tool_status.get("tools", {}).values() 
-                                 if hasattr(tool, 'get') and tool.get("status") != "error"])
-                },
-                "agents": {
-                    "total": agent_status["total_agents"],
-                    "active": len([agent for agent in agent_status.get("agents", {}).values() 
-                                 if hasattr(agent, 'get') and agent.get("status") != "stopped"])
-                },
-                "knowledge_base": "Loaded",
-                "memory_system": "Active"
-            },
-            "capabilities": [
-                "Intelligent travel planning",
-                "Multi-tool coordination",
-                "Retrieval-augmented generation",
-                "Conversation memory management",
-                "Self-learning and improvement"
-            ]
-        }
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to retrieve system status: {str(e)}"}
-        )
-
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
-
-@app.get("/system/status")
-async def system_status():
-    """Detailed system status"""
-    try:
-        from app.memory.session_manager import get_session_manager
-        session_manager = get_session_manager()
-        
-        return {
-            "tools": tool_registry.get_registry_status(),
-            "agents": agent_manager.get_system_status(),
-            "memory": {
-                "conversation_memory": "active",
-                "session_manager": "active",
-                "session_stats": session_manager.get_session_stats()
-            }
-        }
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to retrieve system status: {str(e)}"}
-        )
-
-@app.get("/sessions")
-async def list_sessions():
-    """List all sessions"""
-    try:
-        from app.memory.session_manager import get_session_manager
-        session_manager = get_session_manager()
-        
-        sessions = session_manager.list_sessions()
-        return {
-            "sessions": [session.model_dump() for session in sessions],
-            "current_session": session_manager.current_session_id,
-            "total": len(sessions)
-        }
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to retrieve sessions: {str(e)}"}
-        )
-
-@app.post("/sessions")
-async def create_session(title: str = None, description: str = None):
-    """Create a new session"""
-    try:
-        from app.memory.session_manager import get_session_manager
-        session_manager = get_session_manager()
-        
-        session_id = session_manager.create_session(title=title, description=description)
-        session = session_manager.get_current_session()
-        
-        return {
-            "session_id": session_id,
-            "session": session.model_dump() if session else None,
-            "message": "Session created successfully"
-        }
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to create session: {str(e)}"}
-        )
-
-@app.put("/sessions/{session_id}/switch")
-async def switch_session(session_id: str):
-    """Switch to a different session"""
-    try:
-        from app.memory.session_manager import get_session_manager
-        session_manager = get_session_manager()
-        
-        success = session_manager.switch_session(session_id)
-        if success:
-            return {"message": f"Switched to session {session_id}"}
-        else:
-            return JSONResponse(
-                status_code=404,
-                content={"error": "Session not found"}
-            )
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to switch session: {str(e)}"}
-        )
-
-# Include API routes
-app.include_router(
-    travel_plans.router, 
-    prefix="/api/v1", 
-    tags=["travel_plans"]
-)
+# Include all API routes with organized structure
+app.include_router(system_router, tags=["system"])
+app.include_router(sessions_router, tags=["sessions"])
+app.include_router(chat_router, prefix="/api", tags=["chat"])
+app.include_router(plans_router, prefix="/api", tags=["plans"])
+app.include_router(agent_router, prefix="/api", tags=["agent"])
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000) 
