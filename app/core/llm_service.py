@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 
 class LLMResponse(BaseModel):
-    """LLM响应标准格式"""
+    """LLM Response Standard Format"""
     content: str
     usage: Optional[Dict[str, Any]] = None
     model: str
@@ -34,7 +34,7 @@ class BaseLLMService(ABC):
         messages: List[Dict[str, str]], 
         **kwargs
     ) -> LLMResponse:
-        """聊天完成接口"""
+        """Chat Completion Interface"""
         pass
     
     @abstractmethod
@@ -44,24 +44,24 @@ class BaseLLMService(ABC):
         functions: List[Dict[str, Any]], 
         **kwargs
     ) -> LLMResponse:
-        """函数调用接口"""
+        """Function Call Interface"""
         pass
 
 
 class OpenAIService(BaseLLMService):
-    """OpenAI服务实现"""
+    """OpenAI Service Implementation"""
     
     def __init__(self, api_key: str = None, model: str = "gpt-4"):
-        # TODO: 实现OpenAI服务初始化
+        # TODO: Implement OpenAI Service Initialization
         self.model = model
-        self.client = None  # TODO: 初始化OpenAI客户端
+        self.client = None  # TODO: Initialize OpenAI Client
     
     async def chat_completion(
         self, 
         messages: List[Dict[str, str]], 
         **kwargs
     ) -> LLMResponse:
-        # TODO: 实现OpenAI聊天完成
+        # TODO: Implement OpenAI Chat Completion
         pass
     
     async def function_call(
@@ -70,30 +70,30 @@ class OpenAIService(BaseLLMService):
         functions: List[Dict[str, Any]], 
         **kwargs
     ) -> LLMResponse:
-        # TODO: 实现OpenAI函数调用
+        # TODO: Implement OpenAI Function Call
         pass
 
 
 class LLMServiceFactory:
-    """LLM服务工厂"""
+    """LLM Service Factory"""
     
     @staticmethod
     def create_service(provider: str = "openai", **kwargs) -> BaseLLMService:
-        # TODO: 实现服务工厂逻辑
+        # TODO: Implement Service Factory Logic
         if provider == "openai":
             return OpenAIService(**kwargs)
         else:
-            raise ValueError(f"不支持的LLM提供商: {provider}")
+            raise ValueError(f"Unsupported LLM Provider: {provider}")
 
 
-# 全局LLM服务实例
+# Global LLM Service Instance
 llm_service: Optional[BaseLLMService] = None
 
 
 def get_llm_service() -> BaseLLMService:
-    """获取LLM服务实例"""
+    """Get LLM Service Instance"""
     global llm_service
     if llm_service is None:
-        # TODO: 从配置中读取LLM服务配置
+        # TODO: Read LLM Service Configuration from Config
         llm_service = LLMServiceFactory.create_service()
     return llm_service 
