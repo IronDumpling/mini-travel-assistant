@@ -330,14 +330,31 @@ class TravelAgent(BaseAgent):
     
     async def _retrieve_knowledge_context(self, query: str) -> Dict[str, Any]:
         """Retrieve knowledge context"""
-        # TODO: Use RAG engine to retrieve relevant knowledge
-        # result = await self.rag_engine.retrieve(query, top_k=5)
-        
-        # Temporary return example result
-        return {
-            "relevant_docs": [],
-            "context": "Relevant knowledge context"
-        }
+        try:
+            # Use RAG engine to retrieve relevant knowledge
+            result = await self.rag_engine.retrieve(query, top_k=5)
+            
+            # Process retrieved documents
+            contexts = []
+            for doc in result.documents:
+                contexts.append({
+                    "id": doc.id,
+                    "content": doc.content[:500] + "..." if len(doc.content) > 500 else doc.content,
+                    "metadata": doc.metadata
+                })
+            
+            return {
+                "relevant_docs": contexts,
+                "context": "\n\n".join([doc.content for doc in result.documents]),
+                "total_results": result.total_results,
+                "scores": result.scores
+            }
+        except Exception as e:
+            return {
+                "relevant_docs": [],
+                "context": f"Error retrieving context: {str(e)}",
+                "error": str(e)
+            }
     
     async def _create_action_plan(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Create action plan"""
@@ -380,6 +397,11 @@ class TravelAgent(BaseAgent):
         }
         
         try:
+            # First, always retrieve knowledge context for any travel query
+            query = context.get("original_query", "travel information")
+            knowledge_context = await self._retrieve_knowledge_context(query)
+            results["knowledge_context"] = knowledge_context
+            
             # Execute tools based on plan
             for tool_name in plan.get("tools_to_use", []):
                 # TODO: Call corresponding tool
@@ -398,15 +420,39 @@ class TravelAgent(BaseAgent):
     
     async def _generate_response(self, execution_result: Dict[str, Any], intent: Dict[str, Any]) -> str:
         """Generate response content"""
-        # TODO: Generate natural language response based on execution result
-        # 1. Summarize execution results
-        # 2. Customize response style based on intent type
-        # 3. Provide next steps
-        
-        if execution_result["success"]:
-            return f"I have completed the relevant search and analysis for your {intent['type']}. Based on your needs, I found some good options..."
-        else:
-            return f"Sorry, there was a problem processing your {intent['type']} request. Let me re-search for you..."
+        try:
+            # Get knowledge context from execution result
+            knowledge_context = execution_result.get("knowledge_context", {})
+            relevant_docs = knowledge_context.get("relevant_docs", [])
+            
+            if execution_result["success"] and relevant_docs:
+                # Create response based on retrieved knowledge
+                response_parts = [
+                    f"Based on my knowledge about {intent.get('destination', 'your destination')}, here's what I found:"
+                ]
+                
+                # Add relevant information from retrieved documents
+                for i, doc in enumerate(relevant_docs[:3]):  # Limit to top 3 results
+                    doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
+                    content = doc.get("content", "")
+                    response_parts.append(f"\n📍 **{doc_title}**\n{content}")
+                
+                # Add practical next steps
+                response_parts.append("\n\n🎯 **Next Steps:**")
+                if intent["type"] == "planning":
+                    response_parts.append("- I can help you search for specific flights and hotels")
+                    response_parts.append("- Let me know your travel dates and budget preferences")
+                    response_parts.append("- I can provide more detailed information about any specific attraction")
+                
+                return "\n".join(response_parts)
+            
+            elif execution_result["success"]:
+                return f"I've processed your {intent['type']} request. How can I help you further with your travel planning?"
+            else:
+                error_msg = execution_result.get("error", "Unknown error")
+                return f"I encountered an issue while processing your {intent['type']} request: {error_msg}. Let me try to help you in another way."
+        except Exception as e:
+            return f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
     
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute specific action"""
