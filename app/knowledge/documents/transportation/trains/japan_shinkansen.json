@@ -8,6 +8,7 @@
   "tags": ["Shinkansen", "Bullet Train", "Japan", "Transportation", "JR Pass", "High Speed Rail", "Tokyo", "Osaka", "Kyoto"],
   "language": "en",
   "source": {
+    "id": "jr_east_official",
     "name": "JR East Official Guide",
     "url": "https://www.jreast.co.jp/e/",
     "reliability_score": 0.98

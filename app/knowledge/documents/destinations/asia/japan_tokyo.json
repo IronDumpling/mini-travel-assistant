@@ -8,6 +8,7 @@
   "tags": ["Tokyo", "Japan", "Asia", "Megacity", "Culture", "Technology", "Traditional", "Modern", "Travel Guide"],
   "language": "en",
   "source": {
+    "id": "jnto_official", 
     "name": "Japan National Tourism Organization",
     "url": "https://www.jnto.go.jp",
     "reliability_score": 0.95

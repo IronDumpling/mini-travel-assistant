@@ -340,8 +340,8 @@ class KnowledgeBase:
                     content=f"{knowledge.title}\n\n{knowledge.content}",
                     metadata={
                         "category": knowledge.category,
-                        "location": knowledge.location,
-                        "tags": knowledge.tags,
+                        "location": knowledge.location or "",
+                        "tags": knowledge.tags,  # Will be converted to string in RAG engine
                         "language": knowledge.language,
                         "title": knowledge.title
                     }
@@ -376,8 +376,8 @@ class KnowledgeBase:
                 content=f"{knowledge.title}\n\n{knowledge.content}",
                 metadata={
                     "category": knowledge.category,
-                    "location": knowledge.location,
-                    "tags": knowledge.tags,
+                    "location": knowledge.location or "",
+                    "tags": knowledge.tags,  # Will be converted to string in RAG engine
                     "language": knowledge.language,
                     "title": knowledge.title
                 }
@@ -417,8 +417,8 @@ class KnowledgeBase:
                 content=f"{updated_knowledge.title}\n\n{updated_knowledge.content}",
                 metadata={
                     "category": updated_knowledge.category,
-                    "location": updated_knowledge.location,
-                    "tags": updated_knowledge.tags,
+                    "location": updated_knowledge.location or "",
+                    "tags": updated_knowledge.tags,  # Will be converted to string in RAG engine
                     "language": updated_knowledge.language,
                     "title": updated_knowledge.title
                 }

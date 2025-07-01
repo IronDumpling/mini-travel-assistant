@@ -8,6 +8,7 @@
   "tags": ["Japan", "Visa", "Tourism", "Application", "Requirements", "Documentation", "Travel", "Embassy"],
   "language": "en",
   "source": {
+    "id": "embassy_japan_official",
     "name": "Embassy of Japan Official Website",
     "url": "https://www.jp.emb-china.go.jp",
     "reliability_score": 0.98

@@ -102,10 +102,10 @@ class ChromaVectorStore:
         self.collection = self.client.get_or_create_collection(
             name=collection_name,
             metadata={
-                "hnsw:space": "cosine",  # Use cosine similarity
-                "hnsw:M": 16,           # HNSW parameter optimization
-                "hnsw:ef_construction": 200,
-                "hnsw:ef": 100
+                "hnsw:space": "cosine",      # Use cosine similarity
+                "hnsw:M": 16,               # HNSW parameter optimization
+                "hnsw:construction_ef": 200, # Build-time search parameter
+                "hnsw:search_ef": 100       # Query-time search parameter
             }
         )
         
@@ -121,7 +121,17 @@ class ChromaVectorStore:
             # Prepare data for batch insertion
             ids = [doc.id for doc in documents]
             contents = [doc.content for doc in documents]
-            metadatas = [doc.metadata for doc in documents]
+            # Convert list values in metadata to strings for ChromaDB compatibility
+            metadatas = []
+            for doc in documents:
+                processed_metadata = {}
+                for key, value in doc.metadata.items():
+                    if isinstance(value, list):
+                        # Convert list to comma-separated string
+                        processed_metadata[key] = ", ".join(str(v) for v in value)
+                    elif value is not None:
+                        processed_metadata[key] = str(value)
+                metadatas.append(processed_metadata)
             
             # Generate embeddings using SentenceTransformer
             embedding_model = SentenceTransformerModel()
