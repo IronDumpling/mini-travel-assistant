@@ -1,24 +1,27 @@
 """
 RAG Engine Module - Retrieval-Augmented Generation Engine
 
-TODO: Implement the following features
-1. Integration with vector database, ChromaDB  
-2. Document chunking and embedding  
-3. Similarity search  
-4. Retrieval result ranking and filtering  
-5. Context compression and concatenation  
-6. Retrieval quality evaluation  
+Implements the core RAG functionality with ChromaDB persistence, 
+document chunking, embedding, and semantic search capabilities.
 """
 
 from typing import List, Dict, Optional, Tuple, Any
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
+from pathlib import Path
 import chromadb
 from sentence_transformers import SentenceTransformer
+import asyncio
+import logging
+from datetime import datetime
+import tiktoken
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class Document(BaseModel):
-    """文档结构"""
+    """Document structure for RAG system"""
     id: str
     content: str
     metadata: Dict[str, Any] = {}
@@ -26,7 +29,7 @@ class Document(BaseModel):
 
 
 class RetrievalResult(BaseModel):
-    """检索结果"""
+    """Retrieval result structure"""
     documents: List[Document]
     scores: List[float]
     query: str
@@ -34,39 +37,152 @@ class RetrievalResult(BaseModel):
 
 
 class BaseEmbeddingModel(ABC):
-    """嵌入模型基类"""
+    """Abstract base class for embedding models"""
     
     @abstractmethod
     async def encode(self, texts: List[str]) -> List[List[float]]:
-        """文本编码为向量"""
+        """Encode texts to vectors"""
         pass
 
 
 class SentenceTransformerModel(BaseEmbeddingModel):
-    """SentenceTransformer嵌入模型"""
+    """SentenceTransformer embedding model implementation"""
     
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        # TODO: 初始化SentenceTransformer模型
         self.model_name = model_name
         self.model = None
+        self._initialized = False
+    
+    async def initialize(self):
+        """Initialize the embedding model"""
+        if not self._initialized:
+            try:
+                # Run model loading in thread pool to avoid blocking
+                loop = asyncio.get_event_loop()
+                self.model = await loop.run_in_executor(
+                    None, lambda: SentenceTransformer(self.model_name)
+                )
+                self._initialized = True
+                logger.info(f"Embedding model '{self.model_name}' initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize embedding model: {e}")
+                raise
     
     async def encode(self, texts: List[str]) -> List[List[float]]:
-        # TODO: 实现文本编码
-        pass
+        """Encode texts to vectors"""
+        if not self._initialized:
+            await self.initialize()
+        
+        try:
+            # Run encoding in thread pool for better performance
+            loop = asyncio.get_event_loop()
+            embeddings = await loop.run_in_executor(
+                None, lambda: self.model.encode(texts, convert_to_numpy=True)
+            )
+            return embeddings.tolist()
+        except Exception as e:
+            logger.error(f"Failed to encode texts: {e}")
+            raise
 
 
 class ChromaVectorStore:
-    """ChromaDB向量存储"""
+    """ChromaDB vector store with persistence"""
     
     def __init__(self, collection_name: str = "travel_knowledge"):
-        # TODO: 初始化ChromaDB
         self.collection_name = collection_name
-        self.client = None
-        self.collection = None
+        
+        # Configure persistent storage
+        db_path = Path("./data/chroma_db")
+        db_path.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize ChromaDB with persistence
+        self.client = chromadb.PersistentClient(path=str(db_path))
+        
+        # Get or create collection with optimized settings
+        self.collection = self.client.get_or_create_collection(
+            name=collection_name,
+            metadata={
+                "hnsw:space": "cosine",  # Use cosine similarity
+                "hnsw:M": 16,           # HNSW parameter optimization
+                "hnsw:ef_construction": 200,
+                "hnsw:ef": 100
+            }
+        )
+        
+        logger.info(f"ChromaDB initialized at {db_path}")
+        logger.info(f"Collection '{collection_name}' loaded with {self.collection.count()} documents")
     
     async def add_documents(self, documents: List[Document]) -> bool:
-        # TODO: 添加文档到向量数据库
-        pass
+        """Add documents to vector database"""
+        try:
+            if not documents:
+                return True
+            
+            # Prepare data for batch insertion
+            ids = [doc.id for doc in documents]
+            contents = [doc.content for doc in documents]
+            metadatas = [doc.metadata for doc in documents]
+            
+            # Generate embeddings using SentenceTransformer
+            embedding_model = SentenceTransformerModel()
+            await embedding_model.initialize()
+            embeddings = await embedding_model.encode(contents)
+            
+            # Check for existing documents
+            try:
+                existing_docs = self.collection.get(ids=ids)
+                existing_ids = set(existing_docs['ids'] if existing_docs['ids'] else [])
+            except Exception:
+                existing_ids = set()
+            
+            # Separate new and existing documents
+            new_docs = []
+            new_embeddings = []
+            new_metadatas = []
+            new_ids = []
+            
+            update_docs = []
+            update_embeddings = []
+            update_metadatas = []
+            update_ids = []
+            
+            for i, doc_id in enumerate(ids):
+                if doc_id in existing_ids:
+                    update_ids.append(doc_id)
+                    update_docs.append(contents[i])
+                    update_embeddings.append(embeddings[i])
+                    update_metadatas.append(metadatas[i])
+                else:
+                    new_ids.append(doc_id)
+                    new_docs.append(contents[i])
+                    new_embeddings.append(embeddings[i])
+                    new_metadatas.append(metadatas[i])
+            
+            # Add new documents
+            if new_docs:
+                self.collection.add(
+                    ids=new_ids,
+                    documents=new_docs,
+                    embeddings=new_embeddings,
+                    metadatas=new_metadatas
+                )
+                logger.info(f"Added {len(new_docs)} new documents to collection")
+            
+            # Update existing documents
+            if update_docs:
+                self.collection.update(
+                    ids=update_ids,
+                    documents=update_docs,
+                    embeddings=update_embeddings,
+                    metadatas=update_metadatas
+                )
+                logger.info(f"Updated {len(update_docs)} existing documents")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to add documents to vector store: {e}")
+            return False
     
     async def search(
         self, 
@@ -74,33 +190,107 @@ class ChromaVectorStore:
         top_k: int = 5,
         filter_metadata: Optional[Dict[str, Any]] = None
     ) -> List[Tuple[Document, float]]:
-        # TODO: 向量相似度搜索
-        pass
+        """Perform vector similarity search"""
+        try:
+            # Build where clause for filtering
+            where_clause = {}
+            if filter_metadata:
+                for key, value in filter_metadata.items():
+                    where_clause[key] = {"$eq": value}
+            
+            # Perform search
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,
+                where=where_clause if where_clause else None,
+                include=['documents', 'metadatas', 'distances']
+            )
+            
+            # Process results
+            documents_with_scores = []
+            if results['documents'] and results['documents'][0]:
+                for i, (doc_text, metadata, distance) in enumerate(zip(
+                    results['documents'][0],
+                    results['metadatas'][0], 
+                    results['distances'][0]
+                )):
+                    # Convert distance to similarity score
+                    similarity_score = 1 - distance
+                    
+                    document = Document(
+                        id=f"retrieved_{i}",
+                        content=doc_text,
+                        metadata=metadata or {}
+                    )
+                    
+                    documents_with_scores.append((document, similarity_score))
+            
+            return documents_with_scores
+            
+        except Exception as e:
+            logger.error(f"Search failed: {e}")
+            return []
     
     async def delete_documents(self, document_ids: List[str]) -> bool:
-        # TODO: 删除文档
-        pass
+        """Delete documents from vector database"""
+        try:
+            self.collection.delete(ids=document_ids)
+            logger.info(f"Deleted {len(document_ids)} documents")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete documents: {e}")
+            return False
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get vector store statistics"""
+        try:
+            count = self.collection.count()
+            return {
+                "total_documents": count,
+                "collection_name": self.collection_name,
+                "last_updated": datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Failed to get stats: {e}")
+            return {"error": str(e)}
 
 
 class RAGEngine:
-    """RAG检索引擎"""
+    """Main RAG retrieval engine"""
     
     def __init__(
         self, 
         embedding_model: BaseEmbeddingModel = None,
         vector_store: ChromaVectorStore = None
     ):
-        # TODO: 初始化RAG引擎
         self.embedding_model = embedding_model or SentenceTransformerModel()
         self.vector_store = vector_store or ChromaVectorStore()
+        logger.info("RAG Engine initialized")
     
     async def index_documents(self, documents: List[Document]) -> bool:
-        """索引文档"""
-        # TODO: 实现文档索引流程
-        # 1. 文档分片
-        # 2. 生成嵌入向量
-        # 3. 存储到向量数据库
-        pass
+        """Index documents with chunking and embedding"""
+        try:
+            if not documents:
+                logger.warning("No documents provided for indexing")
+                return True
+            
+            # 1. Chunk documents for better retrieval
+            chunked_docs = self._chunk_documents(documents)
+            logger.info(f"Chunked {len(documents)} documents into {len(chunked_docs)} chunks")
+            
+            # 2. Store documents in vector database
+            success = await self.vector_store.add_documents(chunked_docs)
+            
+            if success:
+                logger.info(f"Successfully indexed {len(chunked_docs)} document chunks")
+            else:
+                logger.error("Failed to index documents")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Document indexing failed: {e}")
+            return False
     
     async def retrieve(
         self, 
@@ -108,13 +298,44 @@ class RAGEngine:
         top_k: int = 5,
         filter_metadata: Optional[Dict[str, Any]] = None
     ) -> RetrievalResult:
-        """检索相关文档"""
-        # TODO: 实现检索流程
-        # 1. 查询向量化
-        # 2. 相似度搜索
-        # 3. 结果排序和过滤
-        # 4. 返回标准格式结果
-        pass
+        """Retrieve relevant documents based on query"""
+        try:
+            # 1. Encode query to vector
+            query_embedding = await self.embedding_model.encode([query])
+            
+            # 2. Search for similar documents
+            search_results = await self.vector_store.search(
+                query_embedding=query_embedding[0],
+                top_k=top_k,
+                filter_metadata=filter_metadata
+            )
+            
+            # 3. Process and rank results
+            documents = []
+            scores = []
+            
+            for doc, score in search_results:
+                documents.append(doc)
+                scores.append(score)
+            
+            result = RetrievalResult(
+                documents=documents,
+                scores=scores,
+                query=query,
+                total_results=len(documents)
+            )
+            
+            logger.info(f"Retrieved {len(documents)} documents for query: '{query[:50]}...'")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Retrieval failed: {e}")
+            return RetrievalResult(
+                documents=[],
+                scores=[],
+                query=query,
+                total_results=0
+            )
     
     async def retrieve_and_generate(
         self, 
@@ -122,36 +343,148 @@ class RAGEngine:
         context_template: str = None,
         **llm_kwargs
     ) -> str:
-        """检索并生成回答"""
-        # TODO: 实现RAG完整流程
-        # 1. 检索相关文档
-        # 2. 构建上下文
-        # 3. 调用LLM生成回答
-        pass
+        """Complete RAG pipeline: retrieve and generate answer"""
+        try:
+            # 1. Retrieve relevant documents
+            retrieval_result = await self.retrieve(query, top_k=5)
+            
+            # 2. Build context from retrieved documents
+            context = self._compress_context(retrieval_result.documents)
+            
+            # 3. Build prompt template
+            if not context_template:
+                context_template = """Based on the following knowledge, please answer the user's question:
+
+Knowledge:
+{context}
+
+User Question: {query}
+
+Please provide an accurate and helpful answer:
+"""
+            
+            prompt = context_template.format(context=context, query=query)
+            
+            # 4. Call LLM service to generate answer
+            from app.core.llm_service import get_llm_service
+            llm_service = get_llm_service()
+            
+            response = await llm_service.chat_completion(
+                messages=[{"role": "user", "content": prompt}],
+                **llm_kwargs
+            )
+            
+            return response.content
+            
+        except Exception as e:
+            logger.error(f"RAG generation failed: {e}")
+            return f"I apologize, but I encountered an error while processing your question: {str(e)}"
     
     def _chunk_documents(self, documents: List[Document]) -> List[Document]:
-        """文档分片"""
-        # TODO: 实现智能文档分片
-        # 1. 按段落分片
-        # 2. 重叠分片策略
-        # 3. 保持语义完整性
-        pass
+        """Intelligent document chunking with overlap"""
+        chunked_docs = []
+        
+        for doc in documents:
+            # Split content into paragraphs
+            paragraphs = doc.content.split('\n\n')
+            
+            current_chunk = ""
+            chunk_id = 0
+            max_chunk_size = 1000  # characters
+            overlap_size = 200     # characters for overlap
+            
+            for paragraph in paragraphs:
+                paragraph = paragraph.strip()
+                if not paragraph:
+                    continue
+                
+                # Check if adding this paragraph would exceed max size
+                if len(current_chunk + paragraph) < max_chunk_size:
+                    current_chunk += paragraph + "\n\n"
+                else:
+                    # Save current chunk if it has content
+                    if current_chunk.strip():
+                        chunked_docs.append(Document(
+                            id=f"{doc.id}_chunk_{chunk_id}",
+                            content=current_chunk.strip(),
+                            metadata={
+                                **doc.metadata, 
+                                "chunk_id": chunk_id,
+                                "parent_id": doc.id,
+                                "chunk_type": "text"
+                            }
+                        ))
+                        chunk_id += 1
+                    
+                    # Start new chunk with overlap
+                    if len(current_chunk) > overlap_size:
+                        overlap_text = current_chunk[-overlap_size:].split('\n\n')[-1]
+                        current_chunk = overlap_text + "\n\n" + paragraph + "\n\n"
+                    else:
+                        current_chunk = paragraph + "\n\n"
+            
+            # Save final chunk
+            if current_chunk.strip():
+                chunked_docs.append(Document(
+                    id=f"{doc.id}_chunk_{chunk_id}",
+                    content=current_chunk.strip(),
+                    metadata={
+                        **doc.metadata, 
+                        "chunk_id": chunk_id,
+                        "parent_id": doc.id,
+                        "chunk_type": "text"
+                    }
+                ))
+        
+        return chunked_docs
     
     def _compress_context(self, documents: List[Document], max_tokens: int = 4000) -> str:
-        """上下文压缩"""
-        # TODO: 实现上下文压缩
-        # 1. 相关性排序
-        # 2. Token数量控制
-        # 3. 关键信息保留
-        pass
+        """Compress context to fit within token limits"""
+        if not documents:
+            return ""
+        
+        try:
+            # Initialize tokenizer
+            encoding = tiktoken.get_encoding("cl100k_base")
+            
+            compressed_context = ""
+            total_tokens = 0
+            
+            for i, doc in enumerate(documents):
+                # Calculate tokens for this document
+                doc_content = f"\n\n=== Knowledge {i+1} ===\n{doc.content}"
+                doc_tokens = len(encoding.encode(doc_content))
+                
+                # Check if we can add this document
+                if total_tokens + doc_tokens <= max_tokens:
+                    compressed_context += doc_content
+                    total_tokens += doc_tokens
+                else:
+                    # Try to add partial content if space allows
+                    remaining_tokens = max_tokens - total_tokens
+                    if remaining_tokens > 100:  # Minimum useful content
+                        # Truncate content to fit
+                        truncated_tokens = encoding.encode(doc.content)[:remaining_tokens-50]
+                        truncated_content = encoding.decode(truncated_tokens)
+                        compressed_context += f"\n\n=== Knowledge {i+1} (truncated) ===\n{truncated_content}..."
+                    break
+            
+            return compressed_context
+            
+        except Exception as e:
+            logger.error(f"Context compression failed: {e}")
+            # Fallback: simple truncation
+            context = "\n\n".join([f"=== Knowledge {i+1} ===\n{doc.content}" 
+                                  for i, doc in enumerate(documents)])
+            return context[:max_tokens * 4]  # Rough character approximation
 
 
-# 全局RAG引擎实例
+# Global RAG engine instance
 rag_engine: Optional[RAGEngine] = None
 
 
 def get_rag_engine() -> RAGEngine:
-    """获取RAG引擎实例"""
+    """Get RAG engine instance (singleton pattern)"""
     global rag_engine
     if rag_engine is None:
         rag_engine = RAGEngine()
