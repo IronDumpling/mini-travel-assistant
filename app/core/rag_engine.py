@@ -103,9 +103,9 @@ class ChromaVectorStore:
             name=collection_name,
             metadata={
                 "hnsw:space": "cosine",      # Use cosine similarity
-                "hnsw:M": 16,               # HNSW parameter optimization
+                "hnsw:M": 16,                # HNSW parameter optimization
                 "hnsw:construction_ef": 200, # Build-time search parameter
-                "hnsw:search_ef": 100       # Query-time search parameter
+                "hnsw:search_ef": 100        # Query-time search parameter
             }
         )
         
@@ -379,12 +379,29 @@ Please provide an accurate and helpful answer:
             from app.core.llm_service import get_llm_service
             llm_service = get_llm_service()
             
-            response = await llm_service.chat_completion(
-                messages=[{"role": "user", "content": prompt}],
-                **llm_kwargs
-            )
-            
-            return response.content
+            # TODO: Replace with actual LLM service call when available
+            try:
+                response = await llm_service.chat_completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    **llm_kwargs
+                )
+                return response.content
+            except Exception as e:
+                # Fallback: Generate response based on retrieved context
+                logger.warning(f"LLM service unavailable, using fallback response: {e}")
+                
+                if context:
+                    # Create a structured response based on retrieved knowledge
+                    fallback_response = f"""Based on the available travel information, here's what I found:
+
+{context}
+
+This information should help answer your question about: {query}
+
+Would you like me to search for more specific information or help you with travel planning?"""
+                    return fallback_response
+                else:
+                    return f"I understand you're asking about: {query}. While I don't have specific information available right now, I'd be happy to help you with travel planning. Could you provide more details about what you're looking for?"
             
         except Exception as e:
             logger.error(f"RAG generation failed: {e}")

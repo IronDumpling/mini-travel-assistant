@@ -267,7 +267,12 @@ class TravelAgent(BaseAgent):
             
             # 4. Execute action plan
             self.status = AgentStatus.ACTING
-            result = await self._execute_action_plan(action_plan, message.metadata)
+            # Add original message to context for knowledge retrieval
+            execution_context = {
+                **message.metadata,
+                "original_message": message.content
+            }
+            result = await self._execute_action_plan(action_plan, execution_context)
             
             # 5. Generate response
             response_content = await self._generate_response(result, intent)
@@ -302,46 +307,102 @@ class TravelAgent(BaseAgent):
         # 2. Extract key information (destination, time, budget, etc.)
         # 3. Identify user sentiment and preferences
         
-        prompt = f"""
-        Analyze the intent and key information of the following user message:
-        User message: {user_message}
+        # For now, implement basic keyword-based intent analysis
+        user_message_lower = user_message.lower()
         
-        Please identify:
-        1. Intent type (planning, query, modification, complaint, etc.)
-        2. Travel-related information (destination, time, budget, number of people, etc.)
-        3. User preferences and requirements
-        4. Urgency level
+        # Determine intent type
+        intent_type = "query"  # default
+        if any(word in user_message_lower for word in ["帮我", "规划", "安排", "制定", "plan", "create", "make"]):
+            intent_type = "planning"
+        elif any(word in user_message_lower for word in ["修改", "更改", "调整", "change", "modify", "update"]):
+            intent_type = "modification"
+        elif any(word in user_message_lower for word in ["推荐", "建议", "介绍", "recommend", "suggest", "introduce"]):
+            intent_type = "recommendation"
         
-        Return the result in JSON format.
-        """
+        # Extract destination information
+        destination = "Unknown"
+        destinations = ["东京", "京都", "大阪", "tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", "shanghai"]
+        for dest in destinations:
+            if dest in user_message_lower:
+                destination = dest
+                break
         
-        # TODO: Call LLM service
+        # Extract time information
+        time_info = {}
+        if any(word in user_message_lower for word in ["天", "日", "day", "days"]):
+            # Try to extract number of days
+            import re
+            days_match = re.search(r'(\d+)天|(\d+)日|(\d+)\s*day', user_message_lower)
+            if days_match:
+                days = int(days_match.group(1) or days_match.group(2) or days_match.group(3))
+                time_info["duration_days"] = days
+        
+        # Extract budget information
+        budget_info = {}
+        if any(word in user_message_lower for word in ["预算", "budget", "cost", "price", "钱", "费用"]):
+            budget_info["budget_mentioned"] = True
+        
+        # TODO: Call LLM service for more sophisticated analysis
+        # prompt = f"""
+        # Analyze the intent and key information of the following user message:
+        # User message: {user_message}
+        # 
+        # Please identify:
+        # 1. Intent type (planning, query, modification, complaint, etc.)
+        # 2. Travel-related information (destination, time, budget, number of people, etc.)
+        # 3. User preferences and requirements
+        # 4. Urgency level
+        # 
+        # Return the result in JSON format.
+        # """
         # response = await self.llm_service.chat_completion([
         #     {"role": "user", "content": prompt}
         # ])
         
-        # Temporary return example result
         return {
-            "type": "planning",
-            "destination": "Unknown", # TODO: Extract destination
+            "type": intent_type,
+            "destination": destination,
+            "time_info": time_info,
+            "budget_info": budget_info,
             "urgency": "normal",
-            "extracted_info": {}
+            "extracted_info": {
+                "destination": destination,
+                "time_info": time_info,
+                "budget_info": budget_info
+            }
         }
     
     async def _retrieve_knowledge_context(self, query: str) -> Dict[str, Any]:
         """Retrieve knowledge context"""
-        # TODO: Use RAG engine to retrieve relevant knowledge
-        # result = await self.rag_engine.retrieve(query, top_k=5)
-        
-        # Temporary return example result
-        return {
-            "relevant_docs": [],
-            "context": "Relevant knowledge context"
-        }
+        try:
+            # Use RAG engine to retrieve relevant knowledge
+            result = await self.rag_engine.retrieve(query, top_k=5)
+            
+            # Process retrieved documents
+            contexts = []
+            for doc in result.documents:
+                contexts.append({
+                    "id": doc.id,
+                    "content": doc.content[:500] + "..." if len(doc.content) > 500 else doc.content,
+                    "metadata": doc.metadata
+                })
+            
+            return {
+                "relevant_docs": contexts,
+                "context": "\n\n".join([doc.content for doc in result.documents]),
+                "total_results": result.total_results,
+                "scores": result.scores
+            }
+        except Exception as e:
+            return {
+                "relevant_docs": [],
+                "context": f"Error retrieving context: {str(e)}",
+                "error": str(e)
+            }
     
     async def _create_action_plan(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Create action plan"""
-        # TODO: Create action plan based on intent and context
+        # TODO: Use LLM to create more sophisticated action plan
         # 1. Determine tools to execute
         # 2. Plan tool execution order
         # 3. Set execution parameters
@@ -354,8 +415,10 @@ class TravelAgent(BaseAgent):
             "next_steps": []
         }
         
+        # Basic action planning based on intent type
         if intent["type"] == "planning":
             plan["actions"] = [
+                "retrieve_knowledge",
                 "search_flights",
                 "search_hotels", 
                 "search_attractions",
@@ -366,6 +429,47 @@ class TravelAgent(BaseAgent):
                 "hotel_search",
                 "attraction_search"
             ]
+            plan["next_steps"] = [
+                "Provide detailed travel itinerary",
+                "Include budget estimates",
+                "Suggest booking timeline"
+            ]
+        elif intent["type"] == "recommendation":
+            plan["actions"] = [
+                "retrieve_knowledge",
+                "search_attractions",
+                "generate_recommendations"
+            ]
+            plan["tools_to_use"] = [
+                "attraction_search"
+            ]
+            plan["next_steps"] = [
+                "Provide personalized recommendations",
+                "Include practical tips",
+                "Suggest related activities"
+            ]
+        elif intent["type"] == "query":
+            plan["actions"] = [
+                "retrieve_knowledge",
+                "answer_question"
+            ]
+            plan["tools_to_use"] = []
+            plan["next_steps"] = [
+                "Provide detailed answer",
+                "Offer additional information",
+                "Ask follow-up questions"
+            ]
+        
+        # TODO: Use LLM for more sophisticated planning
+        # llm_prompt = f"""
+        # Based on the user intent: {intent}
+        # And context: {context}
+        # Create a detailed action plan including:
+        # 1. Sequence of actions to take
+        # 2. Tools to use
+        # 3. Parameters for each tool
+        # 4. Expected outcomes
+        # """
         
         return plan
     
@@ -380,15 +484,50 @@ class TravelAgent(BaseAgent):
         }
         
         try:
+            # First, always retrieve knowledge context for any travel query
+            # Use the original user message as the query for knowledge retrieval
+            query = context.get("original_message", "travel information")
+            knowledge_context = await self._retrieve_knowledge_context(query)
+            results["knowledge_context"] = knowledge_context
+            
             # Execute tools based on plan
             for tool_name in plan.get("tools_to_use", []):
-                # TODO: Call corresponding tool
-                # result = await self.tool_executor.execute_tool(
-                #     tool_name, 
-                #     tool_params, 
-                #     context
-                # )
-                results["tools_used"].append(tool_name)
+                try:
+                    # TODO: Call corresponding tool with actual parameters
+                    # For now, simulate tool execution
+                    if tool_name == "flight_search":
+                        mock_result = {
+                            "flights": [
+                                {"airline": "Example Airlines", "price": "$500", "duration": "2h 30m"},
+                                {"airline": "Budget Air", "price": "$300", "duration": "3h 15m"}
+                            ],
+                            "message": "Found 2 flight options"
+                        }
+                    elif tool_name == "hotel_search":
+                        mock_result = {
+                            "hotels": [
+                                {"name": "Example Hotel", "price": "$120/night", "rating": 4.5},
+                                {"name": "Budget Inn", "price": "$80/night", "rating": 3.8}
+                            ],
+                            "message": "Found 2 hotel options"
+                        }
+                    elif tool_name == "attraction_search":
+                        mock_result = {
+                            "attractions": [
+                                {"name": "Famous Landmark", "rating": 4.8, "description": "Must-see attraction"},
+                                {"name": "Cultural Site", "rating": 4.6, "description": "Rich history and culture"}
+                            ],
+                            "message": "Found 2 attraction options"
+                        }
+                    else:
+                        mock_result = {"message": f"Mock result for {tool_name}"}
+                    
+                    results["results"][tool_name] = mock_result
+                    results["tools_used"].append(tool_name)
+                    
+                except Exception as e:
+                    results["results"][tool_name] = {"error": str(e)}
+                    results["success"] = False
             
         except Exception as e:
             results["success"] = False
@@ -398,15 +537,91 @@ class TravelAgent(BaseAgent):
     
     async def _generate_response(self, execution_result: Dict[str, Any], intent: Dict[str, Any]) -> str:
         """Generate response content"""
-        # TODO: Generate natural language response based on execution result
-        # 1. Summarize execution results
-        # 2. Customize response style based on intent type
-        # 3. Provide next steps
-        
-        if execution_result["success"]:
-            return f"I have completed the relevant search and analysis for your {intent['type']}. Based on your needs, I found some good options..."
-        else:
-            return f"Sorry, there was a problem processing your {intent['type']} request. Let me re-search for you..."
+        try:
+            # Get knowledge context from execution result
+            knowledge_context = execution_result.get("knowledge_context", {})
+            relevant_docs = knowledge_context.get("relevant_docs", [])
+            
+            if execution_result["success"]:
+                # Create response based on intent and results
+                response_parts = []
+                
+                if intent["type"] == "planning":
+                    response_parts.append("🎯 **Travel Planning Assistant**")
+                    response_parts.append(f"Based on your request for {intent.get('destination', 'your destination')}, here's what I found:")
+                    
+                    # Add knowledge-based information
+                    if relevant_docs:
+                        response_parts.append("\n📚 **Travel Information:**")
+                        for i, doc in enumerate(relevant_docs[:2]):  # Limit to top 2 results
+                            doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
+                            content = doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "")
+                            response_parts.append(f"**{doc_title}**\n{content}")
+                    
+                    # Add tool results
+                    tool_results = execution_result.get("results", {})
+                    if "flight_search" in tool_results and "flights" in tool_results["flight_search"]:
+                        response_parts.append("\n✈️ **Flight Options:**")
+                        for flight in tool_results["flight_search"]["flights"][:2]:
+                            response_parts.append(f"- {flight['airline']}: {flight['price']} ({flight['duration']})")
+                    
+                    if "hotel_search" in tool_results and "hotels" in tool_results["hotel_search"]:
+                        response_parts.append("\n🏨 **Hotel Options:**")
+                        for hotel in tool_results["hotel_search"]["hotels"][:2]:
+                            response_parts.append(f"- {hotel['name']}: {hotel['price']} (Rating: {hotel['rating']})")
+                    
+                    if "attraction_search" in tool_results and "attractions" in tool_results["attraction_search"]:
+                        response_parts.append("\n🎭 **Attractions:**")
+                        for attraction in tool_results["attraction_search"]["attractions"][:2]:
+                            response_parts.append(f"- {attraction['name']}: {attraction['description']} (Rating: {attraction['rating']})")
+                    
+                    # Add next steps
+                    response_parts.append("\n\n🎯 **Next Steps:**")
+                    response_parts.append("- Let me know your travel dates and I can provide more specific recommendations")
+                    response_parts.append("- I can help you compare prices and make bookings")
+                    response_parts.append("- Ask me about specific aspects like dining, transportation, or activities")
+                    
+                elif intent["type"] == "recommendation":
+                    response_parts.append("💡 **Travel Recommendations**")
+                    response_parts.append(f"Here are my recommendations for {intent.get('destination', 'your destination')}:")
+                    
+                    # Add knowledge-based recommendations
+                    if relevant_docs:
+                        for i, doc in enumerate(relevant_docs[:3]):
+                            doc_title = doc.get("metadata", {}).get("title", f"Recommendation {i+1}")
+                            content = doc.get("content", "")[:150] + "..." if len(doc.get("content", "")) > 150 else doc.get("content", "")
+                            response_parts.append(f"\n**{doc_title}**\n{content}")
+                    
+                    response_parts.append("\n\n🔍 **Would you like me to:**")
+                    response_parts.append("- Provide more detailed information about any of these recommendations?")
+                    response_parts.append("- Help you plan a complete itinerary?")
+                    response_parts.append("- Search for specific activities or attractions?")
+                    
+                elif intent["type"] == "query":
+                    response_parts.append("❓ **Travel Information**")
+                    
+                    if relevant_docs:
+                        response_parts.append("Based on my knowledge, here's what I found:")
+                        for i, doc in enumerate(relevant_docs[:2]):
+                            doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
+                            content = doc.get("content", "")
+                            response_parts.append(f"\n**{doc_title}**\n{content}")
+                    else:
+                        response_parts.append("I'd be happy to help you with travel information. Could you provide more specific details about what you're looking for?")
+                    
+                    response_parts.append("\n\n💬 **Follow-up Questions:**")
+                    response_parts.append("- Are you looking for information about a specific destination?")
+                    response_parts.append("- Would you like me to help you plan a trip?")
+                    response_parts.append("- Do you have any specific travel dates in mind?")
+                
+                return "\n".join(response_parts)
+            
+            else:
+                error_msg = execution_result.get("error", "Unknown error")
+                return f"I encountered an issue while processing your {intent['type']} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
+                
+        except Exception as e:
+            return f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
     
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute specific action"""
