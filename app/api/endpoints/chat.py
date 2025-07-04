@@ -145,11 +145,18 @@ async def clear_chat_history(session_id: str):
         if not success:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # TODO: Implement clear history in session manager
-        return {
-            "message": f"Chat history cleared for session {session_id}",
-            "note": "Clear history functionality not yet implemented"
-        }
+        # Clear messages using session manager
+        success = session_manager.clear_messages(session_id)
+        if success:
+            return {
+                "message": f"Chat history cleared for session {session_id}",
+                "status": "success"
+            }
+        else:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Failed to clear chat history"}
+            )
         
     except HTTPException:
         raise

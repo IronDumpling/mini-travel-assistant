@@ -26,6 +26,14 @@ class SessionStatus(str, Enum):
     INACTIVE = "inactive"
     ARCHIVED = "archived"
 
+class SessionMessage(BaseModel):
+    """Individual message in a session"""
+    id: str
+    user_message: str
+    agent_response: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
 class SessionMetadata(BaseModel):
     """Session metadata"""
     session_id: str
@@ -37,6 +45,7 @@ class SessionMetadata(BaseModel):
     total_messages: int = 0
     travel_context: Dict[str, Any] = Field(default_factory=dict)
     tags: List[str] = Field(default_factory=list)
+    messages: List[SessionMessage] = Field(default_factory=list)
 
 class SessionManager:
     """Single-user session manager"""
@@ -267,6 +276,234 @@ class SessionManager:
             for session in sessions_to_archive:
                 session.status = SessionStatus.INACTIVE
                 self._save_session(session)
+
+    def add_message(
+        self,
+        user_message: str,
+        agent_response: str,
+        session_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Add a message to the session"""
+        target_session_id = session_id or self.current_session_id
+        
+        if not target_session_id or target_session_id not in self.sessions:
+            raise ValueError(f"Session {target_session_id} not found")
+        
+        session = self.sessions[target_session_id]
+        
+        # Create message
+        message_id = f"{target_session_id}_{len(session.messages)}"
+        message = SessionMessage(
+            id=message_id,
+            user_message=user_message,
+            agent_response=agent_response,
+            metadata=metadata or {}
+        )
+        
+        # Add to session
+        session.messages.append(message)
+        session.total_messages += 1
+        session.last_activity = datetime.now(timezone.utc)
+        
+        # Update travel context if metadata contains travel-related info
+        if metadata:
+            travel_updates = {}
+            if "destination" in metadata:
+                travel_updates["destination"] = metadata["destination"]
+            if "travel_dates" in metadata:
+                travel_updates["travel_dates"] = metadata["travel_dates"]
+            if "budget" in metadata:
+                travel_updates["budget"] = metadata["budget"]
+            
+            if travel_updates:
+                session.travel_context.update(travel_updates)
+        
+        # Save session
+        self._save_session(session)
+        
+        return message_id
+    
+    def get_messages(
+        self,
+        session_id: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: int = 0
+    ) -> List[SessionMessage]:
+        """Get messages from a session"""
+        target_session_id = session_id or self.current_session_id
+        
+        if not target_session_id or target_session_id not in self.sessions:
+            return []
+        
+        session = self.sessions[target_session_id]
+        messages = session.messages[offset:]
+        
+        if limit:
+            messages = messages[:limit]
+        
+        return messages
+    
+    def clear_messages(self, session_id: Optional[str] = None) -> bool:
+        """Clear all messages from a session"""
+        target_session_id = session_id or self.current_session_id
+        
+        if not target_session_id or target_session_id not in self.sessions:
+            return False
+        
+        session = self.sessions[target_session_id]
+        session.messages.clear()
+        session.total_messages = 0
+        session.last_activity = datetime.now(timezone.utc)
+        
+        # Save session
+        self._save_session(session)
+        return True
+
+    def search_messages(
+        self,
+        query: str,
+        session_id: Optional[str] = None,
+        limit: int = 10
+    ) -> List[SessionMessage]:
+        """Search messages within a session or across all sessions"""
+        query_lower = query.lower()
+        matching_messages = []
+        
+        # Determine which sessions to search
+        if session_id:
+            sessions_to_search = [self.sessions[session_id]] if session_id in self.sessions else []
+        else:
+            sessions_to_search = self.sessions.values()
+        
+        for session in sessions_to_search:
+            for message in session.messages:
+                # Search in user message and agent response
+                if (query_lower in message.user_message.lower() or 
+                    query_lower in message.agent_response.lower()):
+                    matching_messages.append(message)
+        
+        # Sort by timestamp (most recent first)
+        matching_messages.sort(key=lambda x: x.timestamp, reverse=True)
+        return matching_messages[:limit]
+    
+    def get_session_statistics(self, session_id: Optional[str] = None) -> Dict[str, Any]:
+        """Get detailed statistics for a session or all sessions"""
+        if session_id:
+            session = self.sessions.get(session_id)
+            if not session:
+                return {"error": "Session not found"}
+            
+            return {
+                "session_id": session_id,
+                "total_messages": len(session.messages),
+                "created_at": session.created_at,
+                "last_activity": session.last_activity,
+                "status": session.status,
+                "travel_context_keys": list(session.travel_context.keys()),
+                "average_response_length": sum(len(msg.agent_response) for msg in session.messages) / len(session.messages) if session.messages else 0,
+                "storage_size_kb": self._get_session_file_size(session_id)
+            }
+        else:
+            # Global statistics
+            total_messages = sum(len(session.messages) for session in self.sessions.values())
+            total_size = sum(self._get_session_file_size(sid) for sid in self.sessions.keys())
+            
+            return {
+                "total_sessions": len(self.sessions),
+                "total_messages": total_messages,
+                "total_storage_kb": total_size,
+                "average_messages_per_session": total_messages / len(self.sessions) if self.sessions else 0,
+                "oldest_session": min(self.sessions.values(), key=lambda x: x.created_at).created_at if self.sessions else None,
+                "newest_session": max(self.sessions.values(), key=lambda x: x.created_at).created_at if self.sessions else None
+            }
+    
+    def _get_session_file_size(self, session_id: str) -> float:
+        """Get session file size in KB"""
+        try:
+            session_file = self.storage_path / f"{session_id}.json"
+            if session_file.exists():
+                return session_file.stat().st_size / 1024
+        except Exception:
+            pass
+        return 0.0
+    
+    def backup_session(self, session_id: str, backup_path: Optional[str] = None) -> bool:
+        """Create a backup of a specific session"""
+        try:
+            session = self.sessions.get(session_id)
+            if not session:
+                return False
+            
+            if not backup_path:
+                backup_path = f"./data/backups/session_{session_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            
+            backup_file = Path(backup_path)
+            backup_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(backup_file, 'w', encoding='utf-8') as f:
+                json.dump(session.model_dump(), f, indent=2, default=str)
+            
+            return True
+        except Exception as e:
+            print(f"Failed to backup session {session_id}: {e}")
+            return False
+    
+    def export_session_messages(
+        self, 
+        session_id: str, 
+        format: str = "json",
+        output_path: Optional[str] = None
+    ) -> Optional[str]:
+        """Export session messages in different formats (json, txt, csv)"""
+        session = self.sessions.get(session_id)
+        if not session:
+            return None
+        
+        if not output_path:
+            output_path = f"./data/exports/session_{session_id}_messages.{format}"
+        
+        output_file = Path(output_path)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            if format == "json":
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    messages_data = [msg.model_dump() for msg in session.messages]
+                    json.dump(messages_data, f, indent=2, default=str)
+            
+            elif format == "txt":
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Chat History for Session: {session.title}\n")
+                    f.write(f"Session ID: {session_id}\n")
+                    f.write(f"Created: {session.created_at}\n")
+                    f.write("=" * 80 + "\n\n")
+                    
+                    for i, msg in enumerate(session.messages, 1):
+                        f.write(f"Message #{i} - {msg.timestamp}\n")
+                        f.write(f"User: {msg.user_message}\n")
+                        f.write(f"Assistant: {msg.agent_response}\n")
+                        f.write("-" * 40 + "\n\n")
+            
+            elif format == "csv":
+                import csv
+                with open(output_file, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(['timestamp', 'user_message', 'agent_response', 'confidence', 'actions_taken'])
+                    for msg in session.messages:
+                        writer.writerow([
+                            msg.timestamp,
+                            msg.user_message,
+                            msg.agent_response,
+                            msg.metadata.get('confidence', ''),
+                            ', '.join(msg.metadata.get('actions_taken', []))
+                        ])
+            
+            return str(output_file)
+        
+        except Exception as e:
+            print(f"Failed to export session messages: {e}")
+            return None
 
 # Global session manager instance
 session_manager: Optional[SessionManager] = None
