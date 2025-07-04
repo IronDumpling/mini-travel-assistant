@@ -3,6 +3,7 @@ Chat Endpoints - Conversational AI interface
 """
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from typing import List, Optional
 from pydantic import BaseModel
 from app.agents.travel_agent import TravelAgent
@@ -145,11 +146,17 @@ async def clear_chat_history(session_id: str):
         if not success:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # TODO: Implement clear history in session manager
-        return {
-            "message": f"Chat history cleared for session {session_id}",
-            "note": "Clear history functionality not yet implemented"
-        }
+        success = session_manager.clear_messages(session_id)
+        if success:
+            return {
+                "message": f"Chat history cleared for session {session_id}",
+                "status": "success"
+            }
+        else:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Failed to clear chat history"}
+            )
         
     except HTTPException:
         raise
