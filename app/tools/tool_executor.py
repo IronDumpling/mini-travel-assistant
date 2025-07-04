@@ -1,13 +1,8 @@
 """
-Tool Executor Module - Tool Executor
+Tool Executor Module - Tool Executor with RAG-Enhanced Tool Selection
 
-TODO: Implement the following features
-1. Intelligent tool selection and combination
-2. Concurrent tool execution
-3. Tool execution chain management
-4. Error recovery and retry strategies
-5. Tool execution monitoring and logging
-6. Tool performance optimization
+Implements intelligent tool selection using RAG (Retrieval-Augmented Generation)
+to improve tool selection accuracy based on semantic understanding of user requests.
 """
 
 from typing import Dict, List, Any, Optional, Callable, Union
@@ -16,6 +11,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pydantic import BaseModel
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, tool_registry
 from app.core.llm_service import get_llm_service
+from app.core.rag_engine import get_rag_engine, Document
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ToolCall(BaseModel):
@@ -41,7 +40,7 @@ class ExecutionResult(BaseModel):
 
 
 class ToolSelector:
-    """Tool selector"""
+    """Enhanced tool selector with RAG-powered tool selection"""
     
     def __init__(self):
         # TODO: Initialize LLM service when available
@@ -50,6 +49,138 @@ class ToolSelector:
         except Exception as e:
             # For now, work without LLM service
             self.llm_service = None
+        
+        # Initialize RAG engine for tool selection
+        self.rag_engine = get_rag_engine()
+        self._tool_knowledge_initialized = False
+    
+    async def initialize_tool_knowledge(self):
+        """Initialize tool knowledge base for RAG-powered selection"""
+        if self._tool_knowledge_initialized:
+            return
+        
+        try:
+            # Create tool knowledge documents
+            tool_knowledge_docs = self._create_tool_knowledge_documents()
+            
+            # Index tool knowledge in RAG engine
+            success = await self.rag_engine.index_documents(tool_knowledge_docs)
+            
+            if success:
+                logger.info(f"Tool knowledge base initialized with {len(tool_knowledge_docs)} documents")
+                self._tool_knowledge_initialized = True
+            else:
+                logger.error("Failed to initialize tool knowledge base")
+        
+        except Exception as e:
+            logger.error(f"Error initializing tool knowledge: {e}")
+    
+    def _create_tool_knowledge_documents(self) -> List[Document]:
+        """Create knowledge documents for each tool"""
+        tool_docs = []
+        
+        # Flight Search Tool Knowledge
+        flight_doc = Document(
+            id="tool_flight_search",
+            content="""
+Flight Search Tool
+
+Description:
+- Search for flight information and prices
+- Compare options from different airlines
+- Provide flight time and price recommendations
+
+Use Cases:
+- User inquiries about tickets, flights, and air travel
+- Finding flights for specific routes
+- Comparing flight prices and times
+- Planning transportation methods
+
+Keywords:
+flight, airplane, flights, tickets, flying, fly, airline, aviation, ticket, booking, air, air travel
+
+Example Queries:
+- "I want to find flights from Beijing to Tokyo"
+- "Help me check ticket prices to Paris"
+- "Are there any cheap flights to New York"
+- "What flight options are available next Tuesday"
+            """,
+            metadata={
+                "tool_name": "flight_search",
+                "category": "transportation",
+                "priority": "high"
+            }
+        )
+        
+        # Hotel Search Tool Knowledge
+        hotel_doc = Document(
+            id="tool_hotel_search",
+            content="""
+Hotel Search Tool
+
+Description:
+- Search for hotels and accommodation options
+- Compare prices and facilities
+- Provide accommodation recommendations and reviews
+
+Use Cases:
+- User inquiries about accommodation and hotels
+- Finding hotels in specific areas
+- Comparing hotel prices and facilities
+- Planning accommodation arrangements
+
+Keywords:
+hotel, accommodation, stay, lodging, booking, room, inn, resort, reservation, place, motel, hostel
+
+Example Queries:
+- "What are good hotels in Tokyo"
+- "Help me find affordable accommodation"
+- "Hotel recommendations near city center"
+- "What five-star hotels are available"
+            """,
+            metadata={
+                "tool_name": "hotel_search",
+                "category": "accommodation",
+                "priority": "high"
+            }
+        )
+        
+        # Attraction Search Tool Knowledge
+        attraction_doc = Document(
+            id="tool_attraction_search",
+            content="""
+Attraction Search Tool
+
+Description:
+- Search for tourist attractions and activities
+- Provide attraction information and recommendations
+- Plan tourist routes and itineraries
+
+Use Cases:
+- User inquiries about attractions, tourism, and activities
+- Learning about local famous attractions
+- Planning travel itineraries and routes
+- Finding specific types of activities
+
+Keywords:
+attraction, sightseeing, tourism, visit, tour, activity, explore, experience, museum, park, landmark, sight
+
+Example Queries:
+- "What are fun places to visit in Kyoto"
+- "Recommend must-visit attractions"
+- "What special activities are available locally"
+- "Which places are good for taking photos"
+            """,
+            metadata={
+                "tool_name": "attraction_search",
+                "category": "entertainment",
+                "priority": "medium"
+            }
+        )
+        
+        tool_docs.extend([flight_doc, hotel_doc, attraction_doc])
+        
+        return tool_docs
     
     async def select_tools(
         self, 
@@ -57,34 +188,101 @@ class ToolSelector:
         available_tools: List[str],
         context: Optional[Dict[str, Any]] = None
     ) -> List[str]:
-        """Intelligent tool selection based on user request"""
-        # TODO: Implement intelligent tool selection logic with LLM
-        # 1. Analyze user request
-        # 2. Match appropriate tools
-        # 3. Consider tool dependencies
-        # 4. Return recommended tool list
+        """Enhanced tool selection using RAG for semantic understanding"""
         
-        # For now, implement basic keyword-based tool selection
+        # Initialize tool knowledge if not done
+        if not self._tool_knowledge_initialized:
+            await self.initialize_tool_knowledge()
+        
+        try:
+            # Use RAG to find relevant tools based on user request
+            relevant_tools = await self._rag_based_tool_selection(user_request, available_tools, context)
+            
+            # If RAG selection fails, fall back to keyword-based selection
+            if not relevant_tools:
+                logger.warning("RAG tool selection failed, using keyword-based fallback")
+                relevant_tools = await self._keyword_based_tool_selection(user_request, available_tools, context)
+            
+            return relevant_tools
+            
+        except Exception as e:
+            logger.error(f"Tool selection error: {e}")
+            # Fall back to keyword-based selection
+            return await self._keyword_based_tool_selection(user_request, available_tools, context)
+    
+    async def _rag_based_tool_selection(
+        self, 
+        user_request: str, 
+        available_tools: List[str],
+        context: Optional[Dict[str, Any]] = None
+    ) -> List[str]:
+        """Use RAG to select tools based on semantic similarity"""
+        
+        # Query the tool knowledge base
+        retrieval_result = await self.rag_engine.retrieve(
+            query=user_request,
+            top_k=3,
+            filter_metadata=None
+        )
+        
+        selected_tools = []
+        tool_scores = {}
+        
+        # Analyze retrieved documents to select tools
+        for i, doc in enumerate(retrieval_result.documents):
+            tool_name = doc.metadata.get("tool_name")
+            if tool_name and tool_name in available_tools:
+                # Calculate relevance score (higher score = more relevant)
+                relevance_score = retrieval_result.scores[i] if i < len(retrieval_result.scores) else 0.0
+                
+                # Consider priority from metadata
+                priority = doc.metadata.get("priority", "medium")
+                priority_boost = {"high": 0.2, "medium": 0.1, "low": 0.0}.get(priority, 0.0)
+                
+                final_score = relevance_score + priority_boost
+                tool_scores[tool_name] = final_score
+        
+        # Select tools based on scores (threshold = 0.3)
+        score_threshold = 0.3
+        for tool_name, score in tool_scores.items():
+            if score >= score_threshold:
+                selected_tools.append(tool_name)
+        
+        # Sort by relevance score (descending)
+        selected_tools.sort(key=lambda x: tool_scores.get(x, 0), reverse=True)
+        
+        logger.info(f"RAG tool selection: {selected_tools} (scores: {tool_scores})")
+        
+        return selected_tools
+    
+    async def _keyword_based_tool_selection(
+        self, 
+        user_request: str, 
+        available_tools: List[str],
+        context: Optional[Dict[str, Any]] = None
+    ) -> List[str]:
+        """Fallback keyword-based tool selection (original implementation)"""
+        
         user_request_lower = user_request.lower()
         selected_tools = []
         
         # Flight search keywords
-        if any(word in user_request_lower for word in ["flight", "飞机", "航班", "机票", "fly", "飞行"]):
+        if any(word in user_request_lower for word in ["flight", "airplane", "flights", "tickets", "fly", "flying"]):
             if "flight_search" in available_tools:
                 selected_tools.append("flight_search")
         
         # Hotel search keywords
-        if any(word in user_request_lower for word in ["hotel", "酒店", "住宿", "住", "stay", "accommodation"]):
+        if any(word in user_request_lower for word in ["hotel", "accommodation", "stay", "lodging", "booking"]):
             if "hotel_search" in available_tools:
                 selected_tools.append("hotel_search")
         
         # Attraction search keywords
-        if any(word in user_request_lower for word in ["attraction", "景点", "旅游", "游览", "visit", "sightseeing", "活动", "玩"]):
+        if any(word in user_request_lower for word in ["attraction", "sightseeing", "tourism", "visit", "tour", "activity", "explore"]):
             if "attraction_search" in available_tools:
                 selected_tools.append("attraction_search")
         
         # Travel planning keywords - select all relevant tools
-        if any(word in user_request_lower for word in ["plan", "规划", "安排", "制定", "trip", "travel", "旅行"]):
+        if any(word in user_request_lower for word in ["plan", "schedule", "arrange", "organize", "trip", "travel", "journey"]):
             for tool in ["flight_search", "hotel_search", "attraction_search"]:
                 if tool in available_tools and tool not in selected_tools:
                     selected_tools.append(tool)
@@ -94,26 +292,10 @@ class ToolSelector:
             if "attraction_search" in available_tools:
                 selected_tools.append("attraction_search")
         
-        # TODO: Use LLM for more sophisticated tool selection
-        # try:
-        #     llm_prompt = f"""
-        #     Based on the user request: "{user_request}"
-        #     Available tools: {available_tools}
-        #     Context: {context or {}}
-        #     
-        #     Select the most appropriate tools to fulfill the user's request.
-        #     Return a JSON list of tool names.
-        #     """
-        #     response = await self.llm_service.chat_completion([
-        #         {"role": "user", "content": llm_prompt}
-        #     ])
-        #     # Parse LLM response and extract tool names
-        # except Exception as e:
-        #     # Fallback to keyword-based selection
-        #     pass
+        logger.info(f"Keyword tool selection: {selected_tools}")
         
         return selected_tools
-    
+
     async def create_tool_chain(
         self, 
         user_request: str,
@@ -186,22 +368,22 @@ class ToolSelector:
         params = {}
         
         # Extract destination
-        destinations = ["东京", "京都", "大阪", "tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", "shanghai"]
+        destinations = ["tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", "shanghai"]
         for dest in destinations:
             if dest in user_request_lower:
                 params["destination"] = dest
                 break
         
         # Extract dates information
-        if any(word in user_request_lower for word in ["天", "日", "day", "days"]):
+        if any(word in user_request_lower for word in ["day", "days", "date", "dates"]):
             import re
-            days_match = re.search(r'(\d+)天|(\d+)日|(\d+)\s*day', user_request_lower)
+            days_match = re.search(r'(\d+)\s*day', user_request_lower)
             if days_match:
-                days = int(days_match.group(1) or days_match.group(2) or days_match.group(3))
+                days = int(days_match.group(1))
                 params["duration_days"] = days
         
         # Extract budget information
-        if any(word in user_request_lower for word in ["预算", "budget", "cost", "price"]):
+        if any(word in user_request_lower for word in ["budget", "cost", "price", "cheap", "expensive"]):
             params["budget_conscious"] = True
         
         # Tool-specific parameters

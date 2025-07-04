@@ -3,6 +3,7 @@ Chat Endpoints - Conversational AI interface
 """
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from typing import List, Optional
 from pydantic import BaseModel
 from app.agents.travel_agent import TravelAgent

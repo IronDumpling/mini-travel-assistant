@@ -1,8 +1,9 @@
 """
-RAG Engine Module - Retrieval-Augmented Generation Engine
+RAG Engine Module - Optimized Retrieval-Augmented Generation Engine
 
 Implements the core RAG functionality with ChromaDB persistence, 
 document chunking, embedding, and semantic search capabilities.
+Optimized for different use cases: travel knowledge, conversation memory, and tool selection.
 """
 
 from typing import List, Dict, Optional, Tuple, Any
@@ -15,9 +16,18 @@ import asyncio
 import logging
 from datetime import datetime
 import tiktoken
+from enum import Enum
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+
+class DocumentType(Enum):
+    """Document type enumeration for better organization"""
+    TRAVEL_KNOWLEDGE = "travel_knowledge"
+    CONVERSATION_TURN = "conversation_turn"
+    TOOL_KNOWLEDGE = "tool_knowledge"
+    GENERAL = "general"
 
 
 class Document(BaseModel):
@@ -26,6 +36,7 @@ class Document(BaseModel):
     content: str
     metadata: Dict[str, Any] = {}
     embedding: Optional[List[float]] = None
+    doc_type: DocumentType = DocumentType.GENERAL
 
 
 class RetrievalResult(BaseModel):
@@ -86,7 +97,7 @@ class SentenceTransformerModel(BaseEmbeddingModel):
 
 
 class ChromaVectorStore:
-    """ChromaDB vector store with persistence"""
+    """ChromaDB vector store with persistence and multi-collection support"""
     
     def __init__(self, collection_name: str = "travel_knowledge"):
         self.collection_name = collection_name
@@ -112,8 +123,8 @@ class ChromaVectorStore:
         logger.info(f"ChromaDB initialized at {db_path}")
         logger.info(f"Collection '{collection_name}' loaded with {self.collection.count()} documents")
     
-    async def add_documents(self, documents: List[Document]) -> bool:
-        """Add documents to vector database"""
+    async def add_documents(self, documents: List[Document], embedding_model: BaseEmbeddingModel) -> bool:
+        """Add documents to vector database using provided embedding model"""
         try:
             if not documents:
                 return True
@@ -131,11 +142,11 @@ class ChromaVectorStore:
                         processed_metadata[key] = ", ".join(str(v) for v in value)
                     elif value is not None:
                         processed_metadata[key] = str(value)
+                # Add document type to metadata
+                processed_metadata["doc_type"] = doc.doc_type.value
                 metadatas.append(processed_metadata)
             
-            # Generate embeddings using SentenceTransformer
-            embedding_model = SentenceTransformerModel()
-            await embedding_model.initialize()
+            # Generate embeddings using provided embedding model
             embeddings = await embedding_model.encode(contents)
             
             # Check for existing documents
@@ -266,7 +277,7 @@ class ChromaVectorStore:
 
 
 class RAGEngine:
-    """Main RAG retrieval engine"""
+    """Main RAG retrieval engine with optimized multi-use-case support"""
     
     def __init__(
         self, 
@@ -275,7 +286,14 @@ class RAGEngine:
     ):
         self.embedding_model = embedding_model or SentenceTransformerModel()
         self.vector_store = vector_store or ChromaVectorStore()
+        self._embedding_initialized = False
         logger.info("RAG Engine initialized")
+    
+    async def _ensure_embedding_initialized(self):
+        """Ensure embedding model is initialized (lazy initialization)"""
+        if not self._embedding_initialized:
+            await self.embedding_model.initialize()
+            self._embedding_initialized = True
     
     async def index_documents(self, documents: List[Document]) -> bool:
         """Index documents with chunking and embedding"""
@@ -284,12 +302,15 @@ class RAGEngine:
                 logger.warning("No documents provided for indexing")
                 return True
             
+            # Ensure embedding model is initialized
+            await self._ensure_embedding_initialized()
+            
             # 1. Chunk documents for better retrieval
             chunked_docs = self._chunk_documents(documents)
             logger.info(f"Chunked {len(documents)} documents into {len(chunked_docs)} chunks")
             
-            # 2. Store documents in vector database
-            success = await self.vector_store.add_documents(chunked_docs)
+            # 2. Store documents in vector database using the shared embedding model
+            success = await self.vector_store.add_documents(chunked_docs, self.embedding_model)
             
             if success:
                 logger.info(f"Successfully indexed {len(chunked_docs)} document chunks")
@@ -306,21 +327,31 @@ class RAGEngine:
         self, 
         query: str, 
         top_k: int = 5,
-        filter_metadata: Optional[Dict[str, Any]] = None
+        filter_metadata: Optional[Dict[str, Any]] = None,
+        doc_type: Optional[DocumentType] = None
     ) -> RetrievalResult:
-        """Retrieve relevant documents based on query"""
+        """Retrieve relevant documents based on query with optional type filtering"""
         try:
+            # Ensure embedding model is initialized
+            await self._ensure_embedding_initialized()
+            
             # 1. Encode query to vector
             query_embedding = await self.embedding_model.encode([query])
             
-            # 2. Search for similar documents
+            # 2. Add document type filter if specified
+            if doc_type:
+                if filter_metadata is None:
+                    filter_metadata = {}
+                filter_metadata["doc_type"] = doc_type.value
+            
+            # 3. Search for similar documents
             search_results = await self.vector_store.search(
                 query_embedding=query_embedding[0],
                 top_k=top_k,
                 filter_metadata=filter_metadata
             )
             
-            # 3. Process and rank results
+            # 4. Process and rank results
             documents = []
             scores = []
             
@@ -346,6 +377,21 @@ class RAGEngine:
                 query=query,
                 total_results=0
             )
+    
+    async def retrieve_by_type(
+        self, 
+        query: str, 
+        doc_type: DocumentType,
+        top_k: int = 5,
+        filter_metadata: Optional[Dict[str, Any]] = None
+    ) -> RetrievalResult:
+        """Convenience method to retrieve documents by type"""
+        return await self.retrieve(
+            query=query,
+            top_k=top_k,
+            filter_metadata=filter_metadata,
+            doc_type=doc_type
+        )
     
     async def retrieve_and_generate(
         self, 
@@ -439,7 +485,8 @@ Would you like me to search for more specific information or help you with trave
                                 "chunk_id": chunk_id,
                                 "parent_id": doc.id,
                                 "chunk_type": "text"
-                            }
+                            },
+                            doc_type=doc.doc_type
                         ))
                         chunk_id += 1
                     
@@ -460,7 +507,8 @@ Would you like me to search for more specific information or help you with trave
                         "chunk_id": chunk_id,
                         "parent_id": doc.id,
                         "chunk_type": "text"
-                    }
+                    },
+                    doc_type=doc.doc_type
                 ))
         
         return chunked_docs
