@@ -10,10 +10,14 @@ TODO: Implement the following features
 6. Cost and usage monitoring  
 """
 
-from typing import Dict, List, Optional, Any, AsyncGenerator
+from typing import Dict, List, Optional, Any
 from abc import ABC, abstractmethod
-import openai
 from pydantic import BaseModel
+import openai
+import logging
+import os
+
+logger = logging.getLogger(__name__)
 
 
 class LLMResponse(BaseModel):
@@ -25,8 +29,23 @@ class LLMResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
+class LLMConfig(BaseModel):
+    """LLM Configuration"""
+    provider: str = "openai"  # openai, claude, etc.
+    model: str = "gpt-4"
+    api_key: Optional[str] = None
+    max_tokens: Optional[int] = None
+    temperature: float = 0.7
+    mock_mode: bool = True  # Default to mock mode for development
+
+
 class BaseLLMService(ABC):
-    """LLM服务基类"""
+    """Base LLM Service Interface"""
+    
+    def __init__(self, config: LLMConfig):
+        self.config = config
+        self.model = config.model
+        self.mock_mode = config.mock_mode
     
     @abstractmethod
     async def chat_completion(
@@ -51,11 +70,10 @@ class BaseLLMService(ABC):
 class OpenAIService(BaseLLMService):
     """OpenAI Service Implementation"""
     
-    def __init__(self, api_key: str = None, model: str = "gpt-4"):
-        # TODO: Implement OpenAI Service Initialization
-        self.model = model
+    def __init__(self, config: LLMConfig):
+        super().__init__(config)
         self.client = None  # TODO: Initialize OpenAI Client
-        self.mock_mode = True  # Enable mock mode for development
+        # TODO: Initialize with real API key: openai.api_key = config.api_key
     
     async def chat_completion(
         self, 
@@ -63,171 +81,25 @@ class OpenAIService(BaseLLMService):
         **kwargs
     ) -> LLMResponse:
         # TODO: Implement OpenAI Chat Completion
-        # For now, provide mock responses based on message content
         if self.mock_mode:
             return await self._mock_chat_completion(messages, **kwargs)
         
-        # TODO: Real OpenAI API implementation will go here
+        # TODO: Real OpenAI API implementation
         # response = await self.client.chat.completions.create(
         #     model=self.model,
         #     messages=messages,
+        #     temperature=self.config.temperature,
+        #     max_tokens=self.config.max_tokens,
         #     **kwargs
         # )
         # return LLMResponse(
         #     content=response.choices[0].message.content,
-        #     usage=response.usage,
+        #     usage=response.usage.dict() if response.usage else None,
         #     model=response.model,
         #     finish_reason=response.choices[0].finish_reason
         # )
         
-        # Fallback to mock for development
         return await self._mock_chat_completion(messages, **kwargs)
-    
-    async def _mock_chat_completion(
-        self,
-        messages: List[Dict[str, str]], 
-        **kwargs
-    ) -> LLMResponse:
-        """Provide mock responses for development"""
-        try:
-            # Get the last user message
-            user_message = ""
-            for msg in reversed(messages):
-                if msg.get("role") == "user":
-                    user_message = msg.get("content", "")
-                    break
-            
-            user_message_lower = user_message.lower()
-            
-            # Generate contextual responses based on keywords
-            if any(word in user_message_lower for word in ["analyze", "intent", "json"]):
-                # This looks like an intent analysis request
-                mock_content = """Based on my analysis of the user message, here are the key findings:
-
-**Intent Type**: Travel Planning
-**Destination**: Tokyo (if mentioned)
-**Travel Dates**: Flexible
-**Budget**: Not specified
-**Group Size**: 1-2 people (estimated)
-**Urgency**: Normal
-
-The user appears to be in the early planning stage and would benefit from comprehensive travel information including attractions, accommodations, and practical tips."""
-
-            elif any(word in user_message_lower for word in ["plan", "create", "tool", "chain"]):
-                # This looks like a planning or tool chain request
-                mock_content = """I recommend the following approach for this travel planning request:
-
-**Suggested Tools**:
-1. Attraction Search - to find popular destinations and activities
-2. Hotel Search - to identify accommodation options
-3. Flight Search - to check transportation options
-
-**Execution Strategy**: Parallel execution for efficiency
-**Parameters**: Focus on the mentioned destination with flexible dates
-**Next Steps**: Gather more specific requirements like travel dates, budget range, and group preferences."""
-
-            elif any(word in user_message_lower for word in ["tokyo", "东京", "japan", "日本"]):
-                # Tokyo/Japan specific response
-                mock_content = """Tokyo is an excellent travel destination! Here's what I can help you with:
-
-**Popular Areas to Visit**:
-- Shibuya and Harajuku for modern culture
-- Asakusa for traditional temples and culture
-- Ginza for shopping and dining
-- Shinjuku for entertainment and nightlife
-
-**Travel Tips**:
-- Best time to visit: Spring (cherry blossoms) or fall (autumn colors)
-- Transportation: Get a JR Pass for unlimited train travel
-- Language: Basic Japanese phrases are helpful but English is widely understood in tourist areas
-
-**Practical Information**:
-- Visa requirements depend on your nationality
-- Currency: Japanese Yen (JPY)
-- Tipping is not customary in Japan
-
-Would you like me to provide more specific recommendations based on your interests and travel dates?"""
-
-            elif any(word in user_message_lower for word in ["travel", "trip", "vacation", "旅行", "规划"]):
-                # General travel planning response
-                mock_content = """I'd be happy to help you plan your trip! Here's how I can assist:
-
-**Travel Planning Services**:
-- Destination research and recommendations
-- Itinerary creation based on your interests
-- Budget planning and cost estimates
-- Accommodation and transportation options
-- Local attractions and activities
-
-**What I Need to Know**:
-- Where would you like to go?
-- When are you planning to travel?
-- How long will your trip be?
-- What's your approximate budget?
-- What are your main interests (culture, food, adventure, relaxation)?
-
-Feel free to share these details and I'll create a personalized travel plan for you!"""
-
-            elif any(word in user_message_lower for word in ["hotel", "accommodation", "住宿", "酒店"]):
-                # Hotel-focused response
-                mock_content = """Here are some great accommodation options to consider:
-
-**Hotel Types**:
-- Luxury Hotels: Premium service and amenities
-- Business Hotels: Clean, efficient, and centrally located
-- Boutique Hotels: Unique character and personalized service
-- Budget Options: Hostels and capsule hotels
-
-**Booking Tips**:
-- Book in advance for better rates
-- Check cancellation policies
-- Read recent reviews from other travelers
-- Consider location relative to attractions and transportation
-
-**What to Look For**:
-- Proximity to public transportation
-- Included amenities (WiFi, breakfast, etc.)
-- Room size and facilities
-- Guest reviews and ratings
-
-Would you like me to search for specific hotels in your destination?"""
-
-            else:
-                # Default helpful response
-                mock_content = """I'm here to help you with your travel planning needs! I can assist with:
-
-**Travel Services**:
-- Destination recommendations and research
-- Itinerary planning and optimization
-- Budget estimation and cost breakdown
-- Transportation and accommodation booking advice
-- Local attractions and cultural insights
-
-**How to Get Started**:
-1. Tell me where you'd like to go
-2. Share your travel dates (even if flexible)
-3. Let me know your interests and preferences
-4. Mention any budget considerations
-
-I'll use my travel knowledge and search tools to create personalized recommendations just for you. What aspect of travel planning would you like help with today?"""
-
-            return LLMResponse(
-                content=mock_content,
-                usage={"prompt_tokens": len(user_message.split()), "completion_tokens": len(mock_content.split()), "total_tokens": len(user_message.split()) + len(mock_content.split())},
-                model=self.model,
-                finish_reason="stop",
-                metadata={"mock_response": True, "response_type": "travel_assistant"}
-            )
-            
-        except Exception as e:
-            # Fallback response if mock generation fails
-            return LLMResponse(
-                content="I'm a travel planning assistant and I'm here to help you plan your next trip. Could you tell me more about where you'd like to go or what kind of travel experience you're looking for?",
-                usage={"prompt_tokens": 0, "completion_tokens": 25, "total_tokens": 25},
-                model=self.model,
-                finish_reason="stop",
-                metadata={"mock_response": True, "fallback": True, "error": str(e)}
-            )
     
     async def function_call(
         self, 
@@ -236,37 +108,163 @@ I'll use my travel knowledge and search tools to create personalized recommendat
         **kwargs
     ) -> LLMResponse:
         # TODO: Implement OpenAI Function Call
-        # For now, provide mock function call response
+        if self.mock_mode:
+            return await self._mock_function_call(messages, functions, **kwargs)
+        
+        # TODO: Real function call implementation
+        return await self._mock_function_call(messages, functions, **kwargs)
+    
+    async def _mock_chat_completion(
+        self,
+        messages: List[Dict[str, str]], 
+        **kwargs
+    ) -> LLMResponse:
+        """Mock chat completion for development"""
+        try:
+            # Get the last user message
+            user_message = ""
+            for msg in reversed(messages):
+                if msg.get("role") == "user":
+                    user_message = msg.get("content", "")
+                    break
+            
+            # Simple contextual responses
+            user_lower = user_message.lower()
+            
+            if any(word in user_lower for word in ["travel", "trip", "vacation"]):
+                mock_content = "I'm a travel planning assistant. I can help you plan your trip by finding destinations, accommodations, and activities. What would you like to know about your travel plans?"
+            elif any(word in user_lower for word in ["hotel", "accommodation"]):
+                mock_content = "I can help you find hotels and accommodations. What destination are you considering and what are your preferences?"
+            elif any(word in user_lower for word in ["flight", "airline"]):
+                mock_content = "I can assist you with flight information. Where are you planning to travel and when?"
+            else:
+                mock_content = "I'm here to help with your travel planning needs. What would you like assistance with?"
+
+            return LLMResponse(
+                content=mock_content,
+                usage={"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80},
+                model=self.model,
+                finish_reason="stop",
+                metadata={"mock_response": True, "provider": "openai"}
+            )
+            
+        except Exception as e:
+            logger.error(f"Mock chat completion failed: {e}")
+            return LLMResponse(
+                content="I'm here to help with your travel planning. What can I assist you with?",
+                usage={"total_tokens": 20},
+                model=self.model,
+                finish_reason="stop",
+                metadata={"mock_response": True, "error": str(e)}
+            )
+    
+    async def _mock_function_call(
+        self,
+        messages: List[Dict[str, str]], 
+        functions: List[Dict[str, Any]], 
+        **kwargs
+    ) -> LLMResponse:
+        """Mock function call for development"""
+        # TODO: Implement mock function call logic
         return LLMResponse(
-            content="Function calling is not yet implemented. Please use regular chat completion for now.",
-            usage={"prompt_tokens": 10, "completion_tokens": 15, "total_tokens": 25},
+            content="Function calling is not yet implemented in mock mode.",
+            usage={"total_tokens": 15},
             model=self.model,
             finish_reason="stop",
-            metadata={"mock_response": True, "function_call_mock": True}
+            metadata={"mock_response": True, "function_call": True}
+        )
+
+
+class ClaudeService(BaseLLMService):
+    """Claude Service Implementation (TODO)"""
+    
+    def __init__(self, config: LLMConfig):
+        super().__init__(config)
+        # TODO: Initialize Claude client
+        logger.info("Claude service initialized in mock mode")
+    
+    async def chat_completion(
+        self, 
+        messages: List[Dict[str, str]], 
+        **kwargs
+    ) -> LLMResponse:
+        # TODO: Implement Claude Chat Completion
+        return LLMResponse(
+            content="Claude service is not yet implemented. Using mock response.",
+            usage={"total_tokens": 20},
+            model=self.model,
+            finish_reason="stop",
+            metadata={"mock_response": True, "provider": "claude"}
+        )
+    
+    async def function_call(
+        self, 
+        messages: List[Dict[str, str]], 
+        functions: List[Dict[str, Any]], 
+        **kwargs
+    ) -> LLMResponse:
+        # TODO: Implement Claude Function Call
+        return LLMResponse(
+            content="Claude function calling is not yet implemented.",
+            usage={"total_tokens": 15},
+            model=self.model,
+            finish_reason="stop",
+            metadata={"mock_response": True, "provider": "claude"}
         )
 
 
 class LLMServiceFactory:
-    """LLM Service Factory"""
+    """LLM Service Factory for creating different LLM services"""
     
     @staticmethod
-    def create_service(provider: str = "openai", **kwargs) -> BaseLLMService:
-        # TODO: Implement Service Factory Logic
-        if provider == "openai":
-            return OpenAIService(**kwargs)
+    def create_service(config: Optional[LLMConfig] = None) -> BaseLLMService:
+        """Create LLM service based on configuration"""
+        if config is None:
+            config = LLMServiceFactory.get_default_config()
+        
+        if config.provider.lower() == "openai":
+            return OpenAIService(config)
+        elif config.provider.lower() == "claude":
+            return ClaudeService(config)
         else:
-            raise ValueError(f"Unsupported LLM Provider: {provider}")
+            logger.warning(f"Unknown LLM provider: {config.provider}, defaulting to OpenAI")
+            config.provider = "openai"
+            return OpenAIService(config)
+    
+    @staticmethod
+    def get_default_config() -> LLMConfig:
+        """Get default LLM configuration from environment or defaults"""
+        return LLMConfig(
+            provider=os.getenv("LLM_PROVIDER", "openai"),
+            model=os.getenv("LLM_MODEL", "gpt-4"),
+            api_key=os.getenv("LLM_API_KEY"),
+            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "2000")),
+            temperature=float(os.getenv("LLM_TEMPERATURE", "0.7")),
+            mock_mode=os.getenv("LLM_MOCK_MODE", "true").lower() == "true"
+        )
+    
+    @staticmethod
+    def get_available_providers() -> List[str]:
+        """Get list of available LLM providers"""
+        return ["openai", "claude"]
 
 
 # Global LLM Service Instance
 llm_service: Optional[BaseLLMService] = None
 
 
-def get_llm_service() -> BaseLLMService:
+def get_llm_service(config: Optional[LLMConfig] = None) -> BaseLLMService:
     """Get LLM Service Instance"""
     global llm_service
     if llm_service is None:
-        # TODO: Read LLM Service Configuration from Config
-        # For development, use mock OpenAI service
-        llm_service = LLMServiceFactory.create_service(provider="openai", model="gpt-4")
+        llm_service = LLMServiceFactory.create_service(config)
+        logger.info(f"Initialized LLM service: {llm_service.config.provider} ({llm_service.model})")
+    return llm_service
+
+
+def configure_llm_service(config: LLMConfig) -> BaseLLMService:
+    """Configure and get LLM service with specific configuration"""
+    global llm_service
+    llm_service = LLMServiceFactory.create_service(config)
+    logger.info(f"Configured LLM service: {config.provider} ({config.model})")
     return llm_service 
