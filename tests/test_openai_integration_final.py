@@ -30,8 +30,15 @@ async def test_openai_integration():
     print("⚠️  Quota: 3 requests per minute - using conservative approach")
     print()
     
-    # Set the API key
-    api_key = "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"
+    # Set the API key from environment variable
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("⚠️  OPENAI_API_KEY not found in environment variables")
+        print("   Please set your OpenAI API key as an environment variable:")
+        print("   export OPENAI_API_KEY='your-api-key-here'")
+        print("   Or use a .env file")
+        return
+    
     os.environ["OPENAI_API_KEY"] = api_key
     
     print(f"✅ API Key set: {api_key[:10]}...")
@@ -206,7 +213,11 @@ async def test_quota_awareness():
     print("\n💰 Testing Quota Awareness (3 RPM Limit)")
     print("=" * 50)
     
-    api_key = "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"
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("⚠️  OPENAI_API_KEY not found in environment variables")
+        print("   Skipping quota awareness test")
+        return
     
     # Test with very minimal tokens
     config = LLMConfig(
