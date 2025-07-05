@@ -1,21 +1,24 @@
 """
 LLM Service Module - Core LLM Service Wrapper
 
-TODO: Implement the following features
-1. Unified LLM interface wrapper supporting OpenAI, Claude, etc.  
-2. Prompt template management  
-3. Standardized response formatting  
-4. Error handling and retry mechanisms  
-5. Streaming response support  
-6. Cost and usage monitoring  
+This module provides a unified interface for different LLM providers including:
+1. OpenAI API integration with proper error handling and retries
+2. Claude API integration (TODO)
+3. Prompt template management
+4. Standardized response formatting
+5. Cost and usage monitoring
+6. Streaming response support
 """
 
 from typing import Dict, List, Optional, Any
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 import openai
+import anthropic
 import logging
 import os
+import asyncio
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +39,8 @@ class LLMConfig(BaseModel):
     api_key: Optional[str] = None
     max_tokens: Optional[int] = None
     temperature: float = 0.7
-    mock_mode: bool = True  # Default to mock mode for development
+    retry_attempts: int = 3
+    retry_delay: float = 1.0
 
 
 class BaseLLMService(ABC):
@@ -45,7 +49,6 @@ class BaseLLMService(ABC):
     def __init__(self, config: LLMConfig):
         self.config = config
         self.model = config.model
-        self.mock_mode = config.mock_mode
     
     @abstractmethod
     async def chat_completion(
@@ -68,149 +71,422 @@ class BaseLLMService(ABC):
 
 
 class OpenAIService(BaseLLMService):
-    """OpenAI Service Implementation"""
+    """OpenAI Service Implementation with real API integration"""
     
     def __init__(self, config: LLMConfig):
         super().__init__(config)
-        self.client = None  # TODO: Initialize OpenAI Client
-        # TODO: Initialize with real API key: openai.api_key = config.api_key
+        self.client = None
+        self._initialize_client()
     
+    def _initialize_client(self):
+        """Initialize OpenAI client with proper configuration"""
+        try:
+            # Get API key from config or environment
+            api_key = self.config.api_key or os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OpenAI API key is required")
+            
+            # Initialize OpenAI client
+            self.client = openai.AsyncOpenAI(api_key=api_key)
+            logger.info(f"OpenAI client initialized with model: {self.model}")
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI client: {e}")
+            raise
+    
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type((openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError))
+    )
     async def chat_completion(
         self, 
         messages: List[Dict[str, str]], 
         **kwargs
     ) -> LLMResponse:
-        # TODO: Implement OpenAI Chat Completion
-        if self.mock_mode:
-            return await self._mock_chat_completion(messages, **kwargs)
+        """Real OpenAI Chat Completion with retry logic"""
+        if not self.client:
+            raise RuntimeError("OpenAI client not initialized")
         
-        # TODO: Real OpenAI API implementation
-        # response = await self.client.chat.completions.create(
-        #     model=self.model,
-        #     messages=messages,
-        #     temperature=self.config.temperature,
-        #     max_tokens=self.config.max_tokens,
-        #     **kwargs
-        # )
-        # return LLMResponse(
-        #     content=response.choices[0].message.content,
-        #     usage=response.usage.dict() if response.usage else None,
-        #     model=response.model,
-        #     finish_reason=response.choices[0].finish_reason
-        # )
-        
-        return await self._mock_chat_completion(messages, **kwargs)
+        try:
+            # Prepare parameters for OpenAI API
+            params = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": self.config.temperature,
+            }
+            
+            # Add optional parameters
+            if self.config.max_tokens:
+                params["max_tokens"] = self.config.max_tokens
+            
+            # Add any additional kwargs
+            params.update(kwargs)
+            
+            logger.debug(f"Making OpenAI API call with model: {self.model}")
+            
+            # Make the API call
+            response = await self.client.chat.completions.create(**params)
+            
+            # Extract response data
+            choice = response.choices[0]
+            content = choice.message.content or ""
+            
+            # Prepare usage data
+            usage_data = None
+            if response.usage:
+                usage_data = {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens
+                }
+            
+            logger.info(f"OpenAI API call successful. Tokens used: {usage_data['total_tokens'] if usage_data else 'unknown'}")
+            
+            return LLMResponse(
+                content=content,
+                usage=usage_data,
+                model=response.model,
+                finish_reason=choice.finish_reason,
+                metadata={
+                    "provider": "openai",
+                    "api_call": True,
+                    "model_used": response.model
+                }
+            )
+            
+        except openai.RateLimitError as e:
+            logger.warning(f"OpenAI rate limit exceeded: {e}")
+            raise
+        except openai.APITimeoutError as e:
+            logger.warning(f"OpenAI API timeout: {e}")
+            raise
+        except openai.APIConnectionError as e:
+            logger.warning(f"OpenAI API connection error: {e}")
+            raise
+        except openai.AuthenticationError as e:
+            logger.error(f"OpenAI authentication failed: {e}")
+            raise
+        except openai.BadRequestError as e:
+            logger.error(f"OpenAI bad request: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in OpenAI API call: {e}")
+            raise
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type((openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError))
+    )
     async def function_call(
         self, 
         messages: List[Dict[str, str]], 
         functions: List[Dict[str, Any]], 
         **kwargs
     ) -> LLMResponse:
-        # TODO: Implement OpenAI Function Call
-        if self.mock_mode:
-            return await self._mock_function_call(messages, functions, **kwargs)
+        """Real OpenAI Function Call with retry logic"""
+        if not self.client:
+            raise RuntimeError("OpenAI client not initialized")
         
-        # TODO: Real function call implementation
-        return await self._mock_function_call(messages, functions, **kwargs)
-    
-    async def _mock_chat_completion(
-        self,
-        messages: List[Dict[str, str]], 
-        **kwargs
-    ) -> LLMResponse:
-        """Mock chat completion for development"""
         try:
-            # Get the last user message
-            user_message = ""
-            for msg in reversed(messages):
-                if msg.get("role") == "user":
-                    user_message = msg.get("content", "")
-                    break
+            # Prepare parameters for OpenAI function calling
+            params = {
+                "model": self.model,
+                "messages": messages,
+                "tools": [{"type": "function", "function": func} for func in functions],
+                "temperature": self.config.temperature,
+            }
             
-            # Simple contextual responses
-            user_lower = user_message.lower()
+            # Add optional parameters
+            if self.config.max_tokens:
+                params["max_tokens"] = self.config.max_tokens
             
-            if any(word in user_lower for word in ["travel", "trip", "vacation"]):
-                mock_content = "I'm a travel planning assistant. I can help you plan your trip by finding destinations, accommodations, and activities. What would you like to know about your travel plans?"
-            elif any(word in user_lower for word in ["hotel", "accommodation"]):
-                mock_content = "I can help you find hotels and accommodations. What destination are you considering and what are your preferences?"
-            elif any(word in user_lower for word in ["flight", "airline"]):
-                mock_content = "I can assist you with flight information. Where are you planning to travel and when?"
+            # Add any additional kwargs
+            params.update(kwargs)
+            
+            logger.debug(f"Making OpenAI function call with model: {self.model}")
+            
+            # Make the API call
+            response = await self.client.chat.completions.create(**params)
+            
+            # Extract response data
+            choice = response.choices[0]
+            message = choice.message
+            
+            # Handle function call response
+            if message.tool_calls:
+                # Function was called
+                tool_call = message.tool_calls[0]
+                function_name = tool_call.function.name
+                function_args = tool_call.function.arguments
+                
+                content = f"Function '{function_name}' called with arguments: {function_args}"
+                
+                return LLMResponse(
+                    content=content,
+                    usage=self._extract_usage(response.usage),
+                    model=response.model,
+                    finish_reason=choice.finish_reason,
+                    metadata={
+                        "provider": "openai",
+                        "api_call": True,
+                        "function_called": True,
+                        "function_name": function_name,
+                        "function_args": function_args
+                    }
+                )
             else:
-                mock_content = "I'm here to help with your travel planning needs. What would you like assistance with?"
-
-            return LLMResponse(
-                content=mock_content,
-                usage={"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80},
-                model=self.model,
-                finish_reason="stop",
-                metadata={"mock_response": True, "provider": "openai"}
-            )
-            
+                # No function call, regular response
+                content = message.content or ""
+                
+                return LLMResponse(
+                    content=content,
+                    usage=self._extract_usage(response.usage),
+                    model=response.model,
+                    finish_reason=choice.finish_reason,
+                    metadata={
+                        "provider": "openai",
+                        "api_call": True,
+                        "function_called": False
+                    }
+                )
+                
         except Exception as e:
-            logger.error(f"Mock chat completion failed: {e}")
-            return LLMResponse(
-                content="I'm here to help with your travel planning. What can I assist you with?",
-                usage={"total_tokens": 20},
-                model=self.model,
-                finish_reason="stop",
-                metadata={"mock_response": True, "error": str(e)}
-            )
+            logger.error(f"Error in OpenAI function call: {e}")
+            raise
     
-    async def _mock_function_call(
-        self,
-        messages: List[Dict[str, str]], 
-        functions: List[Dict[str, Any]], 
-        **kwargs
-    ) -> LLMResponse:
-        """Mock function call for development"""
-        # TODO: Implement mock function call logic
-        return LLMResponse(
-            content="Function calling is not yet implemented in mock mode.",
-            usage={"total_tokens": 15},
-            model=self.model,
-            finish_reason="stop",
-            metadata={"mock_response": True, "function_call": True}
-        )
+    def _extract_usage(self, usage) -> Optional[Dict[str, Any]]:
+        """Extract usage data from OpenAI response"""
+        if usage:
+            return {
+                "prompt_tokens": usage.prompt_tokens,
+                "completion_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens
+            }
+        return None
 
 
 class ClaudeService(BaseLLMService):
-    """Claude Service Implementation (TODO)"""
+    """Claude Service Implementation with real API integration"""
     
     def __init__(self, config: LLMConfig):
         super().__init__(config)
-        # TODO: Initialize Claude client
-        logger.info("Claude service initialized in mock mode")
+        self.client = None
+        self._initialize_client()
     
+    def _initialize_client(self):
+        """Initialize Claude client with proper configuration"""
+        try:
+            # Get API key from config or environment
+            api_key = self.config.api_key or os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("Anthropic API key is required")
+            
+            # Initialize Anthropic client
+            self.client = anthropic.AsyncAnthropic(api_key=api_key)
+            logger.info(f"Claude client initialized with model: {self.model}")
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize Claude client: {e}")
+            raise
+    
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type((anthropic.RateLimitError, anthropic.APITimeoutError, anthropic.APIConnectionError))
+    )
     async def chat_completion(
         self, 
         messages: List[Dict[str, str]], 
         **kwargs
     ) -> LLMResponse:
-        # TODO: Implement Claude Chat Completion
-        return LLMResponse(
-            content="Claude service is not yet implemented. Using mock response.",
-            usage={"total_tokens": 20},
-            model=self.model,
-            finish_reason="stop",
-            metadata={"mock_response": True, "provider": "claude"}
-        )
+        """Real Claude Chat Completion with retry logic"""
+        if not self.client:
+            raise RuntimeError("Claude client not initialized")
+        
+        try:
+            # Convert OpenAI format messages to Claude format
+            claude_messages = self._convert_messages_to_claude_format(messages)
+            
+            # Prepare parameters for Claude API
+            params = {
+                "model": self.model,
+                "messages": claude_messages,
+                "temperature": self.config.temperature,
+            }
+            
+            # Add optional parameters
+            if self.config.max_tokens:
+                params["max_tokens"] = self.config.max_tokens
+            
+            # Add any additional kwargs
+            params.update(kwargs)
+            
+            logger.debug(f"Making Claude API call with model: {self.model}")
+            
+            # Make the API call
+            response = await self.client.messages.create(**params)
+            
+            # Extract response data
+            content = response.content[0].text if response.content else ""
+            
+            # Prepare usage data
+            usage_data = None
+            if response.usage:
+                usage_data = {
+                    "prompt_tokens": response.usage.input_tokens,
+                    "completion_tokens": response.usage.output_tokens,
+                    "total_tokens": response.usage.input_tokens + response.usage.output_tokens
+                }
+            
+            logger.info(f"Claude API call successful. Tokens used: {usage_data['total_tokens'] if usage_data else 'unknown'}")
+            
+            return LLMResponse(
+                content=content,
+                usage=usage_data,
+                model=response.model,
+                finish_reason=response.stop_reason,
+                metadata={
+                    "provider": "claude",
+                    "api_call": True,
+                    "model_used": response.model
+                }
+            )
+            
+        except anthropic.RateLimitError as e:
+            logger.warning(f"Claude rate limit exceeded: {e}")
+            raise
+        except anthropic.APITimeoutError as e:
+            logger.warning(f"Claude API timeout: {e}")
+            raise
+        except anthropic.APIConnectionError as e:
+            logger.warning(f"Claude API connection error: {e}")
+            raise
+        except anthropic.AuthenticationError as e:
+            logger.error(f"Claude authentication failed: {e}")
+            raise
+        except anthropic.BadRequestError as e:
+            logger.error(f"Claude bad request: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in Claude API call: {e}")
+            raise
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type((anthropic.RateLimitError, anthropic.APITimeoutError, anthropic.APIConnectionError))
+    )
     async def function_call(
         self, 
         messages: List[Dict[str, str]], 
         functions: List[Dict[str, Any]], 
         **kwargs
     ) -> LLMResponse:
-        # TODO: Implement Claude Function Call
-        return LLMResponse(
-            content="Claude function calling is not yet implemented.",
-            usage={"total_tokens": 15},
-            model=self.model,
-            finish_reason="stop",
-            metadata={"mock_response": True, "provider": "claude"}
-        )
+        """Real Claude Function Call with retry logic"""
+        if not self.client:
+            raise RuntimeError("Claude client not initialized")
+        
+        try:
+            # Convert OpenAI format messages to Claude format
+            claude_messages = self._convert_messages_to_claude_format(messages)
+            
+            # Convert functions to Claude tools format
+            tools = []
+            for func in functions:
+                tool = {
+                    "type": "function",
+                    "function": func
+                }
+                tools.append(tool)
+            
+            # Prepare parameters for Claude API
+            params = {
+                "model": self.model,
+                "messages": claude_messages,
+                "tools": tools,
+                "temperature": self.config.temperature,
+            }
+            
+            # Add optional parameters
+            if self.config.max_tokens:
+                params["max_tokens"] = self.config.max_tokens
+            
+            # Add any additional kwargs
+            params.update(kwargs)
+            
+            logger.debug(f"Making Claude function call with model: {self.model}")
+            
+            # Make the API call
+            response = await self.client.messages.create(**params)
+            
+            # Handle function call response
+            if response.content and response.content[0].type == "tool_use":
+                # Function was called
+                tool_use = response.content[0]
+                function_name = tool_use.name
+                function_args = tool_use.input
+                
+                content = f"Function '{function_name}' called with arguments: {function_args}"
+                
+                return LLMResponse(
+                    content=content,
+                    usage=self._extract_usage(response.usage),
+                    model=response.model,
+                    finish_reason=response.stop_reason,
+                    metadata={
+                        "provider": "claude",
+                        "api_call": True,
+                        "function_called": True,
+                        "function_name": function_name,
+                        "function_args": function_args
+                    }
+                )
+            else:
+                # No function call, regular response
+                content = response.content[0].text if response.content else ""
+                
+                return LLMResponse(
+                    content=content,
+                    usage=self._extract_usage(response.usage),
+                    model=response.model,
+                    finish_reason=response.stop_reason,
+                    metadata={
+                        "provider": "claude",
+                        "api_call": True,
+                        "function_called": False
+                    }
+                )
+                
+        except Exception as e:
+            logger.error(f"Error in Claude function call: {e}")
+            raise
+    
+    def _convert_messages_to_claude_format(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """Convert OpenAI format messages to Claude format"""
+        claude_messages = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            
+            # Claude uses "user" and "assistant" roles (same as OpenAI)
+            claude_messages.append({
+                "role": role,
+                "content": content
+            })
+        
+        return claude_messages
+    
+    def _extract_usage(self, usage) -> Optional[Dict[str, Any]]:
+        """Extract usage data from Claude response"""
+        if usage:
+            return {
+                "prompt_tokens": usage.input_tokens,
+                "completion_tokens": usage.output_tokens,
+                "total_tokens": usage.input_tokens + usage.output_tokens
+            }
+        return None
 
 
 class LLMServiceFactory:
@@ -234,13 +510,28 @@ class LLMServiceFactory:
     @staticmethod
     def get_default_config() -> LLMConfig:
         """Get default LLM configuration from environment or defaults"""
+        provider = os.getenv("LLM_PROVIDER", "openai")
+        
+        # Get appropriate API key based on provider
+        api_key = os.getenv("LLM_API_KEY")
+        if not api_key:
+            if provider.lower() == "claude":
+                api_key = os.getenv("ANTHROPIC_API_KEY")
+            else:
+                api_key = os.getenv("OPENAI_API_KEY")
+        
+        # Get appropriate default model based on provider
+        default_model = "claude-3-sonnet-20240229" if provider.lower() == "claude" else "gpt-4"
+        model = os.getenv("LLM_MODEL", default_model)
+        
         return LLMConfig(
-            provider=os.getenv("LLM_PROVIDER", "openai"),
-            model=os.getenv("LLM_MODEL", "gpt-4"),
-            api_key=os.getenv("LLM_API_KEY"),
+            provider=provider,
+            model=model,
+            api_key=api_key,
             max_tokens=int(os.getenv("LLM_MAX_TOKENS", "2000")),
             temperature=float(os.getenv("LLM_TEMPERATURE", "0.7")),
-            mock_mode=os.getenv("LLM_MOCK_MODE", "true").lower() == "true"
+            retry_attempts=int(os.getenv("LLM_RETRY_ATTEMPTS", "3")),
+            retry_delay=float(os.getenv("LLM_RETRY_DELAY", "1.0"))
         )
     
     @staticmethod
