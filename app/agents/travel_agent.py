@@ -12,6 +12,7 @@ TODO: Implement the following features
 from typing import Dict, List, Any, Optional
 import logging
 import time
+import asyncio
 from app.agents.base_agent import BaseAgent, AgentMessage, AgentResponse, AgentStatus, QualityAssessment
 from app.tools.base_tool import tool_registry
 from app.tools.tool_executor import get_tool_executor
@@ -1712,6 +1713,7 @@ class TravelAgent(BaseAgent):
                 return f"I encountered an issue while processing your {intent['type']} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
                 
         except Exception as e:
+            logger.error(f"Error calling DeepSeek API: {e}")
             return f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
     
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
