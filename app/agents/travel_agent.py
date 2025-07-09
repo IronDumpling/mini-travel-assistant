@@ -11,12 +11,15 @@ TODO: Implement the following features
 
 from typing import Dict, List, Any, Optional
 import asyncio
+import logging
 from app.agents.base_agent import BaseAgent, AgentMessage, AgentResponse, AgentStatus, QualityAssessment
 from app.tools.base_tool import tool_registry
 from app.tools.tool_executor import get_tool_executor
 from app.core.llm_service import get_llm_service
 from app.core.rag_engine import get_rag_engine
 from app.models.schemas import TravelPreferences, TravelPlan
+
+logger = logging.getLogger(__name__)
 
 
 class TravelAgent(BaseAgent):
@@ -536,91 +539,56 @@ class TravelAgent(BaseAgent):
         return results
     
     async def _generate_response(self, execution_result: Dict[str, Any], intent: Dict[str, Any]) -> str:
-        """Generate response content"""
+        """Generate response content - ALWAYS calls DeepSeek API"""
         try:
             # Get knowledge context from execution result
             knowledge_context = execution_result.get("knowledge_context", {})
             relevant_docs = knowledge_context.get("relevant_docs", [])
             
-            if execution_result["success"]:
-                # Create response based on intent and results
-                response_parts = []
-                
-                if intent["type"] == "planning":
-                    response_parts.append("🎯 **Travel Planning Assistant**")
-                    response_parts.append(f"Based on your request for {intent.get('destination', 'your destination')}, here's what I found:")
-                    
-                    # Add knowledge-based information
-                    if relevant_docs:
-                        response_parts.append("\n📚 **Travel Information:**")
-                        for i, doc in enumerate(relevant_docs[:2]):  # Limit to top 2 results
-                            doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
-                            content = doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "")
-                            response_parts.append(f"**{doc_title}**\n{content}")
-                    
-                    # Add tool results
-                    tool_results = execution_result.get("results", {})
-                    if "flight_search" in tool_results and "flights" in tool_results["flight_search"]:
-                        response_parts.append("\n✈️ **Flight Options:**")
-                        for flight in tool_results["flight_search"]["flights"][:2]:
-                            response_parts.append(f"- {flight['airline']}: {flight['price']} ({flight['duration']})")
-                    
-                    if "hotel_search" in tool_results and "hotels" in tool_results["hotel_search"]:
-                        response_parts.append("\n🏨 **Hotel Options:**")
-                        for hotel in tool_results["hotel_search"]["hotels"][:2]:
-                            response_parts.append(f"- {hotel['name']}: {hotel['price']} (Rating: {hotel['rating']})")
-                    
-                    if "attraction_search" in tool_results and "attractions" in tool_results["attraction_search"]:
-                        response_parts.append("\n🎭 **Attractions:**")
-                        for attraction in tool_results["attraction_search"]["attractions"][:2]:
-                            response_parts.append(f"- {attraction['name']}: {attraction['description']} (Rating: {attraction['rating']})")
-                    
-                    # Add next steps
-                    response_parts.append("\n\n🎯 **Next Steps:**")
-                    response_parts.append("- Let me know your travel dates and I can provide more specific recommendations")
-                    response_parts.append("- I can help you compare prices and make bookings")
-                    response_parts.append("- Ask me about specific aspects like dining, transportation, or activities")
-                    
-                elif intent["type"] == "recommendation":
-                    response_parts.append("💡 **Travel Recommendations**")
-                    response_parts.append(f"Here are my recommendations for {intent.get('destination', 'your destination')}:")
-                    
-                    # Add knowledge-based recommendations
-                    if relevant_docs:
-                        for i, doc in enumerate(relevant_docs[:3]):
-                            doc_title = doc.get("metadata", {}).get("title", f"Recommendation {i+1}")
-                            content = doc.get("content", "")[:150] + "..." if len(doc.get("content", "")) > 150 else doc.get("content", "")
-                            response_parts.append(f"\n**{doc_title}**\n{content}")
-                    
-                    response_parts.append("\n\n🔍 **Would you like me to:**")
-                    response_parts.append("- Provide more detailed information about any of these recommendations?")
-                    response_parts.append("- Help you plan a complete itinerary?")
-                    response_parts.append("- Search for specific activities or attractions?")
-                    
-                elif intent["type"] == "query":
-                    response_parts.append("❓ **Travel Information**")
-                    
-                    if relevant_docs:
-                        response_parts.append("Based on my knowledge, here's what I found:")
-                        for i, doc in enumerate(relevant_docs[:2]):
-                            doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
-                            content = doc.get("content", "")
-                            response_parts.append(f"\n**{doc_title}**\n{content}")
-                    else:
-                        response_parts.append("I'd be happy to help you with travel information. Could you provide more specific details about what you're looking for?")
-                    
-                    response_parts.append("\n\n💬 **Follow-up Questions:**")
-                    response_parts.append("- Are you looking for information about a specific destination?")
-                    response_parts.append("- Would you like me to help you plan a trip?")
-                    response_parts.append("- Do you have any specific travel dates in mind?")
-                
-                return "\n".join(response_parts)
+            # Construct prompt for DeepSeek API
+            prompt_parts = []
             
-            else:
-                error_msg = execution_result.get("error", "Unknown error")
-                return f"I encountered an issue while processing your {intent['type']} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
+            # Add context about the user's intent
+            prompt_parts.append(f"User intent: {intent['type']}")
+            if intent.get('destination') and intent['destination'] != "Unknown":
+                prompt_parts.append(f"Destination: {intent['destination']}")
+            if intent.get('time_info'):
+                prompt_parts.append(f"Time info: {intent['time_info']}")
+            if intent.get('budget_info'):
+                prompt_parts.append(f"Budget info: {intent['budget_info']}")
+            
+            # Add knowledge context if available
+            if relevant_docs:
+                prompt_parts.append("\nRelevant travel information:")
+                for i, doc in enumerate(relevant_docs[:3]):  # Limit to top 3
+                    doc_title = doc.get("metadata", {}).get("title", f"Info {i+1}")
+                    content = doc.get("content", "")[:300]  # Limit content length
+                    prompt_parts.append(f"{doc_title}: {content}")
+            
+            # Add tool results if available
+            tool_results = execution_result.get("results", {})
+            if tool_results:
+                prompt_parts.append("\nTool results:")
+                for tool_name, result in tool_results.items():
+                    if isinstance(result, dict) and "message" in result:
+                        prompt_parts.append(f"{tool_name}: {result['message']}")
+            
+            # Add the main instruction
+            prompt_parts.append(f"\nPlease provide a helpful, friendly response to the user's {intent['type']} request. Be conversational and informative.")
+            
+            prompt = "\n".join(prompt_parts)
+            
+            # ALWAYS call DeepSeek API
+            logger.info("Calling DeepSeek API for response generation")
+            response = await self.llm_service.chat_completion([
+                {"role": "user", "content": prompt}
+            ])
+            
+            logger.info(f"DeepSeek API response received: {len(response.content)} characters")
+            return response.content
                 
         except Exception as e:
+            logger.error(f"Error calling DeepSeek API: {e}")
             return f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
     
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
