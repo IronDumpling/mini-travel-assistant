@@ -8,6 +8,7 @@ Supports multiple countries and regions including Japan and Europe
 import requests
 import time
 import random
+import re
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import json
@@ -355,7 +356,7 @@ def scrape_wikivoyage_attractions(soup, config):
                                         "url": full_url
                                     })
     
-    # Also look for specific attraction keywords in the page
+    # Look for specific attraction keywords in the page content
     all_links = soup.find_all('a')
     for link in all_links:
         try:
@@ -383,7 +384,63 @@ def scrape_wikivoyage_attractions(soup, config):
         except (AttributeError, TypeError) as e:
             continue
     
-    return attractions
+    # If we didn't find enough attractions, try a more aggressive approach
+    if len(attractions) < 5:
+        # Look for any links that contain destination-specific keywords
+        for link in all_links:
+            try:
+                name = link.get_text(strip=True)
+                href = link.get('href')
+                
+                if href and name and isinstance(href, str) and len(name) > 3:
+                    name_lower = name.lower()
+                    
+                    # Check for destination-specific keywords
+                    if any(keyword in name_lower for keyword in config["keywords"]):
+                        # Construct full URL
+                        if href.startswith('/'):
+                            full_url = urljoin(config["source_url"], href)
+                        elif href.startswith('http'):
+                            full_url = href
+                        else:
+                            full_url = urljoin(config["source_url"], '/' + href)
+                        
+                        # Avoid duplicates
+                        if name not in [att['name'] for att in attractions]:
+                            attractions.append({
+                                "name": name,
+                                "url": full_url
+                            })
+                            
+            except (AttributeError, TypeError) as e:
+                continue
+    
+    # Filter out any remaining navigation or non-attraction links
+    filtered_attractions = []
+    for attraction in attractions:
+        name_lower = attraction['name'].lower()
+        
+        # Skip if it contains navigation terms
+        navigation_terms = [
+            'what\'s nearby', 'get shortened url', 'bahasa indonesia',
+            'tiếng việt', 'jump to content', 'main page', 'travel destinations',
+            'random page', 'recent changes', 'community portal', 'maintenance panel',
+            'interlingual lounge', 'donate', 'edit', 'history', 'watch', 'read',
+            'view source', 'view history', 'what links here', 'related changes',
+            'special pages', 'printable version', 'permanent link', 'page information',
+            'wikidata item', 'cite this page', 'create a book', 'download as pdf',
+            'version for printing', 'in other projects', 'wikimedia commons',
+            'wikisource', 'wiktionary', 'wikibooks', 'wikiquote', 'wikinews',
+            'wikiversity', 'wikidata', 'mediawiki', 'meta-wiki', 'wikispecies',
+            'wikivoyage', 'wikimedia', 'foundation', 'disclaimers', 'contact',
+            'mobile view', 'developers', 'statistics', 'cookie statement',
+            'terms of use', 'privacy policy', 'code of conduct'
+        ]
+        
+        if not any(term in name_lower for term in navigation_terms):
+            filtered_attractions.append(attraction)
+    
+    return filtered_attractions
 
 
 def is_specific_attraction(name, config):
@@ -396,10 +453,34 @@ def is_specific_attraction(name, config):
         'contact', 'about', 'privacy', 'terms', 'edit', 'history',
         'monuments', 'museums', 'squares', 'churches', 'basilicas',
         'attractions', 'sights', 'landmarks', 'places', 'areas',
-        'districts', 'neighborhoods', 'quarters', 'zones'
+        'districts', 'neighborhoods', 'quarters', 'zones',
+        'what\'s nearby', 'get shortened url', 'bahasa indonesia',
+        'tiếng việt', 'rural', 'transportation', 'card', 'theaters',
+        'concert halls', 'jump to content', 'main page', 'travel destinations',
+        'random page', 'recent changes', 'community portal', 'maintenance panel',
+        'interlingual lounge', 'donate', 'edit', 'history', 'watch', 'read',
+        'view source', 'view history', 'what links here', 'related changes',
+        'special pages', 'printable version', 'permanent link', 'page information',
+        'wikidata item', 'cite this page', 'create a book', 'download as pdf',
+        'version for printing', 'in other projects', 'wikimedia commons',
+        'wikisource', 'wiktionary', 'wikibooks', 'wikiquote', 'wikinews',
+        'wikiversity', 'wikidata', 'mediawiki', 'meta-wiki', 'wikispecies',
+        'wikivoyage', 'wikimedia', 'foundation', 'disclaimers', 'contact',
+        'mobile view', 'developers', 'statistics', 'cookie statement',
+        'terms of use', 'privacy policy', 'code of conduct', 'disclaimers',
+        'contact wikimedia', 'mobile view', 'developers', 'statistics',
+        'cookie statement', 'terms of use', 'privacy policy', 'code of conduct'
     ]
     
     if any(term in name_lower for term in generic_terms):
+        return False
+    
+    # Skip numbered sections and navigation
+    if re.match(r'^\d+\.\d+', name) or re.match(r'^\d+\.', name):
+        return False
+    
+    # Skip very short names
+    if len(name.strip()) < 4:
         return False
     
     # Check if it contains specific attraction keywords
@@ -408,7 +489,11 @@ def is_specific_attraction(name, config):
         'square', 'church', 'cathedral', 'monument', 'tower', 
         'bridge', 'market', 'basilica', 'forum', 'colosseum',
         'vatican', 'pantheon', 'trevi', 'fountain', 'gallery',
-        'opera', 'theater', 'theatre', 'garden', 'palace'
+        'opera', 'theater', 'theatre', 'garden', 'palace', 'wall',
+        'forbidden', 'summer', 'tiananmen', 'ming', 'lama', 'confucius',
+        'bell', 'drum', 'tower', 'beihai', 'jingshan', 'yuanmingyuan',
+        'olympic', 'bird', 'nest', 'water', 'cube', 'hutong', 'nanluoguxiang',
+        'wangfujing', 'sanlitun', 'houhai', 'yuyuantan', 'panjiayuan'
     ]
     
     # Check if it matches destination-specific keywords
@@ -481,12 +566,57 @@ def create_destination_data(attractions: List[Dict[str, str]],
                           config: Dict[str, Any]) -> Dict[str, Any]:
     """Create a standardized destination data structure"""
     
+    # Normalize destination name for comparison
+    normalized_name = destination_name.lower().strip()
+    
+    logger.info(f"Creating content for destination: '{destination_name}' (normalized: '{normalized_name}')")
+    logger.info(f"Found {len(attractions)} attractions")
+    
     # Create destination-specific content
-    if destination_name.lower() == "kyoto":
+    if normalized_name == "kyoto":
+        logger.info("Using Kyoto-specific content")
         content = create_kyoto_content(attractions, destination_name)
-    elif destination_name.lower() in ["paris", "rome", "barcelona", "amsterdam"]:
+    elif normalized_name == "beijing":
+        logger.info("Using Beijing-specific content")
+        content = create_beijing_content(attractions, destination_name)
+    elif normalized_name == "seoul":
+        logger.info("Using Seoul-specific content")
+        content = create_seoul_content(attractions, destination_name)
+    elif normalized_name == "shanghai":
+        logger.info("Using Shanghai-specific content")
+        content = create_shanghai_content(attractions, destination_name)
+    elif normalized_name == "paris":
+        logger.info("Using Paris-specific content")
+        content = create_paris_content(attractions, destination_name)
+    elif normalized_name == "london":
+        logger.info("Using London-specific content")
+        content = create_london_content(attractions, destination_name)
+    elif normalized_name == "rome":
+        logger.info("Using Rome-specific content")
+        content = create_rome_content(attractions, destination_name)
+    elif normalized_name == "barcelona":
+        logger.info("Using Barcelona-specific content")
+        content = create_barcelona_content(attractions, destination_name)
+    elif normalized_name == "amsterdam":
+        logger.info("Using Amsterdam-specific content")
+        content = create_amsterdam_content(attractions, destination_name)
+    elif normalized_name == "berlin":
+        logger.info("Using Berlin-specific content")
+        content = create_berlin_content(attractions, destination_name)
+    elif normalized_name == "prague":
+        logger.info("Using Prague-specific content")
+        content = create_prague_content(attractions, destination_name)
+    elif normalized_name == "vienna":
+        logger.info("Using Vienna-specific content")
+        content = create_vienna_content(attractions, destination_name)
+    elif normalized_name == "budapest":
+        logger.info("Using Budapest-specific content")
+        content = create_budapest_content(attractions, destination_name)
+    elif config["region"] == "europe":
+        logger.info("Using European content")
         content = create_european_content(attractions, destination_name)
     else:
+        logger.info("Using generic content")
         content = create_generic_content(attractions, destination_name)
     
     return {
@@ -674,6 +804,1103 @@ def create_kyoto_content(attractions: List[Dict[str, str]], destination_name: st
 - **Winter**: 0-10°C, dry, occasional snow, peaceful temple visits"""
     
     return content
+
+
+def create_beijing_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Beijing-specific content"""
+    content = f"""{destination_name} is China's historic capital and political center, home to some of the world's most iconic landmarks including the Great Wall, Forbidden City, and Temple of Heaven. This ancient city seamlessly blends imperial grandeur with modern development.
+
+## Overview
+{destination_name} has served as China's capital for over 800 years and remains the country's political, cultural, and educational heart. With its rich history spanning dynasties, {destination_name} offers visitors an unparalleled glimpse into China's imperial past and contemporary culture.
+
+## Top Attractions
+
+### Imperial Landmarks
+"""
+    
+    # Add imperial landmark information
+    imperial_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['forbidden', 'temple', 'summer', 'palace', 'tiananmen', 'great wall', 'ming', 'lama', 'confucius'])]
+    
+    if imperial_sites:
+        for i, site in enumerate(imperial_sites[:10], 1):
+            content += f"- **{site['name']}**: Iconic imperial landmark and UNESCO World Heritage site\n"
+    else:
+        content += """- **Forbidden City**: Imperial palace complex and UNESCO World Heritage site
+- **Great Wall of China**: Ancient defensive wall and world wonder
+- **Temple of Heaven**: Imperial complex for ceremonies and prayers
+- **Summer Palace**: Imperial garden and palace complex
+- **Tiananmen Square**: Historic square and political center
+- **Ming Tombs**: Imperial burial complex
+- **Lama Temple**: Tibetan Buddhist temple
+- **Confucius Temple**: Traditional temple honoring Confucius\n"""
+    
+    content += """
+### Historic Districts
+- **Hutongs**: Traditional narrow alleyways and courtyard homes
+- **Wangfujing**: Famous shopping street and food district
+- **Nanluoguxiang**: Hip hutong area with cafes and boutiques
+- **Dongcheng**: Historic district with many traditional sites
+
+### Modern Attractions
+"""
+    
+    # Add modern attraction information
+    modern_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['olympic', 'bird', 'water', 'cube', 'park'])]
+    
+    if modern_sites:
+        for site in modern_sites:
+            content += f"- **{site['name']}**: Modern architectural marvel and cultural venue\n"
+    else:
+        content += """- **Beijing Olympic Park**: Venue of the 2008 Summer Olympics
+- **Bird's Nest Stadium**: Iconic Olympic stadium
+- **Water Cube**: Olympic swimming venue
+- **Beijing National Stadium**: Modern sports complex\n"""
+    
+    content += """
+## Best Time to Visit
+
+### Spring (March - May)
+- **Weather**: Mild temperatures (10-25°C), occasional sandstorms
+- **Highlights**: Cherry blossoms at Yuyuantan Park, clear skies
+- **Advantages**: Pleasant weather, fewer crowds than summer
+- **Considerations**: March can be windy with sandstorms
+
+### Summer (June - August)
+- **Weather**: Hot and humid (25-35°C), frequent rain
+- **Highlights**: Long daylight hours, outdoor activities
+- **Considerations**: Peak tourist season, book accommodations early
+- **Air Quality**: Can be affected by pollution
+
+### Autumn (September - November)
+- **Weather**: Comfortable temperatures (10-25°C), clear skies
+- **Highlights**: Golden autumn colors, National Day celebrations
+- **Advantages**: Best weather, beautiful scenery, moderate crowds
+- **Special**: Golden Week in October (very busy)
+
+### Winter (December - February)
+- **Weather**: Cold and dry (-5 to 10°C), occasional snow
+- **Highlights**: Snow-covered Great Wall, indoor attractions
+- **Advantages**: Fewer crowds, lower prices, unique winter views
+- **Considerations**: Very cold, some outdoor sites may be less accessible
+
+## Transportation
+
+### Getting Around Beijing
+- **Metro**: Extensive 23-line system covering most attractions
+- **Bus**: Comprehensive network, very affordable
+- **Taxi**: Readily available, use ride-hailing apps
+- **Bicycle**: Bike-sharing available throughout the city
+
+### From Other Cities
+- **International Airport**: Capital International Airport (PEK)
+- **High-Speed Rail**: Connections to Shanghai, Guangzhou, Xi'an
+- **Domestic Flights**: Well-connected to all major Chinese cities
+
+## Cultural Etiquette
+
+### General Behavior
+- **Greetings**: Handshakes common, slight bow for elders
+- **Dress**: Modest clothing, remove hats in temples
+- **Photography**: Ask permission before taking photos of people
+- **Queue**: Be patient in lines and crowds
+
+### Visiting Religious Sites
+- **Dress Code**: Modest clothing, cover shoulders and knees
+- **Behavior**: Quiet and respectful, no smoking
+- **Photography**: Check for restrictions, especially in temples
+- **Donations**: Optional but appreciated
+
+## Food & Dining
+
+### Must-Try Beijing Foods
+- **Peking Duck**: Beijing's most famous dish
+- **Jiaozi**: Chinese dumplings
+- **Hot Pot**: Spicy or mild broth with meat and vegetables
+- **Noodles**: Hand-pulled noodles in various styles
+- **Street Food**: Jianbing (savory crepes), baozi (steamed buns)
+
+### Dining Districts
+- **Wangfujing**: Food street with traditional and modern options
+- **Nanluoguxiang**: Hip cafes and restaurants
+- **Sanlitun**: International cuisine and nightlife
+- **Houhai**: Lakeside dining with traditional atmosphere
+
+## Shopping
+
+### Traditional Items
+- **Silk**: Traditional Chinese silk products
+- **Tea**: Various types of Chinese tea
+- **Calligraphy**: Traditional writing supplies
+- **Antiques**: Reproductions and genuine items (be careful)
+
+### Shopping Areas
+- **Wangfujing**: Modern shopping street
+- **Sanlitun**: International brands and boutiques
+- **Panjiayuan**: Antique and flea market
+- **Silk Market**: Traditional goods and bargaining
+
+## Accommodation
+
+### Options Available
+- **Hotels**: Range from budget to luxury international chains
+- **Hutong Hotels**: Traditional courtyard accommodations
+- **Hostels**: Budget-friendly options in popular areas
+- **Serviced Apartments**: Good for longer stays
+
+## Seasonal Highlights
+
+### Spring
+- Cherry blossoms at Yuyuantan Park
+- Clear skies and pleasant weather
+- Cultural festivals and events
+
+### Summer
+- Long daylight hours for sightseeing
+- Outdoor activities and festivals
+- Summer Palace at its best
+
+### Autumn
+- Golden autumn colors
+- National Day celebrations
+- Best weather for outdoor activities
+
+### Winter
+- Snow-covered Great Wall
+- Indoor cultural activities
+- Traditional winter foods
+
+## Practical Information
+
+### Important Numbers
+- **Emergency**: 110 (Police), 120 (Ambulance), 119 (Fire)
+- **Tourist Information**: 12301 (24-hour hotline)
+- **Weather**: 12121
+
+### Useful Apps
+- **WeChat**: Essential for payments and communication
+- **DiDi**: Chinese ride-hailing app
+- **Baidu Maps**: Better than Google Maps in China
+- **Pleco**: Chinese-English dictionary
+
+### Money & Payments
+- **Currency**: Chinese Yuan (CNY/RMB)
+- **WeChat Pay/Alipay**: Digital payments widely accepted
+- **Cash**: Still useful for small purchases
+- **Credit Cards**: Accepted at hotels and larger establishments
+
+## Weather by Season
+- **Spring**: 10-25°C, occasional sandstorms, pleasant weather
+- **Summer**: 25-35°C, high humidity, frequent rain, peak season
+- **Autumn**: 10-25°C, clear skies, beautiful colors, best weather
+- **Winter**: -5 to 10°C, cold and dry, occasional snow, fewer crowds"""
+    
+    return content
+
+
+def create_seoul_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Seoul-specific content"""
+    content = f"""{destination_name} is South Korea's dynamic capital, a fascinating blend of ancient traditions and cutting-edge technology. From historic palaces and temples to modern skyscrapers and K-pop culture, {destination_name} offers visitors an exciting mix of old and new.
+
+## Overview
+{destination_name} has been Korea's capital for over 600 years and is now a global metropolis of over 10 million people. The city seamlessly combines its rich cultural heritage with modern innovation, making it one of Asia's most exciting destinations.
+
+## Top Attractions
+
+### Historic Palaces
+"""
+    
+    # Add palace information
+    palaces = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['palace', 'gung', 'changdeok', 'gyeongbok', 'deoksugung'])]
+    
+    if palaces:
+        for i, palace in enumerate(palaces[:5], 1):
+            content += f"- **{palace['name']}**: Magnificent royal palace and cultural treasure\n"
+    else:
+        content += """- **Gyeongbokgung Palace**: Main royal palace of the Joseon dynasty
+- **Changdeokgung Palace**: UNESCO World Heritage palace complex
+- **Deoksugung Palace**: Historic palace with Western architecture
+- **Gyeonghuigung Palace**: Smaller palace with beautiful gardens\n"""
+    
+    content += """
+### Traditional Districts
+- **Bukchon Hanok Village**: Traditional Korean houses and culture
+- **Insadong**: Traditional arts, crafts, and tea houses
+- **Myeongdong**: Shopping and street food district
+- **Hongdae**: Youth culture and entertainment area
+
+### Modern Attractions
+"""
+    
+    # Add modern attraction information
+    modern_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['tower', 'skytree', 'observatory', 'museum', 'park'])]
+    
+    if modern_sites:
+        for site in modern_sites[:5]:
+            content += f"- **{site['name']}**: Modern landmark and cultural venue\n"
+    else:
+        content += """- **N Seoul Tower**: Iconic tower with panoramic city views
+- **Lotte World Tower**: Tallest building in Korea
+- **COEX Mall**: Large underground shopping complex
+- **Seoul Forest Park**: Urban park and recreation area\n"""
+    
+    content += """
+## Best Time to Visit
+
+### Spring (March - May)
+- **Weather**: Mild temperatures (10-25°C), cherry blossoms
+- **Highlights**: Cherry blossom festivals, Yeouido Spring Flower Festival
+- **Advantages**: Pleasant weather, beautiful scenery
+- **Special**: Cherry blossoms peak in early April
+
+### Summer (June - August)
+- **Weather**: Hot and humid (20-35°C), monsoon season
+- **Highlights**: Summer festivals, outdoor activities
+- **Considerations**: Rainy season in June-July, very humid
+- **Air Conditioning**: Essential for comfort
+
+### Autumn (September - November)
+- **Weather**: Comfortable temperatures (10-25°C), clear skies
+- **Highlights**: Fall foliage, cultural festivals
+- **Advantages**: Best weather, beautiful autumn colors
+- **Special**: Chuseok holiday in September/October
+
+### Winter (December - February)
+- **Weather**: Cold and dry (-5 to 10°C), occasional snow
+- **Highlights**: Winter festivals, indoor attractions
+- **Advantages**: Fewer crowds, lower prices
+- **Considerations**: Very cold, some outdoor activities limited
+
+## Transportation
+
+### Getting Around Seoul
+- **Metro**: Extensive 9-line system, clean and efficient
+- **Bus**: Comprehensive network, very affordable
+- **Taxi**: Readily available, use Kakao T app
+- **Bicycle**: Bike-sharing available in many areas
+
+### From Other Cities
+- **International Airport**: Incheon International Airport (ICN)
+- **High-Speed Rail**: KTX connections to Busan, Daegu, Gwangju
+- **Domestic Flights**: Well-connected to all major Korean cities
+
+## Cultural Etiquette
+
+### General Behavior
+- **Greetings**: Bow slightly when meeting people
+- **Dress**: Smart casual is appropriate for most places
+- **Photography**: Ask permission before taking photos of people
+- **Queue**: Be patient and orderly in lines
+
+### Visiting Cultural Sites
+- **Dress Code**: Modest clothing for temples and palaces
+- **Behavior**: Quiet and respectful, remove shoes when required
+- **Photography**: Check for restrictions, especially in palaces
+- **Donations**: Optional but appreciated at temples
+
+## Food & Dining
+
+### Must-Try Seoul Foods
+- **Korean BBQ**: Grilled meat at your table
+- **Bibimbap**: Mixed rice bowl with vegetables and meat
+- **Kimchi**: Fermented vegetables, Korea's national dish
+- **Tteokbokki**: Spicy rice cakes
+- **Korean Fried Chicken**: Crispy fried chicken with various sauces
+
+### Dining Districts
+- **Myeongdong**: Street food and international cuisine
+- **Hongdae**: Youth-oriented restaurants and cafes
+- **Gangnam**: High-end dining and international cuisine
+- **Insadong**: Traditional Korean restaurants and tea houses
+
+## Shopping
+
+### Traditional Items
+- **Hanbok**: Traditional Korean clothing
+- **Ceramics**: Traditional Korean pottery
+- **Tea**: Various types of Korean tea
+- **Cosmetics**: K-beauty products
+
+### Shopping Areas
+- **Myeongdong**: International brands and cosmetics
+- **Dongdaemun**: 24-hour shopping and wholesale
+- **Gangnam**: Luxury brands and high-end shopping
+- **Insadong**: Traditional arts and crafts
+
+## Accommodation
+
+### Options Available
+- **Hotels**: Range from budget to luxury international chains
+- **Hanok Stays**: Traditional Korean house accommodations
+- **Hostels**: Budget-friendly options in popular areas
+- **Guesthouses**: Family-run accommodations
+
+## Seasonal Highlights
+
+### Spring
+- Cherry blossoms throughout the city
+- Yeouido Spring Flower Festival
+- Pleasant weather for outdoor activities
+
+### Summer
+- Summer festivals and events
+- Outdoor activities and nightlife
+- Monsoon season brings rain and humidity
+
+### Autumn
+- Beautiful fall foliage
+- Cultural festivals and events
+- Best weather for sightseeing
+
+### Winter
+- Winter festivals and events
+- Indoor cultural activities
+- Traditional winter foods
+
+## Practical Information
+
+### Important Numbers
+- **Emergency**: 112 (Police), 119 (Fire/Ambulance)
+- **Tourist Information**: 1330 (24-hour hotline)
+- **Weather**: 131
+
+### Useful Apps
+- **Kakao T**: Korean ride-hailing app
+- **Naver Maps**: Better than Google Maps in Korea
+- **Google Translate**: For language assistance
+- **Seoul Metro**: Subway route planning
+
+### Money & Payments
+- **Currency**: Korean Won (KRW)
+- **Credit Cards**: Widely accepted
+- **Cash**: Still useful for small purchases
+- **T-money Card**: For public transportation
+
+## Weather by Season
+- **Spring**: 10-25°C, cherry blossoms, pleasant weather
+- **Summer**: 20-35°C, high humidity, monsoon season
+- **Autumn**: 10-25°C, clear skies, beautiful fall colors
+- **Winter**: -5 to 10°C, cold and dry, occasional snow"""
+    
+    return content
+
+
+def create_shanghai_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Shanghai-specific content"""
+    content = f"""{destination_name} is China's largest city and global financial hub, where East meets West in spectacular fashion. From the historic Bund waterfront to the futuristic Pudong skyline, {destination_name} showcases China's rapid modernization while preserving its cultural heritage.
+
+## Overview
+{destination_name} is a city of contrasts - colonial architecture along the Bund, ultra-modern skyscrapers in Pudong, and traditional gardens and temples scattered throughout. As China's most cosmopolitan city, it offers visitors a unique blend of history, culture, and innovation.
+
+## Top Attractions
+
+### Historic Landmarks
+"""
+    
+    # Add historic landmark information
+    historic_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['bund', 'yuyuan', 'temple', 'garden', 'pagoda', 'museum'])]
+    for i, site in enumerate(historic_sites[:8], 1):
+        content += f"- **{site['name']}**: Historic landmark and cultural treasure\n"
+    
+    content += """
+### Modern Attractions
+"""
+    
+    # Add modern attraction information
+    modern_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['tower', 'pearl', 'oriental', 'skytree', 'observatory'])]
+    for site in modern_sites[:5]:
+        content += f"- **{site['name']}**: Modern architectural marvel\n"
+    
+    content += """
+### Cultural Districts
+- **The Bund**: Historic waterfront with colonial architecture
+- **French Concession**: Charming tree-lined streets and cafes
+- **Xintiandi**: Hip area with restored shikumen houses
+- **Tianzifang**: Artsy maze of narrow alleys and boutiques
+
+## Best Time to Visit
+
+### Spring (March - May)
+- **Weather**: Mild temperatures (10-25°C), occasional rain
+- **Highlights**: Cherry blossoms, pleasant weather
+- **Advantages**: Good weather, moderate crowds
+- **Considerations**: March can be windy
+
+### Summer (June - August)
+- **Weather**: Hot and humid (25-35°C), frequent rain
+- **Highlights**: Long daylight hours, outdoor activities
+- **Considerations**: Peak tourist season, very humid
+- **Air Quality**: Can be affected by pollution
+
+### Autumn (September - November)
+- **Weather**: Comfortable temperatures (15-25°C), clear skies
+- **Highlights**: Golden autumn colors, cultural festivals
+- **Advantages**: Best weather, beautiful scenery
+- **Special**: National Day holiday in October
+
+### Winter (December - February)
+- **Weather**: Cold and damp (0-15°C), occasional snow
+- **Highlights**: Indoor attractions, winter festivals
+- **Advantages**: Fewer crowds, lower prices
+- **Considerations**: Cold and damp weather
+
+## Transportation
+
+### Getting Around Shanghai
+- **Metro**: Extensive 18-line system, clean and efficient
+- **Bus**: Comprehensive network, very affordable
+- **Taxi**: Readily available, use ride-hailing apps
+- **Bicycle**: Bike-sharing available throughout the city
+
+### From Other Cities
+- **International Airport**: Pudong International Airport (PVG)
+- **High-Speed Rail**: Connections to Beijing, Guangzhou, Hangzhou
+- **Domestic Flights**: Well-connected to all major Chinese cities
+
+## Cultural Etiquette
+
+### General Behavior
+- **Greetings**: Handshakes common, slight bow for elders
+- **Dress**: Smart casual is appropriate for most places
+- **Photography**: Ask permission before taking photos of people
+- **Queue**: Be patient in lines and crowds
+
+### Visiting Cultural Sites
+- **Dress Code**: Modest clothing for temples and museums
+- **Behavior**: Quiet and respectful, no smoking
+- **Photography**: Check for restrictions
+- **Donations**: Optional but appreciated
+
+## Food & Dining
+
+### Must-Try Shanghai Foods
+- **Xiaolongbao**: Soup dumplings
+- **Shanghai Hairy Crab**: Seasonal delicacy
+- **Hong Shao Rou**: Braised pork belly
+- **Shengjianbao**: Pan-fried soup dumplings
+- **Noodles**: Various styles of Shanghai noodles
+
+### Dining Districts
+- **The Bund**: High-end dining with river views
+- **French Concession**: International cuisine and cafes
+- **Xintiandi**: Modern restaurants and bars
+- **Nanjing Road**: Traditional and modern options
+
+## Shopping
+
+### Traditional Items
+- **Silk**: Traditional Chinese silk products
+- **Tea**: Various types of Chinese tea
+- **Jade**: Traditional jade jewelry and carvings
+- **Antiques**: Reproductions and genuine items
+
+### Shopping Areas
+- **Nanjing Road**: Famous shopping street
+- **Xintiandi**: Boutique shopping
+- **Tianzifang**: Arts and crafts
+- **The Bund**: Luxury shopping
+
+## Accommodation
+
+### Options Available
+- **Hotels**: Range from budget to luxury international chains
+- **Boutique Hotels**: Unique accommodations in historic areas
+- **Hostels**: Budget-friendly options in popular areas
+- **Serviced Apartments**: Good for longer stays
+
+## Seasonal Highlights
+
+### Spring
+- Cherry blossoms in parks
+- Pleasant weather for outdoor activities
+- Cultural festivals and events
+
+### Summer
+- Long daylight hours for sightseeing
+- Outdoor activities and festivals
+- Summer heat and humidity
+
+### Autumn
+- Golden autumn colors
+- Cultural festivals and events
+- Best weather for outdoor activities
+
+### Winter
+- Indoor cultural activities
+- Winter festivals and events
+- Traditional winter foods
+
+## Practical Information
+
+### Important Numbers
+- **Emergency**: 110 (Police), 120 (Ambulance), 119 (Fire)
+- **Tourist Information**: 12301 (24-hour hotline)
+- **Weather**: 12121
+
+### Useful Apps
+- **WeChat**: Essential for payments and communication
+- **DiDi**: Chinese ride-hailing app
+- **Baidu Maps**: Better than Google Maps in China
+- **Shanghai Metro**: Subway route planning
+
+### Money & Payments
+- **Currency**: Chinese Yuan (CNY/RMB)
+- **WeChat Pay/Alipay**: Digital payments widely accepted
+- **Cash**: Still useful for small purchases
+- **Credit Cards**: Accepted at hotels and larger establishments
+
+## Weather by Season
+- **Spring**: 10-25°C, occasional rain, pleasant weather
+- **Summer**: 25-35°C, high humidity, frequent rain, peak season
+- **Autumn**: 15-25°C, clear skies, beautiful colors, best weather
+- **Winter**: 0-15°C, cold and damp, occasional snow, fewer crowds"""
+    
+    return content
+
+
+def create_paris_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Paris-specific content"""
+    content = f"""{destination_name} is the City of Light, France's romantic capital and one of the world's most beautiful cities. From the iconic Eiffel Tower to the historic Louvre Museum, {destination_name} offers visitors an unparalleled cultural and artistic experience.
+
+## Overview
+{destination_name} has been a center of art, culture, and fashion for centuries. With its stunning architecture, world-class museums, and charming neighborhoods, the city embodies the perfect blend of history and modernity.
+
+## Top Attractions
+
+### Iconic Landmarks
+"""
+    
+    # Add iconic landmark information
+    iconic_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['eiffel', 'louvre', 'notre-dame', 'arc', 'champs', 'versailles'])]
+    for i, site in enumerate(iconic_sites[:8], 1):
+        content += f"- **{site['name']}**: World-famous landmark and cultural icon\n"
+    
+    content += """
+### Cultural Districts
+- **Le Marais**: Historic district with trendy boutiques
+- **Montmartre**: Artistic neighborhood with Sacré-Cœur
+- **Latin Quarter**: Student area with historic charm
+- **Saint-Germain-des-Prés**: Literary and artistic quarter
+
+### Museums & Galleries
+"""
+    
+    # Add museum information
+    museums = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['museum', 'musee', 'gallery', 'palace'])]
+    for museum in museums[:5]:
+        content += f"- **{museum['name']}**: World-class cultural institution\n"
+    
+    content += """
+## Best Time to Visit
+
+### Spring (March - May)
+- **Weather**: Mild temperatures (10-20°C), cherry blossoms
+- **Highlights**: Spring flowers, outdoor cafes
+- **Advantages**: Pleasant weather, moderate crowds
+- **Special**: Paris Fashion Week in March
+
+### Summer (June - August)
+- **Weather**: Warm temperatures (20-30°C), long days
+- **Highlights**: Outdoor festivals, river cruises
+- **Considerations**: Peak tourist season, book early
+- **Special**: Bastille Day celebrations in July
+
+### Autumn (September - November)
+- **Weather**: Comfortable temperatures (10-20°C), fall colors
+- **Highlights**: Cultural events, wine harvest
+- **Advantages**: Fewer crowds, beautiful autumn scenery
+- **Special**: Paris Fashion Week in September
+
+### Winter (December - February)
+- **Weather**: Cold temperatures (0-10°C), occasional snow
+- **Highlights**: Christmas markets, indoor attractions
+- **Advantages**: Fewer crowds, lower prices
+- **Special**: Christmas lights and decorations
+
+## Transportation
+
+### Getting Around Paris
+- **Metro**: Extensive 16-line system, efficient and clean
+- **Bus**: Comprehensive network, scenic routes
+- **RER**: Regional trains for longer distances
+- **Walking**: Many attractions are within walking distance
+
+### From Other Cities
+- **International Airport**: Charles de Gaulle (CDG) and Orly (ORY)
+- **High-Speed Rail**: TGV connections to major European cities
+- **Eurostar**: Direct train to London
+
+## Cultural Etiquette
+
+### General Behavior
+- **Greetings**: Bonjour (hello) is essential
+- **Dress**: Smart casual, Parisians dress well
+- **Photography**: Ask permission before taking photos
+- **Queue**: Be patient and orderly
+
+### Visiting Cultural Sites
+- **Dress Code**: Modest clothing for churches
+- **Behavior**: Quiet and respectful
+- **Photography**: Check for restrictions
+- **Tickets**: Book major attractions in advance
+
+## Food & Dining
+
+### Must-Try Paris Foods
+- **Croissants**: Fresh from local bakeries
+- **Macarons**: Colorful French pastries
+- **Escargots**: Traditional French snails
+- **Coq au Vin**: Classic French chicken dish
+- **Crêpes**: Sweet and savory options
+
+### Dining Districts
+- **Le Marais**: Trendy restaurants and cafes
+- **Saint-Germain**: Traditional French bistros
+- **Montmartre**: Charming neighborhood dining
+- **Champs-Élysées**: High-end restaurants
+
+## Shopping
+
+### Traditional Items
+- **Fashion**: Designer clothing and accessories
+- **Perfume**: French fragrances
+- **Wine**: French wines and champagne
+- **Art**: Prints and reproductions
+
+### Shopping Areas
+- **Champs-Élysées**: Luxury shopping
+- **Le Marais**: Boutique shopping
+- **Galeries Lafayette**: Department store
+- **Rue de Rivoli**: Traditional shopping
+
+## Accommodation
+
+### Options Available
+- **Hotels**: Range from budget to luxury
+- **Boutique Hotels**: Charming small hotels
+- **Hostels**: Budget-friendly options
+- **Apartments**: Self-catering options
+
+## Seasonal Highlights
+
+### Spring
+- Cherry blossoms in parks
+- Outdoor cafes and terraces
+- Spring fashion shows
+
+### Summer
+- Long daylight hours
+- Outdoor festivals and events
+- River cruises on the Seine
+
+### Autumn
+- Fall colors in parks
+- Cultural festivals
+- Wine harvest celebrations
+
+### Winter
+- Christmas markets
+- Indoor cultural activities
+- Winter sales in January
+
+## Practical Information
+
+### Important Numbers
+- **Emergency**: 112 (EU emergency number)
+- **Police**: 17
+- **Tourist Information**: Available at visitor centers
+
+### Useful Apps
+- **RATP**: Public transport app
+- **Google Translate**: For language assistance
+- **Paris Metro**: Subway route planning
+
+### Money & Payments
+- **Currency**: Euro (€)
+- **Credit Cards**: Widely accepted
+- **Cash**: Still useful for small purchases
+- **Tipping**: Service included, extra tip appreciated
+
+## Weather by Season
+- **Spring**: 10-20°C, cherry blossoms, pleasant weather
+- **Summer**: 20-30°C, long days, peak tourist season
+- **Autumn**: 10-20°C, fall colors, fewer crowds
+- **Winter**: 0-10°C, cold, Christmas atmosphere"""
+    
+    return content
+
+
+def create_london_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create London-specific content"""
+    content = f"""{destination_name} is the historic capital of England and the United Kingdom, a global city that seamlessly blends centuries of history with modern innovation. From the iconic Big Ben to the cutting-edge Tate Modern, {destination_name} offers visitors an unparalleled cultural experience.
+
+## Overview
+{destination_name} has been a center of power, culture, and commerce for over 2,000 years. With its royal palaces, world-class museums, and diverse neighborhoods, the city offers something for every visitor.
+
+## Top Attractions
+
+### Historic Landmarks
+"""
+    
+    # Add historic landmark information
+    historic_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['buckingham', 'tower', 'westminster', 'big ben', 'trafalgar', 'hyde', 'st paul'])]
+    for i, site in enumerate(historic_sites[:8], 1):
+        content += f"- **{site['name']}**: Historic landmark and cultural icon\n"
+    
+    content += """
+### Museums & Galleries
+"""
+    
+    # Add museum information
+    museums = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['museum', 'gallery', 'tate', 'british', 'natural', 'science'])]
+    for museum in museums[:5]:
+        content += f"- **{museum['name']}**: World-class cultural institution\n"
+    
+    content += """
+### Cultural Districts
+- **Westminster**: Government and royal landmarks
+- **Soho**: Entertainment and nightlife district
+- **Camden**: Alternative culture and markets
+- **Shoreditch**: Hipster area with street art
+
+## Best Time to Visit
+
+### Spring (March - May)
+- **Weather**: Mild temperatures (10-20°C), cherry blossoms
+- **Highlights**: Spring flowers, outdoor events
+- **Advantages**: Pleasant weather, moderate crowds
+- **Special**: Chelsea Flower Show in May
+
+### Summer (June - August)
+- **Weather**: Warm temperatures (15-25°C), long days
+- **Highlights**: Outdoor festivals, royal events
+- **Considerations**: Peak tourist season, book early
+- **Special**: Wimbledon tennis tournament
+
+### Autumn (September - November)
+- **Weather**: Comfortable temperatures (10-20°C), fall colors
+- **Highlights**: Cultural events, fashion week
+- **Advantages**: Fewer crowds, beautiful autumn scenery
+- **Special**: London Fashion Week in September
+
+### Winter (December - February)
+- **Weather**: Cold temperatures (0-10°C), occasional snow
+- **Highlights**: Christmas markets, indoor attractions
+- **Advantages**: Fewer crowds, lower prices
+- **Special**: New Year's Eve celebrations
+
+## Transportation
+
+### Getting Around London
+- **Underground**: Extensive tube network, efficient
+- **Bus**: Comprehensive network, scenic routes
+- **Overground**: Surface rail network
+- **Walking**: Many attractions are within walking distance
+
+### From Other Cities
+- **International Airport**: Heathrow (LHR), Gatwick (LGW), Stansted (STN)
+- **Eurostar**: Direct train to Paris and Brussels
+- **Domestic Rail**: Connections to all major UK cities
+
+## Cultural Etiquette
+
+### General Behavior
+- **Greetings**: Handshakes common, polite and reserved
+- **Dress**: Smart casual, Londoners dress well
+- **Photography**: Ask permission before taking photos
+- **Queue**: British people are very particular about queuing
+
+### Visiting Cultural Sites
+- **Dress Code**: Modest clothing for churches
+- **Behavior**: Quiet and respectful
+- **Photography**: Check for restrictions
+- **Tickets**: Book major attractions in advance
+
+## Food & Dining
+
+### Must-Try London Foods
+- **Fish and Chips**: Traditional British dish
+- **Sunday Roast**: Traditional Sunday meal
+- **Full English Breakfast**: Hearty morning meal
+- **Afternoon Tea**: Traditional British tea service
+- **Pie and Mash**: Traditional London dish
+
+### Dining Districts
+- **Soho**: International cuisine and trendy restaurants
+- **Camden**: Street food and alternative dining
+- **Mayfair**: High-end restaurants
+- **Brick Lane**: Indian and Bangladeshi cuisine
+
+## Shopping
+
+### Traditional Items
+- **Tea**: Traditional British tea
+- **Tweed**: Traditional British fabric
+- **Antiques**: From Portobello Road market
+- **Fashion**: From Oxford Street and Bond Street
+
+### Shopping Areas
+- **Oxford Street**: Main shopping street
+- **Bond Street**: Luxury shopping
+- **Camden Market**: Alternative and vintage
+- **Portobello Road**: Antiques and vintage
+
+## Accommodation
+
+### Options Available
+- **Hotels**: Range from budget to luxury
+- **Boutique Hotels**: Charming small hotels
+- **Hostels**: Budget-friendly options
+- **Apartments**: Self-catering options
+
+## Seasonal Highlights
+
+### Spring
+- Cherry blossoms in parks
+- Chelsea Flower Show
+- Spring fashion shows
+
+### Summer
+- Long daylight hours
+- Outdoor festivals and events
+- Royal events and ceremonies
+
+### Autumn
+- Fall colors in parks
+- London Fashion Week
+- Cultural festivals
+
+### Winter
+- Christmas markets
+- New Year's Eve celebrations
+- Indoor cultural activities
+
+## Practical Information
+
+### Important Numbers
+- **Emergency**: 999 (UK emergency number)
+- **Police**: 101 (non-emergency)
+- **Tourist Information**: Available at visitor centers
+
+### Useful Apps
+- **TfL Go**: Public transport app
+- **Google Translate**: For language assistance
+- **London Underground**: Tube route planning
+
+### Money & Payments
+- **Currency**: British Pound (£)
+- **Credit Cards**: Widely accepted
+- **Cash**: Still useful for small purchases
+- **Contactless**: Very common for payments
+
+## Weather by Season
+- **Spring**: 10-20°C, cherry blossoms, pleasant weather
+- **Summer**: 15-25°C, long days, peak tourist season
+- **Autumn**: 10-20°C, fall colors, fewer crowds
+- **Winter**: 0-10°C, cold, Christmas atmosphere"""
+    
+    return content
+
+
+def create_rome_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Rome-specific content"""
+    content = f"""{destination_name} is the Eternal City, Italy's historic capital and one of the world's most beautiful cities. From the ancient Colosseum to the magnificent Vatican, {destination_name} offers visitors an unparalleled journey through history and art.
+
+## Overview
+{destination_name} has been a center of power, culture, and religion for over 2,500 years. With its ancient ruins, Renaissance art, and vibrant modern culture, the city offers a unique blend of past and present.
+
+## Top Attractions
+
+### Ancient Landmarks
+"""
+    
+    # Add ancient landmark information
+    ancient_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['colosseum', 'forum', 'pantheon', 'palatine', 'circus', 'appian', 'catacombs'])]
+    for i, site in enumerate(ancient_sites[:8], 1):
+        content += f"- **{site['name']}**: Ancient Roman landmark and archaeological treasure\n"
+    
+    content += """
+### Vatican City
+"""
+    
+    # Add Vatican information
+    vatican_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['vatican', 'sistine', 'st peter', 'basilica'])]
+    for site in vatican_sites[:3]:
+        content += f"- **{site['name']}**: Sacred site and artistic masterpiece\n"
+    
+    content += """
+### Cultural Districts
+- **Centro Storico**: Historic center with major landmarks
+- **Trastevere**: Charming neighborhood with authentic atmosphere
+- **Vatican**: Religious and cultural center
+- **Testaccio**: Traditional Roman neighborhood
+
+## Best Time to Visit
+
+### Spring (March - May)
+- **Weather**: Mild temperatures (10-25°C), pleasant
+- **Highlights**: Spring flowers, outdoor cafes
+- **Advantages**: Good weather, moderate crowds
+- **Special**: Easter celebrations at the Vatican
+
+### Summer (June - August)
+- **Weather**: Hot temperatures (20-35°C), dry
+- **Highlights**: Long daylight hours, outdoor dining
+- **Considerations**: Peak tourist season, very hot
+- **Special**: Summer festivals and events
+
+### Autumn (September - November)
+- **Weather**: Comfortable temperatures (15-25°C), pleasant
+- **Highlights**: Cultural events, wine harvest
+- **Advantages**: Fewer crowds, beautiful weather
+- **Special**: Grape harvest in surrounding regions
+
+### Winter (December - February)
+- **Weather**: Cool temperatures (5-15°C), occasional rain
+- **Highlights**: Christmas celebrations, indoor attractions
+- **Advantages**: Fewer crowds, lower prices
+- **Special**: Christmas markets and decorations
+
+## Transportation
+
+### Getting Around Rome
+- **Metro**: Three-line system, efficient for major sites
+- **Bus**: Comprehensive network, scenic routes
+- **Tram**: Limited but useful routes
+- **Walking**: Many attractions are within walking distance
+
+### From Other Cities
+- **International Airport**: Fiumicino (FCO) and Ciampino (CIA)
+- **High-Speed Rail**: Connections to Milan, Florence, Naples
+- **Domestic Flights**: Well-connected to major Italian cities
+
+## Cultural Etiquette
+
+### General Behavior
+- **Greetings**: Handshakes common, warm and friendly
+- **Dress**: Smart casual, Italians dress well
+- **Photography**: Ask permission before taking photos
+- **Queue**: Be patient, Italians are more relaxed about queuing
+
+### Visiting Religious Sites
+- **Dress Code**: Modest clothing required, cover shoulders and knees
+- **Behavior**: Quiet and respectful
+- **Photography**: Check for restrictions, especially in churches
+- **Tickets**: Book Vatican and major attractions in advance
+
+## Food & Dining
+
+### Must-Try Roman Foods
+- **Pizza Romana**: Thin-crust Roman-style pizza
+- **Pasta alla Carbonara**: Traditional Roman pasta dish
+- **Saltimbocca**: Veal with prosciutto and sage
+- **Gelato**: Italian ice cream
+- **Espresso**: Traditional Italian coffee
+
+### Dining Districts
+- **Trastevere**: Authentic Roman restaurants
+- **Testaccio**: Traditional Roman cuisine
+- **Centro Storico**: Tourist-friendly restaurants
+- **Monti**: Hip neighborhood with trendy restaurants
+
+## Shopping
+
+### Traditional Items
+- **Fashion**: Italian designer clothing
+- **Leather Goods**: Bags, shoes, and accessories
+- **Wine**: Italian wines from surrounding regions
+- **Art**: Prints and reproductions
+
+### Shopping Areas
+- **Via del Corso**: Main shopping street
+- **Via Condotti**: Luxury shopping
+- **Campo de' Fiori**: Local market
+- **Porta Portese**: Sunday flea market
+
+## Accommodation
+
+### Options Available
+- **Hotels**: Range from budget to luxury
+- **Boutique Hotels**: Charming small hotels
+- **Hostels**: Budget-friendly options
+- **Apartments**: Self-catering options
+
+## Seasonal Highlights
+
+### Spring
+- Spring flowers in parks
+- Easter celebrations
+- Outdoor cafes and terraces
+
+### Summer
+- Long daylight hours
+- Summer festivals and events
+- Outdoor dining and nightlife
+
+### Autumn
+- Wine harvest celebrations
+- Cultural festivals
+- Beautiful autumn weather
+
+### Winter
+- Christmas markets
+- Indoor cultural activities
+- Traditional winter foods
+
+## Practical Information
+
+### Important Numbers
+- **Emergency**: 112 (EU emergency number)
+- **Police**: 113
+- **Tourist Information**: Available at visitor centers
+
+### Useful Apps
+- **ATAC**: Public transport app
+- **Google Translate**: For language assistance
+- **Roma Metro**: Subway route planning
+
+### Money & Payments
+- **Currency**: Euro (€)
+- **Credit Cards**: Widely accepted
+- **Cash**: Still useful for small purchases
+- **Tipping**: Service included, extra tip appreciated
+
+## Weather by Season
+- **Spring**: 10-25°C, pleasant weather, moderate crowds
+- **Summer**: 20-35°C, hot and dry, peak tourist season
+- **Autumn**: 15-25°C, beautiful weather, fewer crowds
+- **Winter**: 5-15°C, cool and wet, fewer crowds"""
+    
+    return content
+
+
+def create_barcelona_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Barcelona-specific content"""
+    return create_european_content(attractions, destination_name)
+
+
+def create_amsterdam_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Amsterdam-specific content"""
+    return create_european_content(attractions, destination_name)
+
+
+def create_berlin_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Berlin-specific content"""
+    return create_european_content(attractions, destination_name)
+
+
+def create_prague_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Prague-specific content"""
+    return create_european_content(attractions, destination_name)
+
+
+def create_vienna_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Vienna-specific content"""
+    return create_european_content(attractions, destination_name)
+
+
+def create_budapest_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+    """Create Budapest-specific content"""
+    return create_european_content(attractions, destination_name)
 
 
 def create_european_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
