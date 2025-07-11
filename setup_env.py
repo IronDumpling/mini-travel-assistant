@@ -3,6 +3,7 @@
 Environment Setup Script for AI Travel Planning Agent
 
 This script helps you set up the required environment variables for the DeepSeek API.
+It only appends DeepSeek-specific parameters to the .env file, without modifying or removing any existing lines.
 """
 
 import os
@@ -14,29 +15,30 @@ def setup_environment():
     print("=" * 60)
     
     # Your DeepSeek API key
-    deepseek_api_key = "sk-76bbf9b4105240459a733da25d415f47"
+    deepseek_api_key = "sk-d6f66ddb3a174cb3b57367e97207e1fe"
     
-    # Set environment variables (DeepSeek is now the default)
-    os.environ["LLM_PROVIDER"] = "deepseek"  # This is now the default
-    os.environ["LLM_MODEL"] = "deepseek-chat"
-    os.environ["LLM_API_KEY"] = deepseek_api_key
-    os.environ["DEEPSEEK_API_KEY"] = deepseek_api_key
-    os.environ["LLM_TEMPERATURE"] = "0.7"
-    os.environ["LLM_MAX_TOKENS"] = "4000"
+    # Define DeepSeek-specific environment variables
+    deepseek_vars = {
+        "LLM_PROVIDER": "deepseek",
+        "LLM_MODEL": "deepseek-chat", 
+        "LLM_API_KEY": deepseek_api_key,
+        "DEEPSEEK_API_KEY": deepseek_api_key,
+        "LLM_TEMPERATURE": "0.7",
+        "LLM_MAX_TOKENS": "4000"
+    }
     
-    # Set other required environment variables
-    os.environ["CHROMA_DB_PATH"] = "./data/chroma_db"
-    os.environ["EMBEDDING_MODEL"] = "all-MiniLM-L6-v2"
-    os.environ["RAG_TOP_K"] = "5"
-    os.environ["RAG_SIMILARITY_THRESHOLD"] = "0.7"
-    os.environ["DATABASE_URL"] = "sqlite:///./data/travel_agent.db"
-    os.environ["HOST"] = "0.0.0.0"
-    os.environ["PORT"] = "8000"
-    os.environ["DEBUG"] = "True"
-    os.environ["LOG_LEVEL"] = "INFO"
-    os.environ["MOCK_MODE"] = "false"
+    # Set environment variables for current session
+    for key, value in deepseek_vars.items():
+        os.environ[key] = value
     
-    print("✅ Environment variables set successfully!")
+    # Always append DeepSeek params to the .env file
+    env_file_path = ".env"
+    with open(env_file_path, 'a', encoding='utf-8') as f:
+        f.write("\n# DeepSeek API Configuration\n")
+        for key, value in deepseek_vars.items():
+            f.write(f"{key}={value}\n")
+    print(f"✅ Appended DeepSeek variables to .env file.")
+    
     print()
     print("📋 Configuration Summary:")
     print(f"   LLM Provider: {os.environ.get('LLM_PROVIDER')}")
@@ -48,12 +50,7 @@ def setup_environment():
     print("🚀 You can now run the application!")
     print("   Command: python -m uvicorn app.main:app --reload")
     print()
-    print("📝 Note: These environment variables are set for this session only.")
-    print("   For permanent setup, create a .env file in the project root with:")
-    print("   LLM_PROVIDER=deepseek")
-    print("   LLM_MODEL=deepseek-chat")
-    print("   LLM_API_KEY=sk-76bbf9b4105240459a733da25d415f47")
-    print("   DEEPSEEK_API_KEY=sk-76bbf9b4105240459a733da25d415f47")
+    print("📝 Note: Environment variables are set for this session and appended to .env file.")
 
 if __name__ == "__main__":
     setup_environment() 
