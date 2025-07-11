@@ -31,7 +31,7 @@ HEADERS = {
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "none",
-    "Cache-Control": "max-age=0"
+    "Cache-Control": "max-age=0",
 }
 
 # Destination configurations
@@ -43,15 +43,50 @@ DESTINATION_CONFIGS = {
         "source_id": "japan_guide_official",
         "region": "asia",
         "keywords": [
-            'kinkakuji', 'fushimi', 'kiyomizu', 'arashiyama', 'ginkakuji',
-            'nijo', 'imperial', 'ryoanji', 'tenryuji', 'nishiki', 'gion',
-            'heian', 'philosopher', 'kodaiji', 'yasaka', 'maruyama',
-            'nanzenji', 'kenninji', 'shorenin', 'chionin', 'eikando',
-            'shugakuin', 'ninnaji', 'kibune', 'kurama', 'ohara', 'sanzenin',
-            'takao', 'hieizan', 'daitokuji', 'kitano', 'kamo', 'enkoji',
-            'manshuin', 'kokedera', 'katsura', 'yoshiminedera', 'daikakuji',
-            'myoshinji', 'toei', 'hozugawa', 'sagano', 'yamazaki'
-        ]
+            "kinkakuji",
+            "fushimi",
+            "kiyomizu",
+            "arashiyama",
+            "ginkakuji",
+            "nijo",
+            "imperial",
+            "ryoanji",
+            "tenryuji",
+            "nishiki",
+            "gion",
+            "heian",
+            "philosopher",
+            "kodaiji",
+            "yasaka",
+            "maruyama",
+            "nanzenji",
+            "kenninji",
+            "shorenin",
+            "chionin",
+            "eikando",
+            "shugakuin",
+            "ninnaji",
+            "kibune",
+            "kurama",
+            "ohara",
+            "sanzenin",
+            "takao",
+            "hieizan",
+            "daitokuji",
+            "kitano",
+            "kamo",
+            "enkoji",
+            "manshuin",
+            "kokedera",
+            "katsura",
+            "yoshiminedera",
+            "daikakuji",
+            "myoshinji",
+            "toei",
+            "hozugawa",
+            "sagano",
+            "yamazaki",
+        ],
     },
     "paris": {
         "url": "https://en.wikivoyage.org/wiki/Paris",
@@ -60,11 +95,30 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'eiffel', 'louvre', 'notre-dame', 'arc', 'champs', 'montmartre',
-            'versailles', 'seine', 'marais', 'latin', 'sacre', 'pompidou',
-            'orsay', 'tuileries', 'luxembourg', 'pantheon', 'sainte-chapelle',
-            'musee', 'palace', 'cathedral', 'museum', 'garden', 'park'
-        ]
+            "eiffel",
+            "louvre",
+            "notre-dame",
+            "arc",
+            "champs",
+            "montmartre",
+            "versailles",
+            "seine",
+            "marais",
+            "latin",
+            "sacre",
+            "pompidou",
+            "orsay",
+            "tuileries",
+            "luxembourg",
+            "pantheon",
+            "sainte-chapelle",
+            "musee",
+            "palace",
+            "cathedral",
+            "museum",
+            "garden",
+            "park",
+        ],
     },
     "rome": {
         "url": "https://en.wikivoyage.org/wiki/Rome",
@@ -73,10 +127,25 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'colosseum', 'vatican', 'pantheon', 'forum', 'trevi', 'piazza',
-            'sistine', 'st-peter', 'castel', 'baths', 'catacombs', 'palatine',
-            'capitoline', 'trajan', 'circus', 'appian', 'basilica', 'church'
-        ]
+            "colosseum",
+            "vatican",
+            "pantheon",
+            "forum",
+            "trevi",
+            "piazza",
+            "sistine",
+            "st-peter",
+            "castel",
+            "baths",
+            "catacombs",
+            "palatine",
+            "capitoline",
+            "trajan",
+            "circus",
+            "appian",
+            "basilica",
+            "church",
+        ],
     },
     "barcelona": {
         "url": "https://en.wikivoyage.org/wiki/Barcelona",
@@ -85,10 +154,26 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'sagrada', 'park', 'guell', 'ramblas', 'gothic', 'barceloneta',
-            'montjuic', 'tibidabo', 'casa', 'mila', 'batllo', 'pedrera',
-            'camp', 'nou', 'olympic', 'port', 'vell', 'cathedral', 'museum'
-        ]
+            "sagrada",
+            "park",
+            "guell",
+            "ramblas",
+            "gothic",
+            "barceloneta",
+            "montjuic",
+            "tibidabo",
+            "casa",
+            "mila",
+            "batllo",
+            "pedrera",
+            "camp",
+            "nou",
+            "olympic",
+            "port",
+            "vell",
+            "cathedral",
+            "museum",
+        ],
     },
     "amsterdam": {
         "url": "https://en.wikivoyage.org/wiki/Amsterdam",
@@ -97,10 +182,26 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'rijksmuseum', 'van', 'gogh', 'anne', 'frank', 'dam', 'square',
-            'canals', 'jordaan', 'vondelpark', 'red', 'light', 'district',
-            'museums', 'plein', 'begijnhof', 'westerkerk', 'nemo', 'palace'
-        ]
+            "rijksmuseum",
+            "van",
+            "gogh",
+            "anne",
+            "frank",
+            "dam",
+            "square",
+            "canals",
+            "jordaan",
+            "vondelpark",
+            "red",
+            "light",
+            "district",
+            "museums",
+            "plein",
+            "begijnhof",
+            "westerkerk",
+            "nemo",
+            "palace",
+        ],
     },
     "london": {
         "url": "https://en.wikivoyage.org/wiki/London",
@@ -109,11 +210,33 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'buckingham', 'palace', 'tower', 'bridge', 'westminster', 'abbey',
-            'big', 'ben', 'london', 'eye', 'trafalgar', 'square', 'hyde', 'park',
-            'british', 'museum', 'natural', 'history', 'science', 'museum',
-            'tate', 'modern', 'national', 'gallery', 'covent', 'garden'
-        ]
+            "buckingham",
+            "palace",
+            "tower",
+            "bridge",
+            "westminster",
+            "abbey",
+            "big",
+            "ben",
+            "london",
+            "eye",
+            "trafalgar",
+            "square",
+            "hyde",
+            "park",
+            "british",
+            "museum",
+            "natural",
+            "history",
+            "science",
+            "museum",
+            "tate",
+            "modern",
+            "national",
+            "gallery",
+            "covent",
+            "garden",
+        ],
     },
     "berlin": {
         "url": "https://en.wikivoyage.org/wiki/Berlin",
@@ -122,11 +245,29 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'brandenburg', 'gate', 'reichstag', 'berlin', 'wall', 'memorial',
-            'museum', 'island', 'checkpoint', 'charlie', 'alexanderplatz',
-            'unter', 'den', 'linden', 'tiergarten', 'victory', 'column',
-            'holocaust', 'memorial', 'east', 'side', 'gallery'
-        ]
+            "brandenburg",
+            "gate",
+            "reichstag",
+            "berlin",
+            "wall",
+            "memorial",
+            "museum",
+            "island",
+            "checkpoint",
+            "charlie",
+            "alexanderplatz",
+            "unter",
+            "den",
+            "linden",
+            "tiergarten",
+            "victory",
+            "column",
+            "holocaust",
+            "memorial",
+            "east",
+            "side",
+            "gallery",
+        ],
     },
     "prague": {
         "url": "https://en.wikivoyage.org/wiki/Prague",
@@ -135,10 +276,27 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'charles', 'bridge', 'prague', 'castle', 'old', 'town', 'square',
-            'astronomical', 'clock', 'wenceslas', 'square', 'jewish', 'quarter',
-            'st', 'vitus', 'cathedral', 'petrin', 'tower', 'national', 'museum'
-        ]
+            "charles",
+            "bridge",
+            "prague",
+            "castle",
+            "old",
+            "town",
+            "square",
+            "astronomical",
+            "clock",
+            "wenceslas",
+            "square",
+            "jewish",
+            "quarter",
+            "st",
+            "vitus",
+            "cathedral",
+            "petrin",
+            "tower",
+            "national",
+            "museum",
+        ],
     },
     "vienna": {
         "url": "https://en.wikivoyage.org/wiki/Vienna",
@@ -147,11 +305,29 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'schonbrunn', 'palace', 'st', 'stephens', 'cathedral', 'belvedere',
-            'hofburg', 'palace', 'prater', 'vienna', 'state', 'opera',
-            'kunsthistorisches', 'museum', 'natural', 'history', 'museum',
-            'albertina', 'museum', 'stephensplatz', 'ring', 'strasse'
-        ]
+            "schonbrunn",
+            "palace",
+            "st",
+            "stephens",
+            "cathedral",
+            "belvedere",
+            "hofburg",
+            "palace",
+            "prater",
+            "vienna",
+            "state",
+            "opera",
+            "kunsthistorisches",
+            "museum",
+            "natural",
+            "history",
+            "museum",
+            "albertina",
+            "museum",
+            "stephensplatz",
+            "ring",
+            "strasse",
+        ],
     },
     "budapest": {
         "url": "https://en.wikivoyage.org/wiki/Budapest",
@@ -160,11 +336,30 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "europe",
         "keywords": [
-            'parliament', 'building', 'budapest', 'castle', 'chain', 'bridge',
-            'fishermans', 'bastion', 'st', 'stephens', 'basilica', 'heroes',
-            'square', 'szechenyi', 'baths', 'gellert', 'baths', 'vajdahunyad',
-            'castle', 'andrasy', 'avenue', 'opera', 'house'
-        ]
+            "parliament",
+            "building",
+            "budapest",
+            "castle",
+            "chain",
+            "bridge",
+            "fishermans",
+            "bastion",
+            "st",
+            "stephens",
+            "basilica",
+            "heroes",
+            "square",
+            "szechenyi",
+            "baths",
+            "gellert",
+            "baths",
+            "vajdahunyad",
+            "castle",
+            "andrasy",
+            "avenue",
+            "opera",
+            "house",
+        ],
     },
     "beijing": {
         "url": "https://en.wikivoyage.org/wiki/Beijing",
@@ -173,12 +368,40 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "asia",
         "keywords": [
-            'forbidden', 'city', 'great', 'wall', 'temple', 'heaven', 'summer',
-            'palace', 'tiananmen', 'square', 'beijing', 'hutong', 'olympic',
-            'park', 'bird', 'nest', 'water', 'cube', 'ming', 'tombs',
-            'lama', 'temple', 'confucius', 'temple', 'bell', 'drum', 'tower',
-            'beihai', 'park', 'jingshan', 'park', 'yuanmingyuan', 'ruins'
-        ]
+            "forbidden",
+            "city",
+            "great",
+            "wall",
+            "temple",
+            "heaven",
+            "summer",
+            "palace",
+            "tiananmen",
+            "square",
+            "beijing",
+            "hutong",
+            "olympic",
+            "park",
+            "bird",
+            "nest",
+            "water",
+            "cube",
+            "ming",
+            "tombs",
+            "lama",
+            "temple",
+            "confucius",
+            "temple",
+            "bell",
+            "drum",
+            "tower",
+            "beihai",
+            "park",
+            "jingshan",
+            "park",
+            "yuanmingyuan",
+            "ruins",
+        ],
     },
     "shanghai": {
         "url": "https://en.wikivoyage.org/wiki/Shanghai",
@@ -187,12 +410,36 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "asia",
         "keywords": [
-            'bund', 'shanghai', 'tower', 'pearl', 'oriental', 'pearl',
-            'nanjing', 'road', 'peoples', 'square', 'yuyuan', 'garden',
-            'temple', 'city', 'god', 'xintiandi', 'tianzifang', 'french',
-            'concession', 'jade', 'buddha', 'temple', 'longhua', 'pagoda',
-            'shanghai', 'museum', 'science', 'technology', 'museum'
-        ]
+            "bund",
+            "shanghai",
+            "tower",
+            "pearl",
+            "oriental",
+            "pearl",
+            "nanjing",
+            "road",
+            "peoples",
+            "square",
+            "yuyuan",
+            "garden",
+            "temple",
+            "city",
+            "god",
+            "xintiandi",
+            "tianzifang",
+            "french",
+            "concession",
+            "jade",
+            "buddha",
+            "temple",
+            "longhua",
+            "pagoda",
+            "shanghai",
+            "museum",
+            "science",
+            "technology",
+            "museum",
+        ],
     },
     "seoul": {
         "url": "https://en.wikivoyage.org/wiki/Seoul",
@@ -201,12 +448,34 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "asia",
         "keywords": [
-            'gyeongbokgung', 'palace', 'changdeokgung', 'deoksugung',
-            'namsan', 'tower', 'seoul', 'myeongdong', 'dongdaemun',
-            'insadong', 'hongdae', 'gangnam', 'bukchon', 'hanok',
-            'namsangol', 'village', 'seoul', 'forest', 'park', 'lotte',
-            'world', 'tower', 'coex', 'mall', 'aquarium', 'n', 'seoul'
-        ]
+            "gyeongbokgung",
+            "palace",
+            "changdeokgung",
+            "deoksugung",
+            "namsan",
+            "tower",
+            "seoul",
+            "myeongdong",
+            "dongdaemun",
+            "insadong",
+            "hongdae",
+            "gangnam",
+            "bukchon",
+            "hanok",
+            "namsangol",
+            "village",
+            "seoul",
+            "forest",
+            "park",
+            "lotte",
+            "world",
+            "tower",
+            "coex",
+            "mall",
+            "aquarium",
+            "n",
+            "seoul",
+        ],
     },
     "singapore": {
         "url": "https://en.wikivoyage.org/wiki/Singapore",
@@ -215,12 +484,38 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "asia",
         "keywords": [
-            'marina', 'bay', 'sands', 'gardens', 'cloud', 'forest',
-            'flower', 'dome', 'sentosa', 'island', 'universal', 'studios',
-            'singapore', 'zoo', 'night', 'safari', 'river', 'safari',
-            'merlion', 'park', 'chinatown', 'little', 'india', 'arab',
-            'street', 'orchard', 'road', 'clarke', 'quay', 'boat', 'quay'
-        ]
+            "marina",
+            "bay",
+            "sands",
+            "gardens",
+            "cloud",
+            "forest",
+            "flower",
+            "dome",
+            "sentosa",
+            "island",
+            "universal",
+            "studios",
+            "singapore",
+            "zoo",
+            "night",
+            "safari",
+            "river",
+            "safari",
+            "merlion",
+            "park",
+            "chinatown",
+            "little",
+            "india",
+            "arab",
+            "street",
+            "orchard",
+            "road",
+            "clarke",
+            "quay",
+            "boat",
+            "quay",
+        ],
     },
     "bangkok": {
         "url": "https://en.wikivoyage.org/wiki/Bangkok",
@@ -229,12 +524,39 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "asia",
         "keywords": [
-            'grand', 'palace', 'wat', 'phra', 'kaew', 'emerald', 'buddha',
-            'wat', 'arun', 'temple', 'dawn', 'wat', 'pho', 'reclining',
-            'buddha', 'chinatown', 'yaowarat', 'khaosan', 'road', 'siam',
-            'paragon', 'central', 'world', 'chatuchak', 'weekend', 'market',
-            'lumphini', 'park', 'vimanmek', 'mansion', 'ananta', 'samakhom'
-        ]
+            "grand",
+            "palace",
+            "wat",
+            "phra",
+            "kaew",
+            "emerald",
+            "buddha",
+            "wat",
+            "arun",
+            "temple",
+            "dawn",
+            "wat",
+            "pho",
+            "reclining",
+            "buddha",
+            "chinatown",
+            "yaowarat",
+            "khaosan",
+            "road",
+            "siam",
+            "paragon",
+            "central",
+            "world",
+            "chatuchak",
+            "weekend",
+            "market",
+            "lumphini",
+            "park",
+            "vimanmek",
+            "mansion",
+            "ananta",
+            "samakhom",
+        ],
     },
     "hong_kong": {
         "url": "https://en.wikivoyage.org/wiki/Hong_Kong",
@@ -243,13 +565,39 @@ DESTINATION_CONFIGS = {
         "source_id": "wikivoyage_official",
         "region": "asia",
         "keywords": [
-            'victoria', 'peak', 'hong', 'kong', 'disneyland', 'ocean',
-            'park', 'tian', 'tan', 'buddha', 'big', 'buddha', 'lantau',
-            'island', 'ngong', 'ping', 'village', 'central', 'mid',
-            'levels', 'escalator', 'temple', 'street', 'night', 'market',
-            'stanley', 'market', 'repeal', 'bay', 'avenue', 'stars'
-        ]
-    }
+            "victoria",
+            "peak",
+            "hong",
+            "kong",
+            "disneyland",
+            "ocean",
+            "park",
+            "tian",
+            "tan",
+            "buddha",
+            "big",
+            "buddha",
+            "lantau",
+            "island",
+            "ngong",
+            "ping",
+            "village",
+            "central",
+            "mid",
+            "levels",
+            "escalator",
+            "temple",
+            "street",
+            "night",
+            "market",
+            "stanley",
+            "market",
+            "repeal",
+            "bay",
+            "avenue",
+            "stars",
+        ],
+    },
 }
 
 
@@ -263,42 +611,46 @@ def get_session():
 def scrape_destination(destination_name: str):
     """Scrape destination attractions from various sources"""
     session = get_session()
-    
+
     if destination_name.lower() not in DESTINATION_CONFIGS:
-        logger.error(f"Destination '{destination_name}' not configured. Available: {list(DESTINATION_CONFIGS.keys())}")
+        logger.error(
+            f"Destination '{destination_name}' not configured. Available: {list(DESTINATION_CONFIGS.keys())}"
+        )
         return []
-    
+
     config = DESTINATION_CONFIGS[destination_name.lower()]
     url = config["url"]
-    
+
     try:
         # Add a random delay to avoid being flagged as a bot
         time.sleep(random.uniform(1, 3))
-        
+
         response = session.get(url, timeout=30)
         response.raise_for_status()
-        
+
         soup = BeautifulSoup(response.text, "html.parser")
         attractions = []
-        
+
         # For WikiVoyage pages, look for specific attraction sections
         if "wikivoyage" in config["source_url"].lower():
             attractions = scrape_wikivoyage_attractions(soup, config)
         else:
             # Fallback to general link extraction
             attractions = scrape_general_links(soup, config)
-        
+
         # Remove duplicates based on name
         unique_attractions = []
         seen_names = set()
         for attraction in attractions:
-            if attraction['name'] not in seen_names:
+            if attraction["name"] not in seen_names:
                 unique_attractions.append(attraction)
-                seen_names.add(attraction['name'])
-        
-        logger.info(f"Extracted {len(unique_attractions)} attractions from {config['source']}")
+                seen_names.add(attraction["name"])
+
+        logger.info(
+            f"Extracted {len(unique_attractions)} attractions from {config['source']}"
+        )
         return unique_attractions
-        
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Request failed: {e}")
         return []
@@ -310,266 +662,468 @@ def scrape_destination(destination_name: str):
 def scrape_wikivoyage_attractions(soup, config):
     """Extract specific attractions from WikiVoyage pages"""
     attractions = []
-    
+
     # Look for attraction sections in WikiVoyage
     attraction_sections = [
-        'See', 'Do', 'Buy', 'Eat', 'Drink', 'Sleep', 'Connect', 'Go next'
+        "See",
+        "Do",
+        "Buy",
+        "Eat",
+        "Drink",
+        "Sleep",
+        "Connect",
+        "Go next",
     ]
-    
+
     for section in attraction_sections:
         # Find section headers
-        headers = soup.find_all(['h2', 'h3', 'h4'])
+        headers = soup.find_all(["h2", "h3", "h4"])
         for header in headers:
             if header.get_text(strip=True).startswith(section):
                 # Look for lists and links in this section
-                next_elements = header.find_next_siblings(['ul', 'ol', 'p'], limit=10)
+                next_elements = header.find_next_siblings(["ul", "ol", "p"], limit=10)
                 for element in next_elements:
-                    if element.name in ['ul', 'ol']:
+                    if element.name in ["ul", "ol"]:
                         # Extract from lists
-                        list_items = element.find_all('li')
+                        list_items = element.find_all("li")
                         for item in list_items:
-                            links = item.find_all('a')
+                            links = item.find_all("a")
                             for link in links:
                                 name = link.get_text(strip=True)
-                                href = link.get('href')
+                                href = link.get("href")
                                 if name and href and len(name) > 3:
                                     # Check if it's a specific attraction
                                     if is_specific_attraction(name, config):
                                         full_url = urljoin(config["source_url"], href)
-                                        attractions.append({
-                                            "name": name,
-                                            "url": full_url
-                                        })
-                    elif element.name == 'p':
+                                        attractions.append(
+                                            {"name": name, "url": full_url}
+                                        )
+                    elif element.name == "p":
                         # Extract from paragraphs
-                        links = element.find_all('a')
+                        links = element.find_all("a")
                         for link in links:
                             name = link.get_text(strip=True)
-                            href = link.get('href')
+                            href = link.get("href")
                             if name and href and len(name) > 3:
                                 if is_specific_attraction(name, config):
                                     full_url = urljoin(config["source_url"], href)
-                                    attractions.append({
-                                        "name": name,
-                                        "url": full_url
-                                    })
-    
+                                    attractions.append({"name": name, "url": full_url})
+
     # Look for specific attraction keywords in the page content
-    all_links = soup.find_all('a')
+    all_links = soup.find_all("a")
     for link in all_links:
         try:
             name = link.get_text(strip=True)
-            href = link.get('href')
-            
+            href = link.get("href")
+
             if href and name and isinstance(href, str) and len(name) > 3:
                 # Check if this looks like a specific attraction
                 if is_specific_attraction(name, config):
                     # Construct full URL
-                    if href.startswith('/'):
+                    if href.startswith("/"):
                         full_url = urljoin(config["source_url"], href)
-                    elif href.startswith('http'):
+                    elif href.startswith("http"):
                         full_url = href
                     else:
-                        full_url = urljoin(config["source_url"], '/' + href)
-                    
+                        full_url = urljoin(config["source_url"], "/" + href)
+
                     # Avoid duplicates and navigation links
-                    if name not in [att['name'] for att in attractions]:
-                        attractions.append({
-                            "name": name,
-                            "url": full_url
-                        })
-                        
+                    if name not in [att["name"] for att in attractions]:
+                        attractions.append({"name": name, "url": full_url})
+
         except (AttributeError, TypeError) as e:
             continue
-    
+
     # If we didn't find enough attractions, try a more aggressive approach
     if len(attractions) < 5:
         # Look for any links that contain destination-specific keywords
         for link in all_links:
             try:
                 name = link.get_text(strip=True)
-                href = link.get('href')
-                
+                href = link.get("href")
+
                 if href and name and isinstance(href, str) and len(name) > 3:
                     name_lower = name.lower()
-                    
+
                     # Check for destination-specific keywords
                     if any(keyword in name_lower for keyword in config["keywords"]):
                         # Construct full URL
-                        if href.startswith('/'):
+                        if href.startswith("/"):
                             full_url = urljoin(config["source_url"], href)
-                        elif href.startswith('http'):
+                        elif href.startswith("http"):
                             full_url = href
                         else:
-                            full_url = urljoin(config["source_url"], '/' + href)
-                        
+                            full_url = urljoin(config["source_url"], "/" + href)
+
                         # Avoid duplicates
-                        if name not in [att['name'] for att in attractions]:
-                            attractions.append({
-                                "name": name,
-                                "url": full_url
-                            })
-                            
+                        if name not in [att["name"] for att in attractions]:
+                            attractions.append({"name": name, "url": full_url})
+
             except (AttributeError, TypeError) as e:
                 continue
-    
+
     # Filter out any remaining navigation or non-attraction links
     filtered_attractions = []
     for attraction in attractions:
-        name_lower = attraction['name'].lower()
-        
+        name_lower = attraction["name"].lower()
+
         # Skip if it contains navigation terms
         navigation_terms = [
-            'what\'s nearby', 'get shortened url', 'bahasa indonesia',
-            'tiếng việt', 'jump to content', 'main page', 'travel destinations',
-            'random page', 'recent changes', 'community portal', 'maintenance panel',
-            'interlingual lounge', 'donate', 'edit', 'history', 'watch', 'read',
-            'view source', 'view history', 'what links here', 'related changes',
-            'special pages', 'printable version', 'permanent link', 'page information',
-            'wikidata item', 'cite this page', 'create a book', 'download as pdf',
-            'version for printing', 'in other projects', 'wikimedia commons',
-            'wikisource', 'wiktionary', 'wikibooks', 'wikiquote', 'wikinews',
-            'wikiversity', 'wikidata', 'mediawiki', 'meta-wiki', 'wikispecies',
-            'wikivoyage', 'wikimedia', 'foundation', 'disclaimers', 'contact',
-            'mobile view', 'developers', 'statistics', 'cookie statement',
-            'terms of use', 'privacy policy', 'code of conduct'
+            "what's nearby",
+            "get shortened url",
+            "bahasa indonesia",
+            "tiếng việt",
+            "jump to content",
+            "main page",
+            "travel destinations",
+            "random page",
+            "recent changes",
+            "community portal",
+            "maintenance panel",
+            "interlingual lounge",
+            "donate",
+            "edit",
+            "history",
+            "watch",
+            "read",
+            "view source",
+            "view history",
+            "what links here",
+            "related changes",
+            "special pages",
+            "printable version",
+            "permanent link",
+            "page information",
+            "wikidata item",
+            "cite this page",
+            "create a book",
+            "download as pdf",
+            "version for printing",
+            "in other projects",
+            "wikimedia commons",
+            "wikisource",
+            "wiktionary",
+            "wikibooks",
+            "wikiquote",
+            "wikinews",
+            "wikiversity",
+            "wikidata",
+            "mediawiki",
+            "meta-wiki",
+            "wikispecies",
+            "wikivoyage",
+            "wikimedia",
+            "foundation",
+            "disclaimers",
+            "contact",
+            "mobile view",
+            "developers",
+            "statistics",
+            "cookie statement",
+            "terms of use",
+            "privacy policy",
+            "code of conduct",
         ]
-        
+
         if not any(term in name_lower for term in navigation_terms):
             filtered_attractions.append(attraction)
-    
+
     return filtered_attractions
 
 
 def is_specific_attraction(name, config):
     """Check if a name represents a specific attraction rather than a category"""
     name_lower = name.lower()
-    
+
     # Skip generic categories and navigation
     generic_terms = [
-        'home', 'back', 'next', 'previous', 'top', 'menu', 'search', 
-        'contact', 'about', 'privacy', 'terms', 'edit', 'history',
-        'monuments', 'museums', 'squares', 'churches', 'basilicas',
-        'attractions', 'sights', 'landmarks', 'places', 'areas',
-        'districts', 'neighborhoods', 'quarters', 'zones',
-        'what\'s nearby', 'get shortened url', 'bahasa indonesia',
-        'tiếng việt', 'rural', 'transportation', 'card', 'theaters',
-        'concert halls', 'jump to content', 'main page', 'travel destinations',
-        'random page', 'recent changes', 'community portal', 'maintenance panel',
-        'interlingual lounge', 'donate', 'edit', 'history', 'watch', 'read',
-        'view source', 'view history', 'what links here', 'related changes',
-        'special pages', 'printable version', 'permanent link', 'page information',
-        'wikidata item', 'cite this page', 'create a book', 'download as pdf',
-        'version for printing', 'in other projects', 'wikimedia commons',
-        'wikisource', 'wiktionary', 'wikibooks', 'wikiquote', 'wikinews',
-        'wikiversity', 'wikidata', 'mediawiki', 'meta-wiki', 'wikispecies',
-        'wikivoyage', 'wikimedia', 'foundation', 'disclaimers', 'contact',
-        'mobile view', 'developers', 'statistics', 'cookie statement',
-        'terms of use', 'privacy policy', 'code of conduct', 'disclaimers',
-        'contact wikimedia', 'mobile view', 'developers', 'statistics',
-        'cookie statement', 'terms of use', 'privacy policy', 'code of conduct'
+        "home",
+        "back",
+        "next",
+        "previous",
+        "top",
+        "menu",
+        "search",
+        "contact",
+        "about",
+        "privacy",
+        "terms",
+        "edit",
+        "history",
+        "monuments",
+        "museums",
+        "squares",
+        "churches",
+        "basilicas",
+        "attractions",
+        "sights",
+        "landmarks",
+        "places",
+        "areas",
+        "districts",
+        "neighborhoods",
+        "quarters",
+        "zones",
+        "what's nearby",
+        "get shortened url",
+        "bahasa indonesia",
+        "tiếng việt",
+        "rural",
+        "transportation",
+        "card",
+        "theaters",
+        "concert halls",
+        "jump to content",
+        "main page",
+        "travel destinations",
+        "random page",
+        "recent changes",
+        "community portal",
+        "maintenance panel",
+        "interlingual lounge",
+        "donate",
+        "edit",
+        "history",
+        "watch",
+        "read",
+        "view source",
+        "view history",
+        "what links here",
+        "related changes",
+        "special pages",
+        "printable version",
+        "permanent link",
+        "page information",
+        "wikidata item",
+        "cite this page",
+        "create a book",
+        "download as pdf",
+        "version for printing",
+        "in other projects",
+        "wikimedia commons",
+        "wikisource",
+        "wiktionary",
+        "wikibooks",
+        "wikiquote",
+        "wikinews",
+        "wikiversity",
+        "wikidata",
+        "mediawiki",
+        "meta-wiki",
+        "wikispecies",
+        "wikivoyage",
+        "wikimedia",
+        "foundation",
+        "disclaimers",
+        "contact",
+        "mobile view",
+        "developers",
+        "statistics",
+        "cookie statement",
+        "terms of use",
+        "privacy policy",
+        "code of conduct",
+        "disclaimers",
+        "contact wikimedia",
+        "mobile view",
+        "developers",
+        "statistics",
+        "cookie statement",
+        "terms of use",
+        "privacy policy",
+        "code of conduct",
     ]
-    
+
     if any(term in name_lower for term in generic_terms):
         return False
-    
+
     # Skip numbered sections and navigation
-    if re.match(r'^\d+\.\d+', name) or re.match(r'^\d+\.', name):
+    if re.match(r"^\d+\.\d+", name) or re.match(r"^\d+\.", name):
         return False
-    
+
     # Skip very short names
     if len(name.strip()) < 4:
         return False
-    
+
     # Check if it contains specific attraction keywords
     attraction_keywords = [
-        'museum', 'palace', 'castle', 'temple', 'shrine', 'park', 
-        'square', 'church', 'cathedral', 'monument', 'tower', 
-        'bridge', 'market', 'basilica', 'forum', 'colosseum',
-        'vatican', 'pantheon', 'trevi', 'fountain', 'gallery',
-        'opera', 'theater', 'theatre', 'garden', 'palace', 'wall',
-        'forbidden', 'summer', 'tiananmen', 'ming', 'lama', 'confucius',
-        'bell', 'drum', 'tower', 'beihai', 'jingshan', 'yuanmingyuan',
-        'olympic', 'bird', 'nest', 'water', 'cube', 'hutong', 'nanluoguxiang',
-        'wangfujing', 'sanlitun', 'houhai', 'yuyuantan', 'panjiayuan'
+        "museum",
+        "palace",
+        "castle",
+        "temple",
+        "shrine",
+        "park",
+        "square",
+        "church",
+        "cathedral",
+        "monument",
+        "tower",
+        "bridge",
+        "market",
+        "basilica",
+        "forum",
+        "colosseum",
+        "vatican",
+        "pantheon",
+        "trevi",
+        "fountain",
+        "gallery",
+        "opera",
+        "theater",
+        "theatre",
+        "garden",
+        "palace",
+        "wall",
+        "forbidden",
+        "summer",
+        "tiananmen",
+        "ming",
+        "lama",
+        "confucius",
+        "bell",
+        "drum",
+        "tower",
+        "beihai",
+        "jingshan",
+        "yuanmingyuan",
+        "olympic",
+        "bird",
+        "nest",
+        "water",
+        "cube",
+        "hutong",
+        "nanluoguxiang",
+        "wangfujing",
+        "sanlitun",
+        "houhai",
+        "yuyuantan",
+        "panjiayuan",
     ]
-    
+
     # Check if it matches destination-specific keywords
     if any(keyword in name_lower for keyword in config["keywords"]):
         return True
-    
+
     # Check if it contains attraction keywords
     if any(keyword in name_lower for keyword in attraction_keywords):
         return True
-    
+
     # Check if it looks like a proper noun (capitalized words)
     words = name.split()
     if len(words) >= 2:
         capitalized_words = [word for word in words if word[0].isupper()]
         if len(capitalized_words) >= 2:
             return True
-    
+
     return False
 
 
 def scrape_general_links(soup, config):
     """Fallback method for general link extraction"""
     attractions = []
-    all_links = soup.find_all('a')
-    
+    all_links = soup.find_all("a")
+
     for link in all_links:
         try:
             name = link.get_text(strip=True)
-            href = link.get('href')
-            
+            href = link.get("href")
+
             if href and name and isinstance(href, str) and len(name) > 3:
                 # Check if this looks like an attraction link
                 href_lower = href.lower()
                 name_lower = name.lower()
-                
+
                 # Filter for likely attraction links based on destination
                 is_attraction = (
-                    any(keyword in href_lower for keyword in config["keywords"]) or
-                    any(keyword in name_lower for keyword in ['museum', 'palace', 'castle', 'temple', 'shrine', 'park', 'square', 'church', 'cathedral', 'monument', 'tower', 'bridge', 'market']) or
-                    any(keyword in name_lower for keyword in ['museum', 'palace', 'castle', 'temple', 'shrine', 'park', 'square', 'church', 'cathedral', 'monument', 'tower', 'bridge', 'market'])
+                    any(keyword in href_lower for keyword in config["keywords"])
+                    or any(
+                        keyword in name_lower
+                        for keyword in [
+                            "museum",
+                            "palace",
+                            "castle",
+                            "temple",
+                            "shrine",
+                            "park",
+                            "square",
+                            "church",
+                            "cathedral",
+                            "monument",
+                            "tower",
+                            "bridge",
+                            "market",
+                        ]
+                    )
+                    or any(
+                        keyword in name_lower
+                        for keyword in [
+                            "museum",
+                            "palace",
+                            "castle",
+                            "temple",
+                            "shrine",
+                            "park",
+                            "square",
+                            "church",
+                            "cathedral",
+                            "monument",
+                            "tower",
+                            "bridge",
+                            "market",
+                        ]
+                    )
                 )
-                
+
                 # Avoid navigation and non-attraction links
-                is_navigation = any(skip in name_lower for skip in ['home', 'back', 'next', 'previous', 'top', 'menu', 'search', 'contact', 'about', 'privacy', 'terms'])
-                
+                is_navigation = any(
+                    skip in name_lower
+                    for skip in [
+                        "home",
+                        "back",
+                        "next",
+                        "previous",
+                        "top",
+                        "menu",
+                        "search",
+                        "contact",
+                        "about",
+                        "privacy",
+                        "terms",
+                    ]
+                )
+
                 if is_attraction and not is_navigation:
                     # Construct full URL
-                    if href.startswith('/'):
+                    if href.startswith("/"):
                         full_url = urljoin(config["source_url"], href)
-                    elif href.startswith('http'):
+                    elif href.startswith("http"):
                         full_url = href
                     else:
-                        full_url = urljoin(config["source_url"], '/' + href)
-                    
+                        full_url = urljoin(config["source_url"], "/" + href)
+
                     # Avoid duplicates
-                    if name not in [att['name'] for att in attractions]:
-                        attractions.append({
-                            "name": name,
-                            "url": full_url
-                        })
-                        
+                    if name not in [att["name"] for att in attractions]:
+                        attractions.append({"name": name, "url": full_url})
+
         except (AttributeError, TypeError) as e:
             continue
-    
+
     return attractions
 
 
-def create_destination_data(attractions: List[Dict[str, str]], 
-                          destination_name: str,
-                          config: Dict[str, Any]) -> Dict[str, Any]:
+def create_destination_data(
+    attractions: List[Dict[str, str]], destination_name: str, config: Dict[str, Any]
+) -> Dict[str, Any]:
     """Create a standardized destination data structure"""
-    
+
     # Normalize destination name for comparison
     normalized_name = destination_name.lower().strip()
-    
-    logger.info(f"Creating content for destination: '{destination_name}' (normalized: '{normalized_name}')")
+
+    logger.info(
+        f"Creating content for destination: '{destination_name}' (normalized: '{normalized_name}')"
+    )
     logger.info(f"Found {len(attractions)} attractions")
-    
+
     # Create destination-specific content
     if normalized_name == "kyoto":
         logger.info("Using Kyoto-specific content")
@@ -616,7 +1170,7 @@ def create_destination_data(attractions: List[Dict[str, str]],
     else:
         logger.info("Using generic content")
         content = create_generic_content(attractions, destination_name)
-    
+
     return {
         "id": f"{destination_name.lower().replace(' ', '_').replace(',', '')}_complete_guide",
         "title": f"{destination_name} Complete Travel Guide",
@@ -624,19 +1178,21 @@ def create_destination_data(attractions: List[Dict[str, str]],
         "category": "destinations",
         "subcategory": config["region"],
         "location": destination_name,
-        "tags": [destination_name.split(',')[0].strip(), "Travel Guide"],
+        "tags": [destination_name.split(",")[0].strip(), "Travel Guide"],
         "language": "en",
         "source": {
             "id": config["source_id"],
             "name": config["source"],
             "url": config["source_url"],
-            "reliability_score": 0.9
+            "reliability_score": 0.9,
         },
-        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
 
-def create_kyoto_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_kyoto_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Kyoto-specific content"""
     content = f"""{destination_name} is Japan's cultural heart and former imperial capital, home to over 1,600 Buddhist temples, 400 Shinto shrines, palaces, and gardens. This ancient city offers visitors a glimpse into traditional Japan with its well-preserved historic districts and cultural treasures.
 
@@ -647,12 +1203,21 @@ def create_kyoto_content(attractions: List[Dict[str, str]], destination_name: st
 
 ### Temples & Shrines
 """
-    
+
     # Add temple and shrine information
-    temples = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['temple', 'shrine', 'ji', 'dera', 'jinja'])]
+    temples = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["temple", "shrine", "ji", "dera", "jinja"]
+        )
+    ]
     for i, temple in enumerate(temples[:10], 1):  # Top 10 temples
-        content += f"- **{temple['name']}**: One of Kyoto's most important religious sites\n"
-    
+        content += (
+            f"- **{temple['name']}**: One of Kyoto's most important religious sites\n"
+        )
+
     content += """
 ### Historic Districts
 - **Gion**: Famous geisha district with traditional tea houses
@@ -662,12 +1227,19 @@ def create_kyoto_content(attractions: List[Dict[str, str]], destination_name: st
 
 ### Castles & Palaces
 """
-    
+
     # Add castle and palace information
-    castles = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['castle', 'palace', 'imperial'])]
+    castles = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["castle", "palace", "imperial"]
+        )
+    ]
     for castle in castles:
         content += f"- **{castle['name']}**: Historic royal residence and architectural marvel\n"
-    
+
     content += """
 ## Best Time to Visit
 
@@ -800,11 +1372,13 @@ def create_kyoto_content(attractions: List[Dict[str, str]], destination_name: st
 - **Summer**: 20-35°C, high humidity, rainy season in June-July
 - **Autumn**: 10-25°C, clear skies, beautiful fall colors
 - **Winter**: 0-10°C, dry, occasional snow, peaceful temple visits"""
-    
+
     return content
 
 
-def create_beijing_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_beijing_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Beijing-specific content"""
     content = f"""{destination_name} is China's historic capital and political center, home to some of the world's most iconic landmarks including the Great Wall, Forbidden City, and Temple of Heaven. This ancient city seamlessly blends imperial grandeur with modern development.
 
@@ -815,10 +1389,27 @@ def create_beijing_content(attractions: List[Dict[str, str]], destination_name: 
 
 ### Imperial Landmarks
 """
-    
+
     # Add imperial landmark information
-    imperial_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['forbidden', 'temple', 'summer', 'palace', 'tiananmen', 'great wall', 'ming', 'lama', 'confucius'])]
-    
+    imperial_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in [
+                "forbidden",
+                "temple",
+                "summer",
+                "palace",
+                "tiananmen",
+                "great wall",
+                "ming",
+                "lama",
+                "confucius",
+            ]
+        )
+    ]
+
     if imperial_sites:
         for i, site in enumerate(imperial_sites[:10], 1):
             content += f"- **{site['name']}**: Iconic imperial landmark and UNESCO World Heritage site\n"
@@ -831,7 +1422,7 @@ def create_beijing_content(attractions: List[Dict[str, str]], destination_name: 
 - **Ming Tombs**: Imperial burial complex
 - **Lama Temple**: Tibetan Buddhist temple
 - **Confucius Temple**: Traditional temple honoring Confucius\n"""
-    
+
     content += """
 ### Historic Districts
 - **Hutongs**: Traditional narrow alleyways and courtyard homes
@@ -841,10 +1432,17 @@ def create_beijing_content(attractions: List[Dict[str, str]], destination_name: 
 
 ### Modern Attractions
 """
-    
+
     # Add modern attraction information
-    modern_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['olympic', 'bird', 'water', 'cube', 'park'])]
-    
+    modern_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["olympic", "bird", "water", "cube", "park"]
+        )
+    ]
+
     if modern_sites:
         for site in modern_sites:
             content += f"- **{site['name']}**: Modern architectural marvel and cultural venue\n"
@@ -853,7 +1451,7 @@ def create_beijing_content(attractions: List[Dict[str, str]], destination_name: 
 - **Bird's Nest Stadium**: Iconic Olympic stadium
 - **Water Cube**: Olympic swimming venue
 - **Beijing National Stadium**: Modern sports complex\n"""
-    
+
     content += """
 ## Best Time to Visit
 
@@ -991,11 +1589,13 @@ def create_beijing_content(attractions: List[Dict[str, str]], destination_name: 
 - **Summer**: 25-35°C, high humidity, frequent rain, peak season
 - **Autumn**: 10-25°C, clear skies, beautiful colors, best weather
 - **Winter**: -5 to 10°C, cold and dry, occasional snow, fewer crowds"""
-    
+
     return content
 
 
-def create_seoul_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_seoul_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Seoul-specific content"""
     content = f"""{destination_name} is South Korea's dynamic capital, a fascinating blend of ancient traditions and cutting-edge technology. From historic palaces and temples to modern skyscrapers and K-pop culture, {destination_name} offers visitors an exciting mix of old and new.
 
@@ -1006,10 +1606,17 @@ def create_seoul_content(attractions: List[Dict[str, str]], destination_name: st
 
 ### Historic Palaces
 """
-    
+
     # Add palace information
-    palaces = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['palace', 'gung', 'changdeok', 'gyeongbok', 'deoksugung'])]
-    
+    palaces = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["palace", "gung", "changdeok", "gyeongbok", "deoksugung"]
+        )
+    ]
+
     if palaces:
         for i, palace in enumerate(palaces[:5], 1):
             content += f"- **{palace['name']}**: Magnificent royal palace and cultural treasure\n"
@@ -1018,7 +1625,7 @@ def create_seoul_content(attractions: List[Dict[str, str]], destination_name: st
 - **Changdeokgung Palace**: UNESCO World Heritage palace complex
 - **Deoksugung Palace**: Historic palace with Western architecture
 - **Gyeonghuigung Palace**: Smaller palace with beautiful gardens\n"""
-    
+
     content += """
 ### Traditional Districts
 - **Bukchon Hanok Village**: Traditional Korean houses and culture
@@ -1028,10 +1635,17 @@ def create_seoul_content(attractions: List[Dict[str, str]], destination_name: st
 
 ### Modern Attractions
 """
-    
+
     # Add modern attraction information
-    modern_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['tower', 'skytree', 'observatory', 'museum', 'park'])]
-    
+    modern_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["tower", "skytree", "observatory", "museum", "park"]
+        )
+    ]
+
     if modern_sites:
         for site in modern_sites[:5]:
             content += f"- **{site['name']}**: Modern landmark and cultural venue\n"
@@ -1040,7 +1654,7 @@ def create_seoul_content(attractions: List[Dict[str, str]], destination_name: st
 - **Lotte World Tower**: Tallest building in Korea
 - **COEX Mall**: Large underground shopping complex
 - **Seoul Forest Park**: Urban park and recreation area\n"""
-    
+
     content += """
 ## Best Time to Visit
 
@@ -1178,11 +1792,13 @@ def create_seoul_content(attractions: List[Dict[str, str]], destination_name: st
 - **Summer**: 20-35°C, high humidity, monsoon season
 - **Autumn**: 10-25°C, clear skies, beautiful fall colors
 - **Winter**: -5 to 10°C, cold and dry, occasional snow"""
-    
+
     return content
 
 
-def create_shanghai_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_shanghai_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Shanghai-specific content"""
     content = f"""{destination_name} is China's largest city and global financial hub, where East meets West in spectacular fashion. From the historic Bund waterfront to the futuristic Pudong skyline, {destination_name} showcases China's rapid modernization while preserving its cultural heritage.
 
@@ -1193,21 +1809,35 @@ def create_shanghai_content(attractions: List[Dict[str, str]], destination_name:
 
 ### Historic Landmarks
 """
-    
+
     # Add historic landmark information
-    historic_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['bund', 'yuyuan', 'temple', 'garden', 'pagoda', 'museum'])]
+    historic_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["bund", "yuyuan", "temple", "garden", "pagoda", "museum"]
+        )
+    ]
     for i, site in enumerate(historic_sites[:8], 1):
         content += f"- **{site['name']}**: Historic landmark and cultural treasure\n"
-    
+
     content += """
 ### Modern Attractions
 """
-    
+
     # Add modern attraction information
-    modern_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['tower', 'pearl', 'oriental', 'skytree', 'observatory'])]
+    modern_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["tower", "pearl", "oriental", "skytree", "observatory"]
+        )
+    ]
     for site in modern_sites[:5]:
         content += f"- **{site['name']}**: Modern architectural marvel\n"
-    
+
     content += """
 ### Cultural Districts
 - **The Bund**: Historic waterfront with colonial architecture
@@ -1351,11 +1981,13 @@ def create_shanghai_content(attractions: List[Dict[str, str]], destination_name:
 - **Summer**: 25-35°C, high humidity, frequent rain, peak season
 - **Autumn**: 15-25°C, clear skies, beautiful colors, best weather
 - **Winter**: 0-15°C, cold and damp, occasional snow, fewer crowds"""
-    
+
     return content
 
 
-def create_paris_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_paris_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Paris-specific content"""
     content = f"""{destination_name} is the City of Light, France's romantic capital and one of the world's most beautiful cities. From the iconic Eiffel Tower to the historic Louvre Museum, {destination_name} offers visitors an unparalleled cultural and artistic experience.
 
@@ -1366,12 +1998,26 @@ def create_paris_content(attractions: List[Dict[str, str]], destination_name: st
 
 ### Iconic Landmarks
 """
-    
+
     # Add iconic landmark information
-    iconic_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['eiffel', 'louvre', 'notre-dame', 'arc', 'champs', 'versailles'])]
+    iconic_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in [
+                "eiffel",
+                "louvre",
+                "notre-dame",
+                "arc",
+                "champs",
+                "versailles",
+            ]
+        )
+    ]
     for i, site in enumerate(iconic_sites[:8], 1):
         content += f"- **{site['name']}**: World-famous landmark and cultural icon\n"
-    
+
     content += """
 ### Cultural Districts
 - **Le Marais**: Historic district with trendy boutiques
@@ -1381,12 +2027,19 @@ def create_paris_content(attractions: List[Dict[str, str]], destination_name: st
 
 ### Museums & Galleries
 """
-    
+
     # Add museum information
-    museums = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['museum', 'musee', 'gallery', 'palace'])]
+    museums = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["museum", "musee", "gallery", "palace"]
+        )
+    ]
     for museum in museums[:5]:
         content += f"- **{museum['name']}**: World-class cultural institution\n"
-    
+
     content += """
 ## Best Time to Visit
 
@@ -1523,11 +2176,13 @@ def create_paris_content(attractions: List[Dict[str, str]], destination_name: st
 - **Summer**: 20-30°C, long days, peak tourist season
 - **Autumn**: 10-20°C, fall colors, fewer crowds
 - **Winter**: 0-10°C, cold, Christmas atmosphere"""
-    
+
     return content
 
 
-def create_london_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_london_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create London-specific content"""
     content = f"""{destination_name} is the historic capital of England and the United Kingdom, a global city that seamlessly blends centuries of history with modern innovation. From the iconic Big Ben to the cutting-edge Tate Modern, {destination_name} offers visitors an unparalleled cultural experience.
 
@@ -1538,21 +2193,50 @@ def create_london_content(attractions: List[Dict[str, str]], destination_name: s
 
 ### Historic Landmarks
 """
-    
+
     # Add historic landmark information
-    historic_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['buckingham', 'tower', 'westminster', 'big ben', 'trafalgar', 'hyde', 'st paul'])]
+    historic_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in [
+                "buckingham",
+                "tower",
+                "westminster",
+                "big ben",
+                "trafalgar",
+                "hyde",
+                "st paul",
+            ]
+        )
+    ]
     for i, site in enumerate(historic_sites[:8], 1):
         content += f"- **{site['name']}**: Historic landmark and cultural icon\n"
-    
+
     content += """
 ### Museums & Galleries
 """
-    
+
     # Add museum information
-    museums = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['museum', 'gallery', 'tate', 'british', 'natural', 'science'])]
+    museums = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in [
+                "museum",
+                "gallery",
+                "tate",
+                "british",
+                "natural",
+                "science",
+            ]
+        )
+    ]
     for museum in museums[:5]:
         content += f"- **{museum['name']}**: World-class cultural institution\n"
-    
+
     content += """
 ### Cultural Districts
 - **Westminster**: Government and royal landmarks
@@ -1695,11 +2379,13 @@ def create_london_content(attractions: List[Dict[str, str]], destination_name: s
 - **Summer**: 15-25°C, long days, peak tourist season
 - **Autumn**: 10-20°C, fall colors, fewer crowds
 - **Winter**: 0-10°C, cold, Christmas atmosphere"""
-    
+
     return content
 
 
-def create_rome_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_rome_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Rome-specific content"""
     content = f"""{destination_name} is the Eternal City, Italy's historic capital and one of the world's most beautiful cities. From the ancient Colosseum to the magnificent Vatican, {destination_name} offers visitors an unparalleled journey through history and art.
 
@@ -1710,21 +2396,43 @@ def create_rome_content(attractions: List[Dict[str, str]], destination_name: str
 
 ### Ancient Landmarks
 """
-    
+
     # Add ancient landmark information
-    ancient_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['colosseum', 'forum', 'pantheon', 'palatine', 'circus', 'appian', 'catacombs'])]
+    ancient_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in [
+                "colosseum",
+                "forum",
+                "pantheon",
+                "palatine",
+                "circus",
+                "appian",
+                "catacombs",
+            ]
+        )
+    ]
     for i, site in enumerate(ancient_sites[:8], 1):
         content += f"- **{site['name']}**: Ancient Roman landmark and archaeological treasure\n"
-    
+
     content += """
 ### Vatican City
 """
-    
+
     # Add Vatican information
-    vatican_sites = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['vatican', 'sistine', 'st peter', 'basilica'])]
+    vatican_sites = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in ["vatican", "sistine", "st peter", "basilica"]
+        )
+    ]
     for site in vatican_sites[:3]:
         content += f"- **{site['name']}**: Sacred site and artistic masterpiece\n"
-    
+
     content += """
 ### Cultural Districts
 - **Centro Storico**: Historic center with major landmarks
@@ -1867,41 +2575,55 @@ def create_rome_content(attractions: List[Dict[str, str]], destination_name: str
 - **Summer**: 20-35°C, hot and dry, peak tourist season
 - **Autumn**: 15-25°C, beautiful weather, fewer crowds
 - **Winter**: 5-15°C, cool and wet, fewer crowds"""
-    
+
     return content
 
 
-def create_barcelona_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_barcelona_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Barcelona-specific content"""
     return create_european_content(attractions, destination_name)
 
 
-def create_amsterdam_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_amsterdam_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Amsterdam-specific content"""
     return create_european_content(attractions, destination_name)
 
 
-def create_berlin_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_berlin_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Berlin-specific content"""
     return create_european_content(attractions, destination_name)
 
 
-def create_prague_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_prague_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Prague-specific content"""
     return create_european_content(attractions, destination_name)
 
 
-def create_vienna_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_vienna_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Vienna-specific content"""
     return create_european_content(attractions, destination_name)
 
 
-def create_budapest_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_budapest_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create Budapest-specific content"""
     return create_european_content(attractions, destination_name)
 
 
-def create_european_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_european_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create European destination content"""
     content = f"""{destination_name} is a vibrant European destination with rich history, culture, and modern attractions. This city offers visitors a perfect blend of historical landmarks, cultural experiences, and contemporary amenities.
 
@@ -1912,12 +2634,40 @@ def create_european_content(attractions: List[Dict[str, str]], destination_name:
 
 ### Historic Landmarks
 """
-    
+
     # Add landmark information
-    landmarks = [att for att in attractions if any(keyword in att['name'].lower() for keyword in ['museum', 'palace', 'castle', 'church', 'cathedral', 'monument', 'tower', 'square', 'basilica', 'forum', 'colosseum', 'vatican', 'pantheon', 'trevi', 'fountain', 'gallery', 'opera', 'theater', 'theatre', 'garden'])]
+    landmarks = [
+        att
+        for att in attractions
+        if any(
+            keyword in att["name"].lower()
+            for keyword in [
+                "museum",
+                "palace",
+                "castle",
+                "church",
+                "cathedral",
+                "monument",
+                "tower",
+                "square",
+                "basilica",
+                "forum",
+                "colosseum",
+                "vatican",
+                "pantheon",
+                "trevi",
+                "fountain",
+                "gallery",
+                "opera",
+                "theater",
+                "theatre",
+                "garden",
+            ]
+        )
+    ]
     for i, landmark in enumerate(landmarks[:20], 1):  # Top 20 landmarks
         content += f"- **{landmark['name']}**: Iconic landmark and cultural treasure\n"
-    
+
     content += f"""
 ### Cultural Districts
 - **Historic Center**: Explore the heart of {destination_name}
@@ -2051,11 +2801,13 @@ def create_european_content(attractions: List[Dict[str, str]], destination_name:
 - **Summer**: 20-30°C, warm and sunny, peak season
 - **Autumn**: 10-20°C, comfortable temperatures, fewer crowds
 - **Winter**: 0-10°C, cold but manageable, holiday atmosphere"""
-    
+
     return content
 
 
-def create_generic_content(attractions: List[Dict[str, str]], destination_name: str) -> str:
+def create_generic_content(
+    attractions: List[Dict[str, str]], destination_name: str
+) -> str:
     """Create generic destination content"""
     content = f"""{destination_name} is a fascinating destination with unique attractions and cultural experiences waiting to be discovered.
 
@@ -2066,11 +2818,11 @@ def create_generic_content(attractions: List[Dict[str, str]], destination_name: 
 
 ### Key Landmarks
 """
-    
+
     # Add attraction information
     for i, attraction in enumerate(attractions[:10], 1):  # Top 10 attractions
         content += f"- **{attraction['name']}**: Notable attraction worth visiting\n"
-    
+
     content += f"""
 ## Best Time to Visit
 
@@ -2136,7 +2888,7 @@ def create_generic_content(attractions: List[Dict[str, str]], destination_name: 
 - **Summer**: Warm to hot, peak tourist season
 - **Autumn**: Comfortable temperatures, good for sightseeing
 - **Winter**: Cooler weather, fewer crowds"""
-    
+
     return content
 
 
@@ -2161,25 +2913,27 @@ def main():
         print("Usage: python extract_destination.py <destination_name>")
         print("Available destinations:", list(DESTINATION_CONFIGS.keys()))
         return
-    
+
     destination_name = sys.argv[1]
     print(f"Starting {destination_name} destination extraction...")
-    
+
     # Extract attractions
     attractions = scrape_destination(destination_name)
-    
+
     if not attractions:
         print(f"Failed to extract attractions for {destination_name}")
         return
-    
+
     # Create and save data
     config = DESTINATION_CONFIGS[destination_name.lower()]
     data = create_destination_data(attractions, destination_name, config)
     filename = f"{destination_name.lower().replace(' ', '_').replace(',', '')}_attractions.json"
     save_destination_data(data, filename, config["region"])
-    
-    print(f"Extraction complete! Found {len(attractions)} attractions for {destination_name}.")
+
+    print(
+        f"Extraction complete! Found {len(attractions)} attractions for {destination_name}."
+    )
 
 
 if __name__ == "__main__":
-    main() 
+    main()

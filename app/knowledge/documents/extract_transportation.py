@@ -30,7 +30,7 @@ HEADERS = {
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "none",
-    "Cache-Control": "max-age=0"
+    "Cache-Control": "max-age=0",
 }
 
 # Transportation configurations
@@ -44,11 +44,32 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "trains",
         "country": "japan",
         "keywords": [
-            'shinkansen', 'bullet', 'train', 'jr', 'pass', 'tokyo', 'osaka',
-            'kyoto', 'nagoya', 'sendai', 'hiroshima', 'fukuoka', 'nozomi',
-            'hikari', 'kodama', 'hayabusa', 'komachi', 'tokaido', 'tohoku',
-            'hokuriku', 'joetsu', 'yamagata', 'akita', 'sanyo', 'kyushu'
-        ]
+            "shinkansen",
+            "bullet",
+            "train",
+            "jr",
+            "pass",
+            "tokyo",
+            "osaka",
+            "kyoto",
+            "nagoya",
+            "sendai",
+            "hiroshima",
+            "fukuoka",
+            "nozomi",
+            "hikari",
+            "kodama",
+            "hayabusa",
+            "komachi",
+            "tokaido",
+            "tohoku",
+            "hokuriku",
+            "joetsu",
+            "yamagata",
+            "akita",
+            "sanyo",
+            "kyushu",
+        ],
     },
     "japan_metro": {
         "url": "https://en.wikivoyage.org/wiki/Tokyo#Get_around",
@@ -59,10 +80,26 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "japan",
         "keywords": [
-            'tokyo', 'metro', 'subway', 'jr', 'yamanote', 'chuo', 'sobu',
-            'ginza', 'marunouchi', 'hibiya', 'tozai', 'chiyoda', 'hanzomon',
-            'namboku', 'yurakucho', 'fukutoshin', 'oedo', 'suica', 'pasmo'
-        ]
+            "tokyo",
+            "metro",
+            "subway",
+            "jr",
+            "yamanote",
+            "chuo",
+            "sobu",
+            "ginza",
+            "marunouchi",
+            "hibiya",
+            "tozai",
+            "chiyoda",
+            "hanzomon",
+            "namboku",
+            "yurakucho",
+            "fukutoshin",
+            "oedo",
+            "suica",
+            "pasmo",
+        ],
     },
     "london_underground": {
         "url": "https://en.wikivoyage.org/wiki/London#Get_around",
@@ -73,11 +110,28 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "uk",
         "keywords": [
-            'london', 'underground', 'tube', 'metro', 'oyster', 'card',
-            'central', 'northern', 'piccadilly', 'district', 'circle',
-            'metropolitan', 'hammersmith', 'city', 'waterloo', 'city',
-            'jubilee', 'victoria', 'bakerloo', 'elizabeth', 'line'
-        ]
+            "london",
+            "underground",
+            "tube",
+            "metro",
+            "oyster",
+            "card",
+            "central",
+            "northern",
+            "piccadilly",
+            "district",
+            "circle",
+            "metropolitan",
+            "hammersmith",
+            "city",
+            "waterloo",
+            "city",
+            "jubilee",
+            "victoria",
+            "bakerloo",
+            "elizabeth",
+            "line",
+        ],
     },
     "paris_metro": {
         "url": "https://en.wikivoyage.org/wiki/Paris#Get_around",
@@ -88,10 +142,34 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "france",
         "keywords": [
-            'paris', 'metro', 'subway', 'ratp', 'navigo', 'pass',
-            'line', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
-            '11', '12', '13', '14', 'rer', 'a', 'b', 'c', 'd', 'e'
-        ]
+            "paris",
+            "metro",
+            "subway",
+            "ratp",
+            "navigo",
+            "pass",
+            "line",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "rer",
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+        ],
     },
     "newyork_subway": {
         "url": "https://en.wikivoyage.org/wiki/New_York_City#Get_around",
@@ -102,10 +180,37 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "usa",
         "keywords": [
-            'new', 'york', 'subway', 'metro', 'mta', 'metrocard',
-            'line', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'j', 'l', 'm',
-            'n', 'q', 'r', 's', 'w', 'z', '1', '2', '3', '4', '5', '6', '7'
-        ]
+            "new",
+            "york",
+            "subway",
+            "metro",
+            "mta",
+            "metrocard",
+            "line",
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+            "f",
+            "g",
+            "j",
+            "l",
+            "m",
+            "n",
+            "q",
+            "r",
+            "s",
+            "w",
+            "z",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+        ],
     },
     "singapore_mrt": {
         "url": "https://en.wikivoyage.org/wiki/Singapore#Get_around",
@@ -116,10 +221,27 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "singapore",
         "keywords": [
-            'singapore', 'mrt', 'metro', 'subway', 'ez', 'link', 'card',
-            'north', 'south', 'east', 'west', 'circle', 'downtown',
-            'thomson', 'east', 'coast', 'line', 'lrt', 'light', 'rail'
-        ]
+            "singapore",
+            "mrt",
+            "metro",
+            "subway",
+            "ez",
+            "link",
+            "card",
+            "north",
+            "south",
+            "east",
+            "west",
+            "circle",
+            "downtown",
+            "thomson",
+            "east",
+            "coast",
+            "line",
+            "lrt",
+            "light",
+            "rail",
+        ],
     },
     "hong_kong_mtr": {
         "url": "https://en.wikivoyage.org/wiki/Hong_Kong#Get_around",
@@ -130,10 +252,28 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "hong_kong",
         "keywords": [
-            'hong', 'kong', 'mtr', 'metro', 'subway', 'octopus', 'card',
-            'island', 'line', 'tseung', 'kwan', 'o', 'tung', 'chung',
-            'airport', 'express', 'east', 'rail', 'west', 'rail', 'light'
-        ]
+            "hong",
+            "kong",
+            "mtr",
+            "metro",
+            "subway",
+            "octopus",
+            "card",
+            "island",
+            "line",
+            "tseung",
+            "kwan",
+            "o",
+            "tung",
+            "chung",
+            "airport",
+            "express",
+            "east",
+            "rail",
+            "west",
+            "rail",
+            "light",
+        ],
     },
     "seoul_metro": {
         "url": "https://en.wikivoyage.org/wiki/Seoul#Get_around",
@@ -144,10 +284,30 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "south_korea",
         "keywords": [
-            'seoul', 'metro', 'subway', 'tmoney', 'card', 'line', '1', '2',
-            '3', '4', '5', '6', '7', '8', '9', 'airport', 'express', 'light',
-            'rail', 'bundang', 'shinbundang', 'gyeongui', 'jungang'
-        ]
+            "seoul",
+            "metro",
+            "subway",
+            "tmoney",
+            "card",
+            "line",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "airport",
+            "express",
+            "light",
+            "rail",
+            "bundang",
+            "shinbundang",
+            "gyeongui",
+            "jungang",
+        ],
     },
     "bangkok_bts": {
         "url": "https://en.wikivoyage.org/wiki/Bangkok#Get_around",
@@ -158,10 +318,25 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "thailand",
         "keywords": [
-            'bangkok', 'bts', 'skytrain', 'mrt', 'metro', 'subway',
-            'sukhumvit', 'silom', 'gold', 'line', 'blue', 'purple',
-            'yellow', 'pink', 'orange', 'red', 'airport', 'link'
-        ]
+            "bangkok",
+            "bts",
+            "skytrain",
+            "mrt",
+            "metro",
+            "subway",
+            "sukhumvit",
+            "silom",
+            "gold",
+            "line",
+            "blue",
+            "purple",
+            "yellow",
+            "pink",
+            "orange",
+            "red",
+            "airport",
+            "link",
+        ],
     },
     "shanghai_metro": {
         "url": "https://en.wikivoyage.org/wiki/Shanghai#Get_around",
@@ -172,11 +347,33 @@ TRANSPORTATION_CONFIGS = {
         "transport_type": "metro",
         "country": "china",
         "keywords": [
-            'shanghai', 'metro', 'subway', 'line', '1', '2', '3', '4', '5',
-            '6', '7', '8', '9', '10', '11', '12', '13', '16', '17', '18',
-            'maglev', 'airport', 'express', 'pujiang', 'line'
-        ]
-    }
+            "shanghai",
+            "metro",
+            "subway",
+            "line",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "16",
+            "17",
+            "18",
+            "maglev",
+            "airport",
+            "express",
+            "pujiang",
+            "line",
+        ],
+    },
 }
 
 
@@ -190,42 +387,46 @@ def get_session():
 def scrape_transportation(transportation_name: str):
     """Scrape transportation information from various sources"""
     session = get_session()
-    
+
     if transportation_name.lower() not in TRANSPORTATION_CONFIGS:
-        logger.error(f"Transportation '{transportation_name}' not configured. Available: {list(TRANSPORTATION_CONFIGS.keys())}")
+        logger.error(
+            f"Transportation '{transportation_name}' not configured. Available: {list(TRANSPORTATION_CONFIGS.keys())}"
+        )
         return []
-    
+
     config = TRANSPORTATION_CONFIGS[transportation_name.lower()]
     url = config["url"]
-    
+
     try:
         # Add a random delay to avoid being flagged as a bot
         time.sleep(random.uniform(1, 3))
-        
+
         response = session.get(url, timeout=30)
         response.raise_for_status()
-        
+
         soup = BeautifulSoup(response.text, "html.parser")
         transport_info = []
-        
+
         # For WikiVoyage pages, look for specific transportation sections
         if "wikivoyage" in config["source_url"].lower():
             transport_info = scrape_wikivoyage_transportation(soup, config)
         else:
             # Fallback to general link extraction
             transport_info = scrape_general_links(soup, config)
-        
+
         # Remove duplicates based on name
         unique_info = []
         seen_names = set()
         for info in transport_info:
-            if info['name'] not in seen_names:
+            if info["name"] not in seen_names:
                 unique_info.append(info)
-                seen_names.add(info['name'])
-        
-        logger.info(f"Extracted {len(unique_info)} transportation items from {config['source']}")
+                seen_names.add(info["name"])
+
+        logger.info(
+            f"Extracted {len(unique_info)} transportation items from {config['source']}"
+        )
         return unique_info
-        
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Request failed: {e}")
         return []
@@ -237,182 +438,267 @@ def scrape_transportation(transportation_name: str):
 def scrape_wikivoyage_transportation(soup, config):
     """Extract specific transportation information from WikiVoyage pages"""
     transport_info = []
-    
+
     # Look for transportation sections in WikiVoyage
     transport_sections = [
-        'Get around', 'Transportation', 'Public transport', 'Metro', 'Subway',
-        'Trains', 'Buses', 'Tickets', 'Fares', 'Lines', 'Routes'
+        "Get around",
+        "Transportation",
+        "Public transport",
+        "Metro",
+        "Subway",
+        "Trains",
+        "Buses",
+        "Tickets",
+        "Fares",
+        "Lines",
+        "Routes",
     ]
-    
+
     for section in transport_sections:
         # Find section headers
-        headers = soup.find_all(['h2', 'h3', 'h4'])
+        headers = soup.find_all(["h2", "h3", "h4"])
         for header in headers:
             if header.get_text(strip=True).startswith(section):
                 # Look for lists and links in this section
-                next_elements = header.find_next_siblings(['ul', 'ol', 'p'], limit=10)
+                next_elements = header.find_next_siblings(["ul", "ol", "p"], limit=10)
                 for element in next_elements:
-                    if element.name in ['ul', 'ol']:
+                    if element.name in ["ul", "ol"]:
                         # Extract from lists
-                        list_items = element.find_all('li')
+                        list_items = element.find_all("li")
                         for item in list_items:
-                            links = item.find_all('a')
+                            links = item.find_all("a")
                             for link in links:
                                 name = link.get_text(strip=True)
-                                href = link.get('href')
+                                href = link.get("href")
                                 if name and href and len(name) > 3:
                                     # Check if it's a specific transportation item
                                     if is_specific_transportation(name, config):
                                         full_url = urljoin(config["source_url"], href)
-                                        transport_info.append({
-                                            "name": name,
-                                            "url": full_url
-                                        })
-                    elif element.name == 'p':
+                                        transport_info.append(
+                                            {"name": name, "url": full_url}
+                                        )
+                    elif element.name == "p":
                         # Extract from paragraphs
-                        links = element.find_all('a')
+                        links = element.find_all("a")
                         for link in links:
                             name = link.get_text(strip=True)
-                            href = link.get('href')
+                            href = link.get("href")
                             if name and href and len(name) > 3:
                                 if is_specific_transportation(name, config):
                                     full_url = urljoin(config["source_url"], href)
-                                    transport_info.append({
-                                        "name": name,
-                                        "url": full_url
-                                    })
-    
+                                    transport_info.append(
+                                        {"name": name, "url": full_url}
+                                    )
+
     # Also look for specific transportation keywords in the page
-    all_links = soup.find_all('a')
+    all_links = soup.find_all("a")
     for link in all_links:
         try:
             name = link.get_text(strip=True)
-            href = link.get('href')
-            
+            href = link.get("href")
+
             if href and name and isinstance(href, str) and len(name) > 3:
                 # Check if this looks like a specific transportation item
                 if is_specific_transportation(name, config):
                     # Construct full URL
-                    if href.startswith('/'):
+                    if href.startswith("/"):
                         full_url = urljoin(config["source_url"], href)
-                    elif href.startswith('http'):
+                    elif href.startswith("http"):
                         full_url = href
                     else:
-                        full_url = urljoin(config["source_url"], '/' + href)
-                    
+                        full_url = urljoin(config["source_url"], "/" + href)
+
                     # Avoid duplicates and navigation links
-                    if name not in [info['name'] for info in transport_info]:
-                        transport_info.append({
-                            "name": name,
-                            "url": full_url
-                        })
-                        
+                    if name not in [info["name"] for info in transport_info]:
+                        transport_info.append({"name": name, "url": full_url})
+
         except (AttributeError, TypeError) as e:
             continue
-    
+
     return transport_info
 
 
 def is_specific_transportation(name, config):
     """Check if a name represents a specific transportation item rather than a category"""
     name_lower = name.lower()
-    
+
     # Skip generic categories and navigation
     generic_terms = [
-        'home', 'back', 'next', 'previous', 'top', 'menu', 'search', 
-        'contact', 'about', 'privacy', 'terms', 'edit', 'history',
-        'transportation', 'transport', 'transit', 'systems', 'networks',
-        'services', 'routes', 'lines', 'stations', 'stops'
+        "home",
+        "back",
+        "next",
+        "previous",
+        "top",
+        "menu",
+        "search",
+        "contact",
+        "about",
+        "privacy",
+        "terms",
+        "edit",
+        "history",
+        "transportation",
+        "transport",
+        "transit",
+        "systems",
+        "networks",
+        "services",
+        "routes",
+        "lines",
+        "stations",
+        "stops",
     ]
-    
+
     if any(term in name_lower for term in generic_terms):
         return False
-    
+
     # Check if it contains specific transportation keywords
     transport_keywords = [
-        'metro', 'subway', 'train', 'bus', 'tram', 'light', 'rail',
-        'line', 'route', 'station', 'stop', 'terminal', 'airport',
-        'shinkansen', 'underground', 'tube', 'mrt', 'bts', 'mtr'
+        "metro",
+        "subway",
+        "train",
+        "bus",
+        "tram",
+        "light",
+        "rail",
+        "line",
+        "route",
+        "station",
+        "stop",
+        "terminal",
+        "airport",
+        "shinkansen",
+        "underground",
+        "tube",
+        "mrt",
+        "bts",
+        "mtr",
     ]
-    
+
     # Check if it matches destination-specific keywords
     if any(keyword in name_lower for keyword in config["keywords"]):
         return True
-    
+
     # Check if it contains transportation keywords
     if any(keyword in name_lower for keyword in transport_keywords):
         return True
-    
+
     # Check if it looks like a proper noun (capitalized words)
     words = name.split()
     if len(words) >= 2:
         capitalized_words = [word for word in words if word[0].isupper()]
         if len(capitalized_words) >= 2:
             return True
-    
+
     return False
 
 
 def scrape_general_links(soup, config):
     """Fallback method for general link extraction"""
     transport_info = []
-    all_links = soup.find_all('a')
-    
+    all_links = soup.find_all("a")
+
     for link in all_links:
         try:
             name = link.get_text(strip=True)
-            href = link.get('href')
-            
+            href = link.get("href")
+
             if href and name and isinstance(href, str) and len(name) > 3:
                 # Check if this looks like a transportation link
                 href_lower = href.lower()
                 name_lower = name.lower()
-                
+
                 # Filter for likely transportation links based on destination
                 is_transportation = (
-                    any(keyword in href_lower for keyword in config["keywords"]) or
-                    any(keyword in name_lower for keyword in ['metro', 'subway', 'train', 'bus', 'tram', 'light', 'rail', 'line', 'route', 'station', 'stop']) or
-                    any(keyword in name_lower for keyword in ['metro', 'subway', 'train', 'bus', 'tram', 'light', 'rail', 'line', 'route', 'station', 'stop'])
+                    any(keyword in href_lower for keyword in config["keywords"])
+                    or any(
+                        keyword in name_lower
+                        for keyword in [
+                            "metro",
+                            "subway",
+                            "train",
+                            "bus",
+                            "tram",
+                            "light",
+                            "rail",
+                            "line",
+                            "route",
+                            "station",
+                            "stop",
+                        ]
+                    )
+                    or any(
+                        keyword in name_lower
+                        for keyword in [
+                            "metro",
+                            "subway",
+                            "train",
+                            "bus",
+                            "tram",
+                            "light",
+                            "rail",
+                            "line",
+                            "route",
+                            "station",
+                            "stop",
+                        ]
+                    )
                 )
-                
+
                 # Avoid navigation and non-transportation links
-                is_navigation = any(skip in name_lower for skip in ['home', 'back', 'next', 'previous', 'top', 'menu', 'search', 'contact', 'about', 'privacy', 'terms'])
-                
+                is_navigation = any(
+                    skip in name_lower
+                    for skip in [
+                        "home",
+                        "back",
+                        "next",
+                        "previous",
+                        "top",
+                        "menu",
+                        "search",
+                        "contact",
+                        "about",
+                        "privacy",
+                        "terms",
+                    ]
+                )
+
                 if is_transportation and not is_navigation:
                     # Construct full URL
-                    if href.startswith('/'):
+                    if href.startswith("/"):
                         full_url = urljoin(config["source_url"], href)
-                    elif href.startswith('http'):
+                    elif href.startswith("http"):
                         full_url = href
                     else:
-                        full_url = urljoin(config["source_url"], '/' + href)
-                    
+                        full_url = urljoin(config["source_url"], "/" + href)
+
                     # Avoid duplicates
-                    if name not in [info['name'] for info in transport_info]:
-                        transport_info.append({
-                            "name": name,
-                            "url": full_url
-                        })
-                        
+                    if name not in [info["name"] for info in transport_info]:
+                        transport_info.append({"name": name, "url": full_url})
+
         except (AttributeError, TypeError) as e:
             continue
-    
+
     return transport_info
 
 
-def create_transportation_data(transport_info: List[Dict[str, str]], 
-                              transportation_name: str,
-                              config: Dict[str, Any]) -> Dict[str, Any]:
+def create_transportation_data(
+    transport_info: List[Dict[str, str]],
+    transportation_name: str,
+    config: Dict[str, Any],
+) -> Dict[str, Any]:
     """Create a standardized transportation data structure"""
-    
+
     # Create transportation-specific content
     if config["transport_type"] == "trains" and config["country"] == "japan":
         content = create_japan_train_content(transport_info, transportation_name)
     elif config["transport_type"] == "metro":
         content = create_metro_content(transport_info, transportation_name, config)
     else:
-        content = create_generic_transportation_content(transport_info, transportation_name)
-    
+        content = create_generic_transportation_content(
+            transport_info, transportation_name
+        )
+
     return {
         "id": f"{transportation_name.lower().replace(' ', '_').replace(',', '')}_complete_guide",
         "title": f"{transportation_name.replace('_', ' ').title()} Complete Travel Guide",
@@ -421,30 +707,32 @@ def create_transportation_data(transport_info: List[Dict[str, str]],
         "subcategory": config["transport_type"],
         "location": config["country"],
         "tags": [
-            transportation_name.replace('_', ' ').lower(),
+            transportation_name.replace("_", " ").lower(),
             "Transportation",
             config["transport_type"].title(),
-            config["country"].title()
+            config["country"].title(),
         ],
         "language": "en",
         "source": {
             "id": config["source_id"],
             "name": config["source"],
             "url": config["source_url"],
-            "reliability_score": 0.9
+            "reliability_score": 0.9,
         },
-        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
 
-def create_japan_train_content(transport_info: List[Dict[str, str]], transportation_name: str) -> str:
+def create_japan_train_content(
+    transport_info: List[Dict[str, str]], transportation_name: str
+) -> str:
     """Create content specifically for Japanese train systems"""
-    content = f"""{transportation_name.replace('_', ' ').title()} is Japan's world-renowned transportation system, known for its efficiency, punctuality, and extensive network. This comprehensive guide covers everything you need to know about using {transportation_name.replace('_', ' ').title()}.\n\n## Overview\n{transportation_name.replace('_', ' ').title()} offers visitors a reliable and efficient way to travel throughout Japan. With multiple lines serving different regions, it's the fastest and most convenient way to travel between major cities and explore the country.\n\n## Major Lines and Routes\n\n### Key Transportation Lines\n"""
-    
+    content = f"""{transportation_name.replace("_", " ").title()} is Japan's world-renowned transportation system, known for its efficiency, punctuality, and extensive network. This comprehensive guide covers everything you need to know about using {transportation_name.replace("_", " ").title()}.\n\n## Overview\n{transportation_name.replace("_", " ").title()} offers visitors a reliable and efficient way to travel throughout Japan. With multiple lines serving different regions, it's the fastest and most convenient way to travel between major cities and explore the country.\n\n## Major Lines and Routes\n\n### Key Transportation Lines\n"""
+
     # Add transportation information
     for i, info in enumerate(transport_info[:15], 1):  # Top 15 items
         content += f"- **{info['name']}**: Important transportation route or service\n"
-    
+
     content += f"""
 ## Ticket Types and Pricing
 
@@ -568,40 +856,58 @@ def create_japan_train_content(transport_info: List[Dict[str, str]], transportat
 - **Tourist Hotline**: English-speaking assistance
 - **Lost and Found**: Centralized service for all items
 
-{transportation_name.replace('_', ' ').title()} represents the pinnacle of public transportation efficiency and comfort. With proper planning and understanding of the system, it provides an excellent way to explore Japan's cities and regions."""
-    
+{transportation_name.replace("_", " ").title()} represents the pinnacle of public transportation efficiency and comfort. With proper planning and understanding of the system, it provides an excellent way to explore Japan's cities and regions."""
+
     return content
 
 
-def create_metro_content(transport_info: List[Dict[str, str]], transportation_name: str, config: Dict[str, Any]) -> str:
+def create_metro_content(
+    transport_info: List[Dict[str, str]],
+    transportation_name: str,
+    config: Dict[str, Any],
+) -> str:
     """Create content specifically for metro/subway systems"""
-    country_name = config["country"].replace('_', ' ').title()
+    country_name = config["country"].replace("_", " ").title()
     transport_type = config["transport_type"].title()
-    
-    content = f"""{transportation_name.replace('_', ' ').title()} is {country_name}'s efficient {transport_type.lower()} system, providing fast and reliable transportation throughout the city. This comprehensive guide covers everything you need to know about using {transportation_name.replace('_', ' ').title()}.\n\n## Overview\n{transportation_name.replace('_', ' ').title()} offers visitors a convenient and affordable way to navigate the city. With extensive coverage and frequent service, it's the fastest way to reach major attractions and neighborhoods.\n\n## Major Lines and Routes\n\n### Key {transport_type} Lines and Services\n"""
-    
+
+    content = f"""{transportation_name.replace("_", " ").title()} is {country_name}'s efficient {transport_type.lower()} system, providing fast and reliable transportation throughout the city. This comprehensive guide covers everything you need to know about using {transportation_name.replace("_", " ").title()}.\n\n## Overview\n{transportation_name.replace("_", " ").title()} offers visitors a convenient and affordable way to navigate the city. With extensive coverage and frequent service, it's the fastest way to reach major attractions and neighborhoods.\n\n## Major Lines and Routes\n\n### Key {transport_type} Lines and Services\n"""
+
     # Add transportation information with more specific descriptions
     for i, info in enumerate(transport_info[:20], 1):  # Top 20 items
         # Create more specific descriptions based on the scraped content
-        if any(keyword in info['name'].lower() for keyword in ['line', 'route', 'metro', 'subway', 'train']):
+        if any(
+            keyword in info["name"].lower()
+            for keyword in ["line", "route", "metro", "subway", "train"]
+        ):
             content += f"- **{info['name']}**: Major transportation line or route\n"
-        elif any(keyword in info['name'].lower() for keyword in ['station', 'stop', 'terminal']):
+        elif any(
+            keyword in info["name"].lower()
+            for keyword in ["station", "stop", "terminal"]
+        ):
             content += f"- **{info['name']}**: Important station or transfer point\n"
-        elif any(keyword in info['name'].lower() for keyword in ['airport', 'express', 'rapid']):
+        elif any(
+            keyword in info["name"].lower()
+            for keyword in ["airport", "express", "rapid"]
+        ):
             content += f"- **{info['name']}**: Airport connection or express service\n"
-        elif any(keyword in info['name'].lower() for keyword in ['card', 'pass', 'ticket', 'fare']):
+        elif any(
+            keyword in info["name"].lower()
+            for keyword in ["card", "pass", "ticket", "fare"]
+        ):
             content += f"- **{info['name']}**: Ticketing and payment information\n"
         else:
-            content += f"- **{info['name']}**: Important transportation service or facility\n"
-    
+            content += (
+                f"- **{info['name']}**: Important transportation service or facility\n"
+            )
+
     # Add city-specific information based on the transportation system
     content += f"""
     
-## City-Specific Information for {transportation_name.replace('_', ' ').title()}
+## City-Specific Information for {transportation_name.replace("_", " ").title()}
 
 ### Special Features and Services
 """
-    
+
     # Add city-specific content based on the transportation system
     if "london" in transportation_name.lower():
         content += """- **Oyster Card**: Contactless smart card for all London transport
@@ -624,7 +930,9 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **AirTrain**: Connection to JFK and LaGuardia airports
 - **PATH**: Commuter rail connecting NYC with New Jersey
 - **Staten Island Ferry**: Free ferry service to Staten Island\n"""
-    elif "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower():
+    elif (
+        "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower()
+    ):
         content += """- **Suica/Pasmo**: Contactless IC cards for all Tokyo transport
 - **JR Yamanote Line**: Circular line connecting major Tokyo stations
 - **Tokyo Metro**: 9 lines serving central Tokyo
@@ -667,14 +975,16 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Airport Express**: Metro connections to both airports
 - **Bus Integration**: Extensive bus network complementing metro\n"""
     else:
-        content += f"- **Smart Card System**: Contactless payment for convenient travel\n"
-    
+        content += (
+            f"- **Smart Card System**: Contactless payment for convenient travel\n"
+        )
+
     content += f"""
-## Ticket Types and Pricing for {transportation_name.replace('_', ' ').title()}
+## Ticket Types and Pricing for {transportation_name.replace("_", " ").title()}
 
 ### Basic Fares
 """
-    
+
     # Add city-specific fare information
     if "london" in transportation_name.lower():
         content += """- **Pay As You Go**: £2.50-£6.00 depending on zones
@@ -694,7 +1004,9 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **30-Day Unlimited**: $127 for unlimited rides
 - **MetroCard**: $1 fee for new card
 - **AirTrain**: $7.75 to JFK Airport\n"""
-    elif "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower():
+    elif (
+        "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower()
+    ):
         content += """- **Single Journey**: ¥170-¥320 depending on distance
 - **Day Pass**: ¥800 for unlimited Tokyo Metro/Toei
 - **Suica/Pasmo**: ¥500 deposit, top-up as needed
@@ -743,11 +1055,11 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Senior Passes**: Discounts for elderly travelers
 - **Group Passes**: Savings for multiple travelers
 
-## How to Use {transportation_name.replace('_', ' ').title()}
+## How to Use {transportation_name.replace("_", " ").title()}
 
 ### Buying Tickets
 """
-    
+
     # Add city-specific ticket buying information
     if "london" in transportation_name.lower():
         content += """- **Oyster Card**: Purchase at stations, shops, or online
@@ -767,7 +1079,9 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Staff Counters**: Assistance at major stations
 - **Mobile Apps**: MTA app for journey planning
 - **OMNY**: Contactless payment system (phasing in)\n"""
-    elif "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower():
+    elif (
+        "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower()
+    ):
         content += """- **Suica/Pasmo**: Purchase at stations or convenience stores
 - **Ticket Machines**: Available at all stations
 - **Staff Counters**: Assistance at major stations
@@ -816,7 +1130,7 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Boarding Time**: Trains arrive frequently
 - **Car Selection**: Choose less crowded cars
 
-## Station Information for {transportation_name.replace('_', ' ').title()}
+## Station Information for {transportation_name.replace("_", " ").title()}
 
 ### Major Stations
 - **Central Stations**: Main transportation hubs
@@ -830,11 +1144,11 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Shops and Restaurants**: Convenience stores and dining
 - **Information Centers**: Tourist information and maps
 
-## Travel Tips for {transportation_name.replace('_', ' ').title()}
+## Travel Tips for {transportation_name.replace("_", " ").title()}
 
 ### Best Practices and Peak Hours
 """
-    
+
     # Add city-specific travel tips
     if "london" in transportation_name.lower():
         content += """- **Peak Hours**: Avoid 7:30-9:30 AM and 5:00-7:00 PM on weekdays
@@ -857,7 +1171,9 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Advance Planning**: Use MTA app for real-time journey planning
 - **Backup Plans**: Know alternative routes during weekend maintenance
 - **Transfer Rules**: Free transfers between subway and bus within 2 hours\n"""
-    elif "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower():
+    elif (
+        "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower()
+    ):
         content += """- **Peak Hours**: Avoid 7:30-9:30 AM and 6:00-8:00 PM on weekdays
 - **Off-Peak Travel**: Same fare regardless of time, but less crowded
 - **Women-Only Cars**: Available during peak hours on some lines
@@ -906,9 +1222,9 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Backup Plans**: Know alternative routes\n"""
 
     content += f"""
-### Money-Saving Tips for {transportation_name.replace('_', ' ').title()}
+### Money-Saving Tips for {transportation_name.replace("_", " ").title()}
 """
-    
+
     # Add city-specific money-saving tips
     if "london" in transportation_name.lower():
         content += """- **Oyster vs Contactless**: Same fares, but Oyster has daily/weekly caps
@@ -931,7 +1247,9 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Group Discounts**: Available for school groups and organizations
 - **Student Discounts**: Reduced fares for students with valid ID
 - **Senior Discounts**: Reduced fares for seniors over 65\n"""
-    elif "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower():
+    elif (
+        "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower()
+    ):
         content += """- **Suica/Pasmo vs Single Tickets**: IC cards offer convenience and small discounts
 - **JR Pass**: Worth it for 7+ days of extensive JR travel
 - **Tokyo Metro Pass**: Good value for 1-3 days of metro-only travel
@@ -980,11 +1298,11 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Student Discounts**: Use student ID for reduced fares\n"""
 
     content += f"""
-## Accessibility for {transportation_name.replace('_', ' ').title()}
+## Accessibility for {transportation_name.replace("_", " ").title()}
 
 ### Services Available
 """
-    
+
     # Add city-specific accessibility information
     if "london" in transportation_name.lower():
         content += """- **Step-free Access**: Available at 91 stations with elevators and ramps
@@ -1007,7 +1325,9 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Elevators**: Available at accessible stations with audio announcements
 - **Accessible Restrooms**: Available at major stations
 - **Audio Announcements**: Available on all trains and platforms\n"""
-    elif "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower():
+    elif (
+        "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower()
+    ):
         content += """- **Step-free Access**: Available at most stations with elevators and ramps
 - **Priority Seating**: Available in all cars with clear signage
 - **Assistance**: Staff available at all stations for escort services
@@ -1063,7 +1383,7 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Mobility Assistance**: Escort services available
 - **Medical Support**: First aid and emergency contacts
 
-## Safety and Etiquette for {transportation_name.replace('_', ' ').title()}
+## Safety and Etiquette for {transportation_name.replace("_", " ").title()}
 
 ### General Behavior
 - **Quiet Conversations**: Keep voices low
@@ -1078,7 +1398,7 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Medical Emergencies**: Contact station staff immediately
 - **Security**: Report suspicious activity to staff
 
-## Seasonal Considerations for {transportation_name.replace('_', ' ').title()}
+## Seasonal Considerations for {transportation_name.replace("_", " ").title()}
 
 ### Spring (March-May)
 - **Tourist Season**: Busy with visitors, book early
@@ -1100,11 +1420,11 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Weather**: Heating on all trains
 - **Delays**: Possible due to weather conditions
 
-## Contact Information for {transportation_name.replace('_', ' ').title()}
+## Contact Information for {transportation_name.replace("_", " ").title()}
 
 ### Customer Service
 """
-    
+
     # Add city-specific contact information
     if "london" in transportation_name.lower():
         content += """- **TfL Customer Service**: 0343 222 1234 (24/7)
@@ -1124,7 +1444,9 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Station Staff**: Assistance at major stations
 - **Tourist Information**: Available at major stations and airports
 - **Lost Property**: 1-877-690-5116 or visit 34th Street-Penn Station\n"""
-    elif "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower():
+    elif (
+        "tokyo" in transportation_name.lower() or "japan" in transportation_name.lower()
+    ):
         content += """- **JR East Customer Service**: 050-2016-1603 (English available)
 - **Tokyo Metro Customer Service**: 03-3941-2004
 - **Online Help**: jreast.co.jp and tokyometro.jp
@@ -1176,19 +1498,21 @@ def create_metro_content(transport_info: List[Dict[str, str]], transportation_na
 - **Tourist Hotline**: English-speaking assistance
 - **Lost and Found**: Centralized service for all items
 
-{transportation_name.replace('_', ' ').title()} provides an excellent way to explore the city efficiently and affordably. With proper planning and understanding of the system, it offers a convenient transportation experience for both locals and visitors."""
-    
+{transportation_name.replace("_", " ").title()} provides an excellent way to explore the city efficiently and affordably. With proper planning and understanding of the system, it offers a convenient transportation experience for both locals and visitors."""
+
     return content
 
 
-def create_generic_transportation_content(transport_info: List[Dict[str, str]], transportation_name: str) -> str:
+def create_generic_transportation_content(
+    transport_info: List[Dict[str, str]], transportation_name: str
+) -> str:
     """Create generic transportation content"""
-    content = f"""{transportation_name.replace('_', ' ').title()} is a comprehensive transportation system that provides efficient and reliable travel options. This guide covers everything you need to know about using {transportation_name.replace('_', ' ').title()}.\n\n## Overview\n{transportation_name.replace('_', ' ').title()} offers visitors a convenient way to travel throughout the region. With multiple lines and extensive coverage, it's an excellent choice for both local and tourist transportation needs.\n\n## Major Lines and Services\n\n### Key Transportation Routes\n"""
-    
+    content = f"""{transportation_name.replace("_", " ").title()} is a comprehensive transportation system that provides efficient and reliable travel options. This guide covers everything you need to know about using {transportation_name.replace("_", " ").title()}.\n\n## Overview\n{transportation_name.replace("_", " ").title()} offers visitors a convenient way to travel throughout the region. With multiple lines and extensive coverage, it's an excellent choice for both local and tourist transportation needs.\n\n## Major Lines and Services\n\n### Key Transportation Routes\n"""
+
     # Add transportation information
     for i, info in enumerate(transport_info[:10], 1):  # Top 10 items
         content += f"- **{info['name']}**: Important transportation route or service\n"
-    
+
     content += f"""
 ## Ticket Types and Pricing
 
@@ -1312,8 +1636,8 @@ def create_generic_transportation_content(transport_info: List[Dict[str, str]], 
 - **Tourist Hotline**: English-speaking assistance
 - **Lost and Found**: Centralized service for all items
 
-{transportation_name.replace('_', ' ').title()} provides an excellent way to explore the region efficiently and affordably. With proper planning and understanding of the system, it offers a convenient transportation experience for both locals and visitors."""
-    
+{transportation_name.replace("_", " ").title()} provides an excellent way to explore the region efficiently and affordably. With proper planning and understanding of the system, it offers a convenient transportation experience for both locals and visitors."""
+
     return content
 
 
@@ -1338,25 +1662,27 @@ def main():
         print("Usage: python extract_transportation.py <transportation_name>")
         print("Available transportation systems:", list(TRANSPORTATION_CONFIGS.keys()))
         return
-    
+
     transportation_name = sys.argv[1]
     print(f"Starting {transportation_name} transportation extraction...")
-    
+
     # Extract transportation information
     transport_info = scrape_transportation(transportation_name)
-    
+
     if not transport_info:
         print(f"Failed to extract transportation information for {transportation_name}")
         return
-    
+
     # Create and save data
     config = TRANSPORTATION_CONFIGS[transportation_name.lower()]
     data = create_transportation_data(transport_info, transportation_name, config)
     filename = f"{transportation_name.lower().replace(' ', '_').replace(',', '')}.json"
     save_transportation_data(data, filename, config["transport_type"])
-    
-    print(f"Extraction complete! Found {len(transport_info)} transportation items for {transportation_name}.")
+
+    print(
+        f"Extraction complete! Found {len(transport_info)} transportation items for {transportation_name}."
+    )
 
 
 if __name__ == "__main__":
-    main() 
+    main()
