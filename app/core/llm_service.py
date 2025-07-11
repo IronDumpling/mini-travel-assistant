@@ -15,7 +15,8 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel
 import openai
 import anthropic
-import deepseek
+import httpx
+import json
 import logging
 import os
 import asyncio
@@ -35,8 +36,8 @@ class LLMResponse(BaseModel):
 
 class LLMConfig(BaseModel):
     """LLM Configuration"""
-    provider: str = "openai"  # openai, claude, etc.
-    model: str = "gpt-4"
+    provider: str = "deepseek"  # deepseek, openai, claude, etc.
+    model: str = "deepseek-chat"
     api_key: Optional[str] = None
     max_tokens: Optional[int] = None
     temperature: float = 0.7
@@ -506,8 +507,11 @@ class DeepSeekService(BaseLLMService):
             if not api_key:
                 raise ValueError("DeepSeek API key is required")
             
-            # Initialize DeepSeek client
-            self.client = deepseek.DeepSeekAPI(api_key=api_key)
+            # Initialize OpenAI client with DeepSeek base URL
+            self.client = openai.AsyncOpenAI(
+                api_key=api_key,
+                base_url="https://api.deepseek.com"
+            )
             logger.info(f"DeepSeek client initialized with model: {self.model}")
                 
         except Exception as e:
@@ -517,7 +521,7 @@ class DeepSeekService(BaseLLMService):
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type((Exception,))
+        retry=retry_if_exception_type((openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError))
     )
     async def chat_completion(
         self, 
@@ -545,26 +549,20 @@ class DeepSeekService(BaseLLMService):
             
             logger.debug(f"Making DeepSeek API call with model: {self.model}")
             
-            # Make the API call (DeepSeek API is synchronous, so we run it in executor)
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, 
-                lambda: self.client.chat_completion(**params)
-            )
+            # Make the API call using OpenAI client
+            response = await self.client.chat.completions.create(**params)
             
             # Extract response data
-            content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
-            model = response.get("model", self.model)
-            finish_reason = response.get("choices", [{}])[0].get("finish_reason")
+            choice = response.choices[0]
+            content = choice.message.content or ""
             
             # Prepare usage data
             usage_data = None
-            if "usage" in response:
-                usage = response["usage"]
+            if response.usage:
                 usage_data = {
-                    "prompt_tokens": usage.get("prompt_tokens", 0),
-                    "completion_tokens": usage.get("completion_tokens", 0),
-                    "total_tokens": usage.get("total_tokens", 0)
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens
                 }
             
             logger.info(f"DeepSeek API call successful. Tokens used: {usage_data['total_tokens'] if usage_data else 'unknown'}")
@@ -572,23 +570,38 @@ class DeepSeekService(BaseLLMService):
             return LLMResponse(
                 content=content,
                 usage=usage_data,
-                model=model,
-                finish_reason=finish_reason,
+                model=response.model,
+                finish_reason=choice.finish_reason,
                 metadata={
                     "provider": "deepseek",
                     "api_call": True,
-                    "model_used": model
+                    "model_used": response.model
                 }
             )
             
+        except openai.RateLimitError as e:
+            logger.warning(f"DeepSeek rate limit exceeded: {e}")
+            raise
+        except openai.APITimeoutError as e:
+            logger.warning(f"DeepSeek API timeout: {e}")
+            raise
+        except openai.APIConnectionError as e:
+            logger.warning(f"DeepSeek API connection error: {e}")
+            raise
+        except openai.AuthenticationError as e:
+            logger.error(f"DeepSeek authentication failed: {e}")
+            raise
+        except openai.BadRequestError as e:
+            logger.error(f"DeepSeek bad request: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Error in DeepSeek API call: {e}")
+            logger.error(f"Unexpected error in DeepSeek API call: {e}")
             raise
     
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type((Exception,))
+        retry=retry_if_exception_type((openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError))
     )
     async def function_call(
         self, 
@@ -618,31 +631,27 @@ class DeepSeekService(BaseLLMService):
             
             logger.debug(f"Making DeepSeek function call with model: {self.model}")
             
-            # Make the API call (DeepSeek API is synchronous, so we run it in executor)
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, 
-                lambda: self.client.chat_completion(**params)
-            )
+            # Make the API call using OpenAI client
+            response = await self.client.chat.completions.create(**params)
             
             # Extract response data
-            choice = response.get("choices", [{}])[0]
-            message = choice.get("message", {})
+            choice = response.choices[0]
+            message = choice.message
             
             # Handle function call response
-            if "tool_calls" in message and message["tool_calls"]:
+            if message.tool_calls:
                 # Function was called
-                tool_call = message["tool_calls"][0]
-                function_name = tool_call.get("function", {}).get("name", "")
-                function_args = tool_call.get("function", {}).get("arguments", "")
+                tool_call = message.tool_calls[0]
+                function_name = tool_call.function.name
+                function_args = tool_call.function.arguments
                 
                 content = f"Function '{function_name}' called with arguments: {function_args}"
                 
                 return LLMResponse(
                     content=content,
-                    usage=self._extract_usage(response.get("usage")),
-                    model=response.get("model", self.model),
-                    finish_reason=choice.get("finish_reason"),
+                    usage=self._extract_usage(response.usage),
+                    model=response.model,
+                    finish_reason=choice.finish_reason,
                     metadata={
                         "provider": "deepseek",
                         "api_call": True,
@@ -653,13 +662,13 @@ class DeepSeekService(BaseLLMService):
                 )
             else:
                 # No function call, regular response
-                content = message.get("content", "")
+                content = message.content or ""
                 
                 return LLMResponse(
                     content=content,
-                    usage=self._extract_usage(response.get("usage")),
-                    model=response.get("model", self.model),
-                    finish_reason=choice.get("finish_reason"),
+                    usage=self._extract_usage(response.usage),
+                    model=response.model,
+                    finish_reason=choice.finish_reason,
                     metadata={
                         "provider": "deepseek",
                         "api_call": True,
@@ -667,6 +676,21 @@ class DeepSeekService(BaseLLMService):
                     }
                 )
                 
+        except openai.RateLimitError as e:
+            logger.warning(f"DeepSeek rate limit exceeded: {e}")
+            raise
+        except openai.APITimeoutError as e:
+            logger.warning(f"DeepSeek API timeout: {e}")
+            raise
+        except openai.APIConnectionError as e:
+            logger.warning(f"DeepSeek API connection error: {e}")
+            raise
+        except openai.AuthenticationError as e:
+            logger.error(f"DeepSeek authentication failed: {e}")
+            raise
+        except openai.BadRequestError as e:
+            logger.error(f"DeepSeek bad request: {e}")
+            raise
         except Exception as e:
             logger.error(f"Error in DeepSeek function call: {e}")
             raise
@@ -675,9 +699,9 @@ class DeepSeekService(BaseLLMService):
         """Extract usage data from DeepSeek response"""
         if usage:
             return {
-                "prompt_tokens": usage.get("prompt_tokens", 0),
-                "completion_tokens": usage.get("completion_tokens", 0),
-                "total_tokens": usage.get("total_tokens", 0)
+                "prompt_tokens": usage.prompt_tokens,
+                "completion_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens
             }
         return None
 
@@ -698,14 +722,14 @@ class LLMServiceFactory:
         elif config.provider.lower() == "deepseek":
             return DeepSeekService(config)
         else:
-            logger.warning(f"Unknown LLM provider: {config.provider}, defaulting to OpenAI")
-            config.provider = "openai"
-            return OpenAIService(config)
+            logger.warning(f"Unknown LLM provider: {config.provider}, defaulting to DeepSeek")
+            config.provider = "deepseek"
+            return DeepSeekService(config)
     
     @staticmethod
     def get_default_config() -> LLMConfig:
         """Get default LLM configuration from environment or defaults"""
-        provider = os.getenv("LLM_PROVIDER", "openai")
+        provider = os.getenv("LLM_PROVIDER", "deepseek")  # Changed default to deepseek
         
         # Get appropriate API key based on provider
         api_key = os.getenv("LLM_API_KEY")
@@ -721,7 +745,7 @@ class LLMServiceFactory:
         if provider.lower() == "claude":
             default_model = "claude-3-sonnet-20240229"
         elif provider.lower() == "deepseek":
-            default_model = "deepseek-chat"
+            default_model = "deepseek-chat"  # or "deepseek-coder" for coding tasks
         else:
             default_model = "gpt-4"
         model = os.getenv("LLM_MODEL", default_model)

@@ -163,8 +163,8 @@ Create `.env` file in project root:
 
 ```env
 # LLM Configuration
-LLM_PROVIDER=openai          # openai, claude, or mock
-LLM_MODEL=gpt-4              # Model to use
+LLM_PROVIDER=deepseek        # deepseek, openai, claude, or mock (deepseek is default)
+LLM_MODEL=deepseek-chat      # Model to use
 LLM_API_KEY=your_api_key_here
 LLM_TEMPERATURE=0.7
 LLM_MAX_TOKENS=4000
@@ -575,8 +575,8 @@ python -m pytest tests/test_self_refine.py
 
 ```python
 # Environment variables
-LLM_PROVIDER=openai  # openai, claude, mock
-LLM_MODEL=gpt-4      # Provider-specific model
+LLM_PROVIDER=deepseek  # deepseek, openai, claude, mock (deepseek is default)
+LLM_MODEL=deepseek-chat  # Provider-specific model
 LLM_API_KEY=your_key
 
 # Programmatic configuration
