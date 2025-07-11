@@ -12,7 +12,7 @@ TODO: Implement the following features
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import uuid
 from app.core.logging_config import get_logger
@@ -40,7 +40,7 @@ class AgentMessage(BaseModel):
     content: str
     message_type: str = "text"
     metadata: Dict[str, Any] = {}
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AgentResponse(BaseModel):
@@ -73,8 +73,8 @@ class BaseAgent(ABC):
         self.status = AgentStatus.IDLE
         self.conversation_history: List[AgentMessage] = []
         self.metadata: Dict[str, Any] = {}
-        self.created_at = datetime.utcnow()
-        self.last_activity = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
+        self.last_activity = datetime.now(timezone.utc)
 
         # Agent capabilities configuration
         self.capabilities: List[str] = self.get_capabilities()
@@ -255,6 +255,7 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.warning(f"LLM-based quality assessment failed: {e}")
             # Fall back to heuristic assessment if LLM fails
+            pass
 
         # Fallback to heuristic assessment
         if dimension == "relevance":
@@ -363,6 +364,7 @@ class BaseAgent(ABC):
         except Exception as e:
             logger.warning(f"LLM-based improvement suggestions failed: {e}")
             # Fall back to heuristic suggestions if LLM fails
+            pass
 
         # Fallback to heuristic suggestions
         suggestions = []
@@ -491,11 +493,24 @@ class BaseAgent(ABC):
             },
         )
 
+    async def think(self, context: Dict[str, Any]) -> str:
+        """Thinking process"""
+        # TODO: Implement thinking logic
+        # 1. Analyze current context
+        # 2. Make a plan
+        # 3. Evaluate different choices
+        # 4. Return thinking result
+        self.status = AgentStatus.THINKING
+        self.last_activity = datetime.now(timezone.utc)
+
+        # Default implementation, subclasses can override
+        return f"Agent {self.name} is thinking how to handle: {context}"
+
     async def act(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute action"""
         # TODO: Implement action execution logic
         self.status = AgentStatus.ACTING
-        self.last_activity = datetime.utcnow()
+        self.last_activity = datetime.now(timezone.utc)
 
         # Subclasses need to implement specific action execution logic
         return await self._execute_action(action, parameters)
@@ -540,7 +555,7 @@ class BaseAgent(ABC):
         self.status = AgentStatus.IDLE
         self.conversation_history.clear()
         self.metadata.clear()
-        self.last_activity = datetime.utcnow()
+        self.last_activity = datetime.now(timezone.utc)
 
 
 class AgentManager:
