@@ -5,7 +5,7 @@ Implements intelligent tool selection using RAG (Retrieval-Augmented Generation)
 to improve tool selection accuracy based on semantic understanding of user requests.
 """
 
-from typing import Dict, List, Any, Optional, Callable, Union
+from typing import Dict, List, Any, Optional
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from pydantic import BaseModel

@@ -10,11 +10,10 @@ TODO: Implement the following features
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
-import asyncio
 import uuid
 
 

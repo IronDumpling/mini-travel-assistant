@@ -4,7 +4,6 @@ Prompt Manager - Centralized prompt template management system
 
 from typing import Dict, List, Any, Optional
 from enum import Enum
-import json
 
 class PromptType(Enum):
     """Prompt type enumeration"""

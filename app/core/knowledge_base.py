@@ -7,7 +7,6 @@ smart data loading and RAG-enhanced search capabilities.
 
 from typing import Dict, List, Optional, Any
 from pathlib import Path
-import json
 import yaml
 import logging
 from datetime import datetime

@@ -7,9 +7,7 @@ Features include text search, nearby search, place details, and photo retrieval.
 
 import os
 from typing import List, Optional, Dict, Any
-from datetime import datetime
 import aiohttp
-import json
 from pydantic import BaseModel, Field
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
 

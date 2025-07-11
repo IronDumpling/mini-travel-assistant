@@ -14,7 +14,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from loguru import logger
-import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
