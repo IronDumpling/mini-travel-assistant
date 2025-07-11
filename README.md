@@ -162,6 +162,10 @@ pip install -r requirements.txt
 Create `.env` file in project root:
 
 ```env
+# LLM Service Keys
+OPENAI_API_KEY=your_open_ai_api_key
+DEEPSEEK_API_KEY=your_deepseek_api_key
+
 # LLM Configuration
 LLM_PROVIDER=openai          # openai, claude, or mock
 LLM_MODEL=gpt-4              # Model to use
@@ -175,7 +179,7 @@ EMBEDDING_MODEL=all-MiniLM-L6-v2
 RAG_TOP_K=5
 RAG_SIMILARITY_THRESHOLD=0.7
 
-# Travel API Keys (Optional - uses mock data if not provided)
+# Travel API Keys
 FLIGHT_SEARCH_API_KEY=your_flight_api_key
 HOTEL_SEARCH_API_KEY=your_hotel_api_key
 ATTRACTION_SEARCH_API_KEY=your_attraction_api_key
