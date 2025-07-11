@@ -188,10 +188,68 @@ class TravelAgent(BaseAgent):
         current_response: AgentResponse,
         quality_assessment: Optional[QualityAssessment]
     ) -> AgentResponse:
-        """Refine travel response based on quality assessment"""
+        """Refine travel response based on quality assessment using prompt_manager"""
         if not quality_assessment:
             return current_response
         
+        # Try to use LLM for travel-specific response refinement
+        try:
+            from app.core.prompt_manager import prompt_manager, PromptType
+            
+            if self.llm_service and not self.llm_service.mock_mode:
+                # Use prompt manager for LLM-based travel response refinement
+                refinement_prompt = prompt_manager.get_prompt(
+                    PromptType.RESPONSE_REFINEMENT,
+                    user_message=original_message.content,
+                    current_response=current_response.content,
+                    quality_assessment=quality_assessment.dict(),
+                    improvement_suggestions=quality_assessment.improvement_suggestions,
+                    dimension_scores=quality_assessment.dimension_scores,
+                    actions_taken=current_response.actions_taken,
+                    next_steps=current_response.next_steps,
+                    agent_type="travel_agent",  # Add travel-specific context
+                    travel_dimensions=["personalization", "feasibility"]  # Travel-specific dimensions
+                )
+                
+                # Use structured completion for response refinement
+                schema = prompt_manager.get_schema(PromptType.RESPONSE_REFINEMENT)
+                refinement_result = await self.llm_service.structured_completion(
+                    messages=[{"role": "user", "content": refinement_prompt}],
+                    response_schema=schema,
+                    temperature=0.3,
+                    max_tokens=800
+                )
+                
+                # Extract refined response components
+                refined_content = refinement_result.get("refined_content", current_response.content)
+                refined_actions = refinement_result.get("refined_actions", current_response.actions_taken)
+                refined_next_steps = refinement_result.get("refined_next_steps", current_response.next_steps)
+                confidence_boost = refinement_result.get("confidence_boost", 0.1)
+                
+                return AgentResponse(
+                    success=current_response.success,
+                    content=refined_content,
+                    actions_taken=refined_actions,
+                    next_steps=refined_next_steps,
+                    confidence=min(current_response.confidence + confidence_boost, 1.0),
+                    metadata={
+                        **current_response.metadata,
+                        "travel_refined": True,
+                        "refinement_method": "llm_based",
+                        "quality_dimensions_improved": [
+                            dim for dim, score in quality_assessment.dimension_scores.items() 
+                            if score < 0.6
+                        ],
+                        "improvement_applied": quality_assessment.improvement_suggestions,
+                        "llm_refinement_applied": refinement_result.get("applied_improvements", [])
+                    }
+                )
+                
+        except Exception as e:
+            # Fall back to travel-specific heuristic refinement
+            pass
+        
+        # Fallback to travel-specific heuristic refinement
         improved_content = current_response.content
         improved_actions = current_response.actions_taken.copy()
         improved_next_steps = current_response.next_steps.copy()
@@ -242,13 +300,14 @@ class TravelAgent(BaseAgent):
             metadata={
                 **current_response.metadata,
                 "travel_refined": True,
+                "refinement_method": "heuristic_fallback",
                 "quality_dimensions_improved": [
                     dim for dim, score in quality_assessment.dimension_scores.items() 
                     if score < 0.6
                 ],
                 "improvement_applied": quality_assessment.improvement_suggestions
             }
-                    )
+        )
     
     async def plan_travel(self, message: AgentMessage) -> AgentResponse:
         """Public method to plan travel with self-refinement enabled"""
@@ -873,30 +932,37 @@ class TravelAgent(BaseAgent):
         # Use LLM for sophisticated requirement analysis if available
         if self.llm_service:
             try:
-                llm_prompt = f"""
-                Analyze this travel request and extract detailed requirements:
+                from app.core.prompt_manager import prompt_manager, PromptType
                 
-                User Message: "{user_message}"
-                Current Intent: {intent}
+                # Use prompt manager for requirement extraction
+                requirement_prompt = prompt_manager.get_prompt(
+                    PromptType.REQUIREMENT_EXTRACTION,
+                    user_message=user_message,
+                    intent_analysis=intent
+                )
                 
-                Extract and classify:
-                1. Required vs Optional information needs
-                2. Budget sensitivity (high/medium/low)
-                3. Time sensitivity (urgent/normal/flexible)
-                4. Specific preferences (luxury/budget/family/business)
-                5. Geographic scope (local/national/international)
-                6. Tool necessity scores (0-1 for flight/hotel/attraction search)
-                
-                Return JSON format with detailed analysis.
-                """
-                
-                response = await self.llm_service.chat_completion([
-                    {"role": "user", "content": llm_prompt}
-                ])
-                
-                # Parse LLM response (simplified for now)
-                enhanced_requirements = self._parse_llm_requirements(response.get("content", ""))
-                base_requirements.update(enhanced_requirements)
+                if not self.llm_service.mock_mode:
+                    # Use structured completion for requirement extraction
+                    schema = prompt_manager.get_schema(PromptType.REQUIREMENT_EXTRACTION)
+                    response = await self.llm_service.structured_completion(
+                        messages=[{"role": "user", "content": requirement_prompt}],
+                        response_schema=schema,
+                        temperature=0.3,
+                        max_tokens=600
+                    )
+                    
+                    # Use structured response directly
+                    enhanced_requirements = response
+                    base_requirements.update(enhanced_requirements)
+                else:
+                    # Use basic completion for mock mode
+                    response = await self.llm_service.chat_completion([
+                        {"role": "user", "content": requirement_prompt}
+                    ])
+                    
+                    # Parse LLM response (simplified for now)
+                    enhanced_requirements = self._parse_llm_requirements(response.get("content", ""))
+                    base_requirements.update(enhanced_requirements)
                 
             except Exception as e:
                 logger.warning(f"LLM requirement analysis failed: {e}")
