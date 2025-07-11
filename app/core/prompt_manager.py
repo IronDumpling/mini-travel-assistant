@@ -144,6 +144,19 @@ class PromptManager:
                     "confidence": {"type": "number", "minimum": 0, "maximum": 1}
                 },
                 "required": ["overall_score", "dimension_scores", "meets_threshold"]
+            },
+            
+            PromptType.RESPONSE_REFINEMENT.value: {
+                "type": "object",
+                "properties": {
+                    "refined_content": {"type": "string"},
+                    "refined_actions": {"type": "array", "items": {"type": "string"}},
+                    "refined_next_steps": {"type": "array", "items": {"type": "string"}},
+                    "confidence_boost": {"type": "number", "minimum": 0, "maximum": 0.5},
+                    "applied_improvements": {"type": "array", "items": {"type": "string"}},
+                    "refinement_notes": {"type": "string"}
+                },
+                "required": ["refined_content", "refined_actions", "refined_next_steps"]
             }
         }
     
