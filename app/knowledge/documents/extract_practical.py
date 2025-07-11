@@ -12,13 +12,11 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import json
 from typing import List, Dict, Optional, Any
-import logging
 import sys
 import os
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Use centralized logging
+from loguru import logger
 
 # More realistic headers to avoid bot detection
 HEADERS = {

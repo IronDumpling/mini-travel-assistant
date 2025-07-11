@@ -16,6 +16,68 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from loguru import logger
 from dotenv import load_dotenv
+from pathlib import Path
+
+# Configure centralized logging
+def setup_logging():
+    """Configure centralized logging for the entire application"""
+    
+    # Remove default logger to avoid duplicate logs
+    logger.remove()
+    
+    # Create logs directory if it doesn't exist
+    logs_dir = Path("logs")
+    logs_dir.mkdir(exist_ok=True)
+    
+    # Add console logging (colored and formatted)
+    logger.add(
+        sink=lambda msg: print(msg, end=""),
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | <level>{message}</level>",
+        level="INFO",
+        colorize=True
+    )
+    
+    # Add file logging with rotation
+    logger.add(
+        sink="logs/app_{time:YYYY-MM-DD}.log",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} | {message}",
+        level="INFO",
+        rotation="1 day",
+        retention="7 days",
+        compression="zip",
+        enqueue=True  # Makes logging thread-safe
+    )
+    
+    # Add error-specific logging
+    logger.add(
+        sink="logs/errors_{time:YYYY-MM-DD}.log",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} | {message}",
+        level="ERROR",
+        rotation="1 day",
+        retention="30 days",
+        compression="zip",
+        enqueue=True
+    )
+    
+    # Add debug logging (optional, can be controlled by environment variable)
+    debug_enabled = os.environ.get("DEBUG", "false").lower() == "true"
+    if debug_enabled:
+        logger.add(
+            sink="logs/debug_{time:YYYY-MM-DD}.log",
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} | {message}",
+            level="DEBUG",
+            rotation="1 day",
+            retention="3 days",
+            compression="zip",
+            enqueue=True
+        )
+    
+    logger.info("📝 Centralized logging configured")
+    logger.info(f"📂 Log files will be saved to: {logs_dir.absolute()}")
+    logger.info(f"🐛 Debug logging: {'enabled' if debug_enabled else 'disabled'}")
+
+# Set up logging first before any other imports
+setup_logging()
 
 def setup_environment_if_needed():
     """Check if required environment variables are set, and set them up if missing"""
