@@ -12,7 +12,7 @@ import logging
 from datetime import datetime
 from pydantic import BaseModel
 
-from app.core.rag_engine import Document, get_rag_engine
+from app.core.rag_engine import Document, DocumentType, get_rag_engine
 from app.core.data_loader import TravelDataLoader
 
 # Set up logging
@@ -260,7 +260,8 @@ class KnowledgeBase:
                         "tags": ",".join(knowledge.tags),
                         "language": knowledge.language,
                         "title": knowledge.title
-                    }
+                    },
+                    doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Add proper document type
                 )
                 documents.append(doc)
             
@@ -295,7 +296,8 @@ class KnowledgeBase:
                     "tags": ",".join(knowledge.tags),
                     "language": knowledge.language,
                     "title": knowledge.title
-                }
+                },
+                doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Add proper document type
             )
             
             # Index in RAG engine
@@ -333,7 +335,8 @@ class KnowledgeBase:
                     "tags": ",".join(updated_knowledge.tags),
                     "language": updated_knowledge.language,
                     "title": updated_knowledge.title
-                }
+                },
+                doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Add proper document type
             )
             
             success = await self.rag_engine.index_documents([doc])
@@ -390,11 +393,12 @@ class KnowledgeBase:
             if location:
                 filter_metadata["location"] = location
             
-            # Use RAG engine for semantic search
+            # Use RAG engine for semantic search with travel knowledge filter
             result = await self.rag_engine.retrieve(
                 query=query,
                 top_k=top_k * 2,  # Get more candidates for filtering
-                filter_metadata=filter_metadata
+                filter_metadata=filter_metadata,
+                doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Filter for travel knowledge only
             )
             
             # Process and filter results

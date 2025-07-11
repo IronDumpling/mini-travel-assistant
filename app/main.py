@@ -140,6 +140,13 @@ async def lifespan(app: FastAPI):
         session_manager = get_session_manager()
         logger.info("✅ Memory system initialized with session management")
         
+        # 5. Initialize tool knowledge for RAG-based tool selection
+        logger.info("🔍 Initializing tool knowledge for intelligent tool selection...")
+        from app.tools.tool_executor import get_tool_executor
+        tool_executor = get_tool_executor()
+        await tool_executor.tool_selector.initialize_tool_knowledge()
+        logger.info("✅ Tool knowledge initialized for RAG-based tool selection")
+        
         logger.info("🎉 AI Travel Planning Agent successfully started")
         
     except Exception as e:

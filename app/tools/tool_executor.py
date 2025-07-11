@@ -876,29 +876,99 @@ class ToolExecutor:
         return results
     
     def _create_tool_input(self, tool: BaseTool, input_data: Dict[str, Any]) -> ToolInput:
-        """Create tool input object with enhanced validation"""
+        """Create tool-specific input object with proper validation"""
         
-        # Enhanced input creation with better validation
+        tool_name = tool.metadata.name
+        
         try:
-            # Try to use tool's input schema if available
-            if hasattr(tool, 'get_input_schema'):
-                schema = tool.get_input_schema()
-                # Validate input against schema (simplified)
-                validated_data = self._validate_input_data(input_data, schema)
+            # Create tool-specific input objects instead of generic ToolInput
+            if tool_name == "attraction_search":
+                from app.tools.attraction_search import AttractionSearchInput
+                # Remove non-relevant fields and ensure proper parameter mapping
+                cleaned_data = {
+                    "location": input_data.get("location", "unknown"),
+                    "query": input_data.get("query"),
+                    "category": input_data.get("category"),
+                    "radius_meters": input_data.get("radius_meters", 5000),
+                    "min_rating": input_data.get("min_rating"),
+                    "max_results": input_data.get("max_results", 10),
+                    "include_photos": input_data.get("include_photos", True),
+                    "price_levels": input_data.get("price_levels")
+                }
+                # Remove None values
+                cleaned_data = {k: v for k, v in cleaned_data.items() if v is not None}
+                return AttractionSearchInput(**cleaned_data)
+                
+            elif tool_name == "hotel_search":
+                from app.tools.hotel_search import HotelSearchInput
+                from datetime import datetime
+                # Map travel agent parameters to hotel search parameters and convert dates
+                check_in_str = input_data.get("check_in", "2024-06-01")
+                check_out_str = input_data.get("check_out", "2024-06-03")
+                
+                # Convert string dates to datetime objects
+                check_in = datetime.strptime(check_in_str, "%Y-%m-%d") if isinstance(check_in_str, str) else check_in_str
+                check_out = datetime.strptime(check_out_str, "%Y-%m-%d") if isinstance(check_out_str, str) else check_out_str
+                
+                cleaned_data = {
+                    "location": input_data.get("location", "unknown"),
+                    "check_in": check_in,
+                    "check_out": check_out,
+                    "guests": input_data.get("guests", 1),
+                    "rooms": input_data.get("rooms", 1),
+                    "min_rating": input_data.get("min_rating", 4.0),
+                    "max_price": input_data.get("max_price"),
+                    "required_amenities": input_data.get("amenities", [])  # Fix parameter name
+                }
+                # Remove None values
+                cleaned_data = {k: v for k, v in cleaned_data.items() if v is not None}
+                return HotelSearchInput(**cleaned_data)
+                
+            elif tool_name == "flight_search":
+                from app.tools.flight_search import FlightSearchInput
+                from datetime import datetime
+                # Map travel agent parameters to flight search parameters and convert dates
+                start_date_str = input_data.get("start_date", "2024-06-01")
+                return_date_str = input_data.get("return_date")
+                
+                # Convert string dates to datetime objects
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if isinstance(start_date_str, str) else start_date_str
+                end_date = None
+                if return_date_str:
+                    end_date = datetime.strptime(return_date_str, "%Y-%m-%d") if isinstance(return_date_str, str) else return_date_str
+                
+                cleaned_data = {
+                    "origin": input_data.get("origin", "unknown"),
+                    "destination": input_data.get("destination", "unknown"),
+                    "start_date": start_date,
+                    "passengers": input_data.get("passengers", 1),
+                    "class_type": input_data.get("class_type", "economy"),
+                    "end_date": end_date,  # Fix parameter name (was return_date)
+                    "max_price": input_data.get("max_price")
+                }
+                # Remove None values  
+                cleaned_data = {k: v for k, v in cleaned_data.items() if v is not None}
+                return FlightSearchInput(**cleaned_data)
+                
             else:
-                validated_data = input_data
-            
-            return ToolInput(
-                data=validated_data,
-                metadata=input_data.get("user_context", {}),
-                validation_required=True
-            )
-            
+                # For unknown tools, fall back to generic ToolInput
+                logger.warning(f"Unknown tool type: {tool_name}, using generic ToolInput")
+                return ToolInput(
+                    data=input_data,
+                    metadata=input_data.get("user_context", {}),
+                    validation_required=True
+                )
+                
         except Exception as e:
-            logger.warning(f"Input validation failed: {e}, using original data")
+            logger.error(f"Failed to create tool-specific input for {tool_name}: {e}")
+            # Fall back to generic ToolInput with error details
             return ToolInput(
                 data=input_data,
-                metadata=input_data.get("user_context", {}),
+                metadata={
+                    **(input_data.get("user_context", {})),
+                    "input_creation_error": str(e),
+                    "fallback_mode": True
+                },
                 validation_required=True
             )
     
