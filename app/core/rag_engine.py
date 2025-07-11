@@ -407,17 +407,10 @@ class RAGEngine:
             # 2. Build context from retrieved documents
             context = self._compress_context(retrieval_result.documents)
             
-            # 3. Build prompt template
+            # 3. Build prompt template using prompt manager
             if not context_template:
-                context_template = """Based on the following knowledge, please answer the user's question:
-
-Knowledge:
-{context}
-
-User Question: {query}
-
-Please provide an accurate and helpful answer:
-"""
+                from app.core.prompt_manager import prompt_manager, PromptType
+                context_template = prompt_manager.get_prompt(PromptType.RAG_GENERATION)
             
             prompt = context_template.format(context=context, query=query)
             
