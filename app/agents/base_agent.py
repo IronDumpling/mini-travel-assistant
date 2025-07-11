@@ -475,19 +475,6 @@ class BaseAgent(ABC):
                 "improvement_applied": quality_assessment.improvement_suggestions
             }
         )
-
-    async def think(self, context: Dict[str, Any]) -> str:
-        """Thinking process"""
-        # TODO: Implement thinking logic
-        # 1. Analyze current context
-        # 2. Make a plan
-        # 3. Evaluate different choices
-        # 4. Return thinking result
-        self.status = AgentStatus.THINKING
-        self.last_activity = datetime.utcnow()
-        
-        # Default implementation, subclasses can override
-        return f"Agent {self.name} is thinking how to handle: {context}"
     
     async def act(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute action"""

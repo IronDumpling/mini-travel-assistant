@@ -12,6 +12,7 @@ TODO: Implement the following features
 from typing import Dict, List, Any, Optional
 import asyncio
 import logging
+import time
 from app.agents.base_agent import BaseAgent, AgentMessage, AgentResponse, AgentStatus, QualityAssessment
 from app.tools.base_tool import tool_registry
 from app.tools.tool_executor import get_tool_executor
@@ -1418,8 +1419,7 @@ class TravelAgent(BaseAgent):
         return requirements
     
     async def _execute_action_plan(self, plan: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute action plan"""
-        # TODO: Use tool executor to execute plan
+        """Execute action plan using real tools"""
         results = {
             "tools_used": [],
             "results": {},
@@ -1429,53 +1429,165 @@ class TravelAgent(BaseAgent):
         
         try:
             # First, always retrieve knowledge context for any travel query
-            # Use the original user message as the query for knowledge retrieval
             query = context.get("original_message", "travel information")
             knowledge_context = await self._retrieve_knowledge_context(query)
             results["knowledge_context"] = knowledge_context
             
-            # Execute tools based on plan
-            for tool_name in plan.get("tools_to_use", []):
-                try:
-                    # TODO: Call corresponding tool with actual parameters
-                    # For now, simulate tool execution
-                    if tool_name == "flight_search":
-                        mock_result = {
-                            "flights": [
-                                {"airline": "Example Airlines", "price": "$500", "duration": "2h 30m"},
-                                {"airline": "Budget Air", "price": "$300", "duration": "3h 15m"}
-                            ],
-                            "message": "Found 2 flight options"
+            # Execute tools using real tool executor
+            if plan.get("tools_to_use"):
+                # Import required classes for tool execution
+                from app.tools.tool_executor import ToolCall, ToolChain, ToolExecutionContext
+                
+                # Create tool execution context
+                tool_context = ToolExecutionContext(
+                    request_id=f"travel_req_{int(time.time())}",
+                    user_id=context.get("user_id"),
+                    session_id=context.get("session_id"),
+                    metadata=context
+                )
+                
+                # Create tool calls with proper parameters
+                tool_calls = []
+                for tool_name in plan["tools_to_use"]:
+                    tool_params = plan.get("tool_parameters", {}).get(tool_name, {})
+                    
+                    # Convert parameters to proper format for each tool
+                    if tool_name == "attraction_search":
+                        # Convert travel agent parameters to AttractionSearchInput format
+                        attraction_params = {
+                            "location": tool_params.get("destination", "unknown"),
+                            "query": None,  # Let the tool use location-based search
+                            "max_results": tool_params.get("limit", 10),
+                            "include_photos": True,
+                            "min_rating": 4.0,
+                            "radius_meters": 10000
                         }
+                        tool_calls.append(ToolCall(
+                            tool_name=tool_name,
+                            input_data=attraction_params,
+                            context=context
+                        ))
+                    
                     elif tool_name == "hotel_search":
-                        mock_result = {
-                            "hotels": [
-                                {"name": "Example Hotel", "price": "$120/night", "rating": 4.5},
-                                {"name": "Budget Inn", "price": "$80/night", "rating": 3.8}
-                            ],
-                            "message": "Found 2 hotel options"
+                        # For hotel search, we need proper date handling
+                        # Since we don't have specific dates, we'll provide basic search
+                        hotel_params = {
+                            "location": tool_params.get("destination", "unknown"),
+                            "check_in": tool_params.get("check_in", "2024-06-01"),  # Default dates
+                            "check_out": tool_params.get("check_out", "2024-06-03"),
+                            "guests": tool_params.get("guests", 1),
+                            "rooms": 1,
+                            "min_rating": 4.0
                         }
-                    elif tool_name == "attraction_search":
-                        mock_result = {
-                            "attractions": [
-                                {"name": "Famous Landmark", "rating": 4.8, "description": "Must-see attraction"},
-                                {"name": "Cultural Site", "rating": 4.6, "description": "Rich history and culture"}
-                            ],
-                            "message": "Found 2 attraction options"
+                        tool_calls.append(ToolCall(
+                            tool_name=tool_name,
+                            input_data=hotel_params,
+                            context=context
+                        ))
+                    
+                    elif tool_name == "flight_search":
+                        # For flight search, we need proper date handling
+                        flight_params = {
+                            "origin": tool_params.get("origin", "unknown"),
+                            "destination": tool_params.get("destination", "unknown"),
+                            "start_date": tool_params.get("departure_date", "2024-06-01"),
+                            "passengers": tool_params.get("passengers", 1),
+                            "class_type": "economy"
                         }
+                        tool_calls.append(ToolCall(
+                            tool_name=tool_name,
+                            input_data=flight_params,
+                            context=context
+                        ))
+                
+                if tool_calls:
+                    # Create and execute tool chain
+                    tool_chain = ToolChain(
+                        calls=tool_calls,
+                        strategy=plan.get("execution_strategy", "parallel")
+                    )
+                    
+                    # Execute using real tool executor
+                    execution_result = await self.tool_executor.execute_chain(tool_chain, tool_context)
+                    
+                    if execution_result.success:
+                        # Process real tool results
+                        processed_results = {}
+                        for tool_name, tool_output in execution_result.results.items():
+                            if tool_output.success:
+                                # Convert tool output to expected format
+                                if tool_name == "attraction_search":
+                                    attractions_data = tool_output.data if hasattr(tool_output, 'data') else {}
+                                    attractions = getattr(tool_output, 'attractions', [])
+                                    processed_results[tool_name] = {
+                                        "attractions": [
+                                            {
+                                                "name": attr.name,
+                                                "rating": attr.rating,
+                                                "description": attr.description,
+                                                "location": attr.location,
+                                                "category": attr.category
+                                            } for attr in attractions
+                                        ],
+                                        "message": f"Found {len(attractions)} real attractions"
+                                    }
+                                elif tool_name == "hotel_search":
+                                    hotels = getattr(tool_output, 'hotels', [])
+                                    processed_results[tool_name] = {
+                                        "hotels": [
+                                            {
+                                                "name": hotel.name,
+                                                "price": f"${hotel.price_per_night}/night",
+                                                "rating": hotel.rating,
+                                                "location": hotel.location
+                                            } for hotel in hotels
+                                        ],
+                                        "message": f"Found {len(hotels)} real hotels"
+                                    }
+                                elif tool_name == "flight_search":
+                                    flights = getattr(tool_output, 'flights', [])
+                                    processed_results[tool_name] = {
+                                        "flights": [
+                                            {
+                                                "airline": flight.airline,
+                                                "price": f"${flight.price}",
+                                                "duration": f"{flight.duration//60}h {flight.duration%60}m"
+                                            } for flight in flights
+                                        ],
+                                        "message": f"Found {len(flights)} real flights"
+                                    }
+                                else:
+                                    processed_results[tool_name] = {
+                                        "data": tool_output.data,
+                                        "message": f"Real data from {tool_name}"
+                                    }
+                            else:
+                                processed_results[tool_name] = {
+                                    "error": tool_output.error,
+                                    "message": f"Failed to get data from {tool_name}"
+                                }
+                        
+                        results["results"] = processed_results
+                        results["tools_used"] = list(execution_result.results.keys())
+                        results["execution_time"] = execution_result.execution_time
                     else:
-                        mock_result = {"message": f"Mock result for {tool_name}"}
-                    
-                    results["results"][tool_name] = mock_result
-                    results["tools_used"].append(tool_name)
-                    
-                except Exception as e:
-                    results["results"][tool_name] = {"error": str(e)}
+                        results["success"] = False
+                        results["error"] = execution_result.error
+                        results["results"] = {
+                            tool_name: {"error": f"Tool execution failed: {execution_result.error}"}
+                            for tool_name in plan["tools_to_use"]
+                        }
+                else:
                     results["success"] = False
-            
+                    results["error"] = "No valid tool calls created"
+            else:
+                results["success"] = True
+                results["message"] = "No tools to execute, using knowledge context only"
+        
         except Exception as e:
             results["success"] = False
             results["error"] = str(e)
+            logger.error(f"Error in _execute_action_plan: {e}")
         
         return results
     
@@ -1603,39 +1715,6 @@ class TravelAgent(BaseAgent):
                 
         except Exception as e:
             return f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
-    
-    async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
-        """Execute specific action"""
-        # TODO: Implement specific action execution logic
-        if action == "search_flights":
-            return await self._search_flights(parameters)
-        elif action == "search_hotels":
-            return await self._search_hotels(parameters)
-        elif action == "generate_plan":
-            return await self._generate_travel_plan(parameters)
-        else:
-            raise ValueError(f"Unknown action type: {action}")
-    
-    async def _search_flights(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Search flights"""
-        # TODO: Call flight search tool
-        return {"flights": [], "message": "Flight search completed"}
-    
-    async def _search_hotels(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Search hotels"""
-        # TODO: Call hotel search tool
-        return {"hotels": [], "message": "Hotel search completed"}
-    
-    async def _generate_travel_plan(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate travel plan"""
-        # TODO: Integrate all search results, generate complete travel plan
-        return {"plan": None, "message": "Travel plan generated"}
-    
-    def update_user_preferences(self, preferences: Dict[str, Any]):
-        """Update user preferences"""
-        # TODO: Learn and store user preferences
-        self.user_preferences_history.update(preferences)
-        self.metadata["last_preference_update"] = preferences
     
     def configure_refinement(
         self, 

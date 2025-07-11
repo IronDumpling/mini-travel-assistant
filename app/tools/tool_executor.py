@@ -429,20 +429,6 @@ Example Queries:
             validation_required=True
         )
 
-    async def _execute_conditional(
-        self, 
-        calls: List[ToolCall],
-        context: Optional[ToolExecutionContext]
-    ) -> Dict[str, ToolOutput]:
-        """Execute tools conditionally"""
-        # TODO: Implement conditional execution logic
-        # 1. Determine whether to execute tools based on conditions
-        # 2. Support if-else logic
-        # 3. Support loop execution
-        
-        # For now, fall back to sequential execution
-        return await self._execute_sequential(calls, context)
-
 
 class ToolExecutor:
     """Tool executor"""
@@ -933,54 +919,6 @@ class ToolExecutor:
                     logger.warning(f"Missing required field: {required_field}")
         
         return validated_data
-    
-    async def auto_execute(
-        self, 
-        user_request: str,
-        context: Optional[Dict[str, Any]] = None
-    ) -> ExecutionResult:
-        """Automatically select and execute tools"""
-        # TODO: Implement automatic tool execution process
-        # 1. Analyze user request
-        # 2. Select appropriate tools
-        # 3. Create execution chain
-        # 4. Execute tool chain
-        # 5. Return results
-        
-        try:
-            # Get available tool list
-            available_tools = tool_registry.list_tools()
-            
-            # Select tools
-            selected_tools = await self.tool_selector.select_tools(
-                user_request, 
-                available_tools, 
-                context
-            )
-            
-            # Create tool chain
-            tool_chain = await self.tool_selector.create_tool_chain(
-                user_request,
-                selected_tools,
-                context
-            )
-            
-            # Execute tool chain
-            execution_context = ToolExecutionContext(
-                request_id=f"auto_{int(asyncio.get_event_loop().time())}",
-                metadata=context or {}
-            )
-            
-            return await self.execute_chain(tool_chain, execution_context)
-            
-        except Exception as e:
-            # Return error result if auto execution fails
-            return ExecutionResult(
-                success=False,
-                results={},
-                execution_time=0.0,
-                error=f"Auto execution failed: {str(e)}"
-            )
 
 
 # Global tool executor instance
