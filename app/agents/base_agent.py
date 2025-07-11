@@ -15,6 +15,9 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AgentStatus(str, Enum):
@@ -229,11 +232,11 @@ class BaseAgent(ABC):
             
             llm_service = get_llm_service()
             
-            if llm_service and not llm_service.mock_mode:
+            if llm_service:
                 # Use prompt manager for LLM-based quality assessment
                 assessment_prompt = prompt_manager.get_prompt(
                     PromptType.QUALITY_ASSESSMENT,
-                    user_message=original_message.content,
+                    original_message=original_message.content,
                     agent_response=response.content,
                     dimension=dimension,
                     actions_taken=response.actions_taken,
@@ -255,8 +258,8 @@ class BaseAgent(ABC):
                 return float(dimension_score)
                 
         except Exception as e:
+            logger.warning(f"LLM-based quality assessment failed: {e}")
             # Fall back to heuristic assessment if LLM fails
-            pass
         
         # Fallback to heuristic assessment
         if dimension == "relevance":
@@ -328,11 +331,11 @@ class BaseAgent(ABC):
             
             llm_service = get_llm_service()
             
-            if llm_service and not llm_service.mock_mode:
+            if llm_service:
                 # Use prompt manager for LLM-based quality assessment with suggestions
                 assessment_prompt = prompt_manager.get_prompt(
                     PromptType.QUALITY_ASSESSMENT,
-                    user_message=original_message.content,
+                    original_message=original_message.content,
                     agent_response=response.content,
                     dimension=dimension,
                     actions_taken=response.actions_taken,
@@ -355,8 +358,8 @@ class BaseAgent(ABC):
                     return suggestions
                 
         except Exception as e:
+            logger.warning(f"LLM-based improvement suggestions failed: {e}")
             # Fall back to heuristic suggestions if LLM fails
-            pass
         
         # Fallback to heuristic suggestions
         suggestions = []
@@ -399,17 +402,13 @@ class BaseAgent(ABC):
             
             llm_service = get_llm_service()
             
-            if llm_service and not llm_service.mock_mode:
+            if llm_service:
                 # Use prompt manager for LLM-based response refinement
                 refinement_prompt = prompt_manager.get_prompt(
                     PromptType.RESPONSE_REFINEMENT,
-                    user_message=original_message.content,
-                    current_response=current_response.content,
+                    original_response=current_response.content,
                     quality_assessment=quality_assessment.dict(),
-                    improvement_suggestions=quality_assessment.improvement_suggestions,
-                    dimension_scores=quality_assessment.dimension_scores,
-                    actions_taken=current_response.actions_taken,
-                    next_steps=current_response.next_steps
+                    improvement_areas=quality_assessment.improvement_suggestions
                 )
                 
                 # Use structured completion for response refinement
@@ -443,8 +442,8 @@ class BaseAgent(ABC):
                 )
                 
         except Exception as e:
+            logger.warning(f"LLM-based response refinement failed: {e}")
             # Fall back to heuristic refinement if LLM fails
-            pass
         
         # Fallback to heuristic refinement
         improved_content = current_response.content

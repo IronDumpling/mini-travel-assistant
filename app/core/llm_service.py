@@ -49,7 +49,6 @@ class BaseLLMService(ABC):
     def __init__(self, config: LLMConfig):
         self.config = config
         self.model = config.model
-        self.mock_mode = False  # Add mock_mode property for compatibility
     
     @abstractmethod
     async def chat_completion(
