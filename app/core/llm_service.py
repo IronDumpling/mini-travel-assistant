@@ -25,7 +25,6 @@ logger = get_logger(__name__)
 
 class LLMStructuredOutputError(Exception):
     """Exception raised when structured output generation fails"""
-
     pass
 
 
@@ -71,6 +70,147 @@ class BaseLLMService(ABC):
     ) -> LLMResponse:
         """Function Call Interface"""
         pass
+    
+    async def structured_completion(
+        self,
+        messages: List[Dict[str, str]],
+        response_schema: Dict[str, Any],
+        max_retries: int = 3,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Generate structured response with schema validation"""
+        
+        # Add schema instruction to prompt
+        schema_instruction = self._create_schema_instruction(response_schema)
+        enhanced_messages = self._add_schema_instruction(messages, schema_instruction)
+        
+        for attempt in range(max_retries):
+            try:
+                response = await self.chat_completion(enhanced_messages, **kwargs)
+                
+                # Extract and validate JSON
+                parsed_response = self._extract_json_from_response(response.content)
+                validated_response = self._validate_against_schema(parsed_response, response_schema)
+                
+                return validated_response
+                
+            except (json.JSONDecodeError, ValueError) as e:
+                if attempt == max_retries - 1:
+                    raise LLMStructuredOutputError(f"Failed to get valid structured output: {e}")
+                
+                # Add correction instruction for retry
+                enhanced_messages = self._add_correction_instruction(enhanced_messages, str(e))
+        
+        raise LLMStructuredOutputError("Max retries exceeded for structured output")
+    
+    def _create_schema_instruction(self, schema: Dict[str, Any]) -> str:
+        """Create schema instruction for structured output"""
+        return f"""
+        
+        IMPORTANT: Please respond with a valid JSON object that matches this schema:
+        {json.dumps(schema, indent=2)}
+        
+        Make sure to:
+        1. Return ONLY valid JSON
+        2. Include all required fields
+        3. Use correct data types
+        4. Follow the enum constraints where specified
+        """
+    
+    def _add_schema_instruction(self, messages: List[Dict[str, str]], instruction: str) -> List[Dict[str, str]]:
+        """Add schema instruction to messages"""
+        enhanced_messages = messages.copy()
+        if enhanced_messages and enhanced_messages[-1].get("role") == "user":
+            enhanced_messages[-1]["content"] += instruction
+        else:
+            enhanced_messages.append({"role": "user", "content": instruction})
+        return enhanced_messages
+    
+    def _add_correction_instruction(self, messages: List[Dict[str, str]], error: str) -> List[Dict[str, str]]:
+        """Add correction instruction for retry"""
+        correction = f"""
+        
+        The previous response had an error: {error}
+        Please provide a corrected JSON response that follows the schema exactly.
+        """
+        return self._add_schema_instruction(messages, correction)
+    
+    def _extract_json_from_response(self, content: str) -> Dict[str, Any]:
+        """Extract JSON from LLM response"""
+        # Try to find JSON in the response
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(0)
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError:
+                pass
+        
+        # Try to parse the entire content as JSON
+        try:
+            return json.loads(content.strip())
+        except json.JSONDecodeError:
+            # Try to clean up common JSON issues
+            cleaned_content = self._clean_json_string(content)
+            return json.loads(cleaned_content)
+    
+    def _clean_json_string(self, content: str) -> str:
+        """Clean up common JSON formatting issues"""
+        # Remove markdown code blocks
+        content = re.sub(r'```json\s*', '', content)
+        content = re.sub(r'```\s*', '', content)
+        
+        # Find the JSON object
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            return json_match.group(0)
+        
+        return content.strip()
+    
+    def _validate_against_schema(self, data: Dict[str, Any], schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Basic schema validation"""
+        required_fields = schema.get("required", [])
+        
+        # Check required fields
+        for field in required_fields:
+            if field not in data:
+                raise ValueError(f"Missing required field: {field}")
+        
+        # Basic type checking for properties
+        properties = schema.get("properties", {})
+        for field, field_schema in properties.items():
+            if field in data:
+                self._validate_field(data[field], field_schema, field)
+        
+        return data
+    
+    def _validate_field(self, value: Any, field_schema: Dict[str, Any], field_name: str):
+        """Validate individual field against schema"""
+        field_type = field_schema.get("type")
+        
+        if field_type == "string" and not isinstance(value, str):
+            raise ValueError(f"Field {field_name} must be a string")
+        elif field_type == "number" and not isinstance(value, (int, float)):
+            raise ValueError(f"Field {field_name} must be a number")
+        elif field_type == "integer" and not isinstance(value, int):
+            raise ValueError(f"Field {field_name} must be an integer")
+        elif field_type == "boolean" and not isinstance(value, bool):
+            raise ValueError(f"Field {field_name} must be a boolean")
+        elif field_type == "array" and not isinstance(value, list):
+            raise ValueError(f"Field {field_name} must be an array")
+        elif field_type == "object" and not isinstance(value, dict):
+            raise ValueError(f"Field {field_name} must be an object")
+        
+        # Check enum constraints
+        if "enum" in field_schema and value not in field_schema["enum"]:
+            raise ValueError(f"Field {field_name} must be one of {field_schema['enum']}")
+        
+        # Check numeric constraints
+        if field_type in ["number", "integer"]:
+            if "minimum" in field_schema and value < field_schema["minimum"]:
+                raise ValueError(f"Field {field_name} must be >= {field_schema['minimum']}")
+            if "maximum" in field_schema and value > field_schema["maximum"]:
+                raise ValueError(f"Field {field_name} must be <= {field_schema['maximum']}")
 
     async def structured_completion(
         self,

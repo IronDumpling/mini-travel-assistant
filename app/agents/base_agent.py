@@ -22,6 +22,7 @@ logger = get_logger(__name__)
 
 class AgentStatus(str, Enum):
     """Agent status enumeration"""
+
     IDLE = "idle"
     THINKING = "thinking"
     ACTING = "acting"
@@ -32,6 +33,7 @@ class AgentStatus(str, Enum):
 
 class AgentMessage(BaseModel):
     """Agent message"""
+
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     sender: str
     receiver: str
@@ -43,6 +45,7 @@ class AgentMessage(BaseModel):
 
 class AgentResponse(BaseModel):
     """Agent response"""
+
     success: bool
     content: str
     actions_taken: List[str] = []
@@ -53,6 +56,7 @@ class AgentResponse(BaseModel):
 
 class QualityAssessment(BaseModel):
     """Quality assessment result"""
+
     overall_score: float = Field(ge=0.0, le=1.0)
     dimension_scores: Dict[str, float] = {}
     improvement_suggestions: List[str] = []
@@ -62,7 +66,7 @@ class QualityAssessment(BaseModel):
 
 class BaseAgent(ABC):
     """Base agent class"""
-    
+
     def __init__(self, name: str, description: str = ""):
         self.name = name
         self.description = description
@@ -71,131 +75,123 @@ class BaseAgent(ABC):
         self.metadata: Dict[str, Any] = {}
         self.created_at = datetime.utcnow()
         self.last_activity = datetime.utcnow()
-        
+
         # Agent capabilities configuration
         self.capabilities: List[str] = self.get_capabilities()
         self.tools: List[str] = self.get_available_tools()
-        
+
         # Self-refine configuration
         self.quality_threshold: float = 0.75
         self.max_refine_iterations: int = 3
         self.refine_enabled: bool = True
-    
+
     @abstractmethod
     async def process_message(self, message: AgentMessage) -> AgentResponse:
         """Process message (subclass must implement)"""
         pass
-    
+
     @abstractmethod
     def get_capabilities(self) -> List[str]:
         """Get agent capabilities list (subclass must implement)"""
         pass
-    
+
     @abstractmethod
     def get_available_tools(self) -> List[str]:
         """Get available tools list (subclass must implement)"""
         pass
-    
+
     async def process_with_refinement(self, message: AgentMessage) -> AgentResponse:
         """Process message with self-refinement loop"""
         if not self.refine_enabled:
             return await self.process_message(message)
-        
+
         iteration = 0
         current_response = None
         refinement_history = []
-        
+
         while iteration < self.max_refine_iterations:
             iteration += 1
-            
+
             # Generate response
             if iteration == 1:
                 current_response = await self.process_message(message)
             else:
                 # Refine based on previous assessment
                 current_response = await self._refine_response(
-                    message, 
-                    current_response, 
-                    refinement_history[-1] if refinement_history else None
+                    message,
+                    current_response,
+                    refinement_history[-1] if refinement_history else None,
                 )
-            
+
             # Assess quality
             quality_assessment = await self._assess_response_quality(
-                message, 
-                current_response,
-                iteration
+                message, current_response, iteration
             )
-            
+
             refinement_history.append(quality_assessment)
-            
+
             # Update response metadata with refinement info
-            current_response.metadata.update({
-                "refinement_iteration": iteration,
-                "quality_score": quality_assessment.overall_score,
-                "refinement_history": [
-                    {
-                        "iteration": i + 1,
-                        "score": assess.overall_score,
-                        "suggestions": assess.improvement_suggestions
-                    }
-                    for i, assess in enumerate(refinement_history)
-                ]
-            })
-            
+            current_response.metadata.update(
+                {
+                    "refinement_iteration": iteration,
+                    "quality_score": quality_assessment.overall_score,
+                    "refinement_history": [
+                        {
+                            "iteration": i + 1,
+                            "score": assess.overall_score,
+                            "suggestions": assess.improvement_suggestions,
+                        }
+                        for i, assess in enumerate(refinement_history)
+                    ],
+                }
+            )
+
             # Check if quality threshold is met
             if quality_assessment.meets_threshold:
                 current_response.metadata["refinement_status"] = "completed_early"
                 break
-            
+
             # If this is the last iteration, mark as completed
             if iteration >= self.max_refine_iterations:
-                current_response.metadata["refinement_status"] = "max_iterations_reached"
+                current_response.metadata["refinement_status"] = (
+                    "max_iterations_reached"
+                )
                 break
-            
+
             current_response.metadata["refinement_status"] = "in_progress"
-        
+
         return current_response
-    
+
     async def _assess_response_quality(
-        self, 
-        original_message: AgentMessage, 
-        response: AgentResponse,
-        iteration: int
+        self, original_message: AgentMessage, response: AgentResponse, iteration: int
     ) -> QualityAssessment:
         """Assess the quality of a response"""
         # Get quality dimensions specific to this agent
         quality_dimensions = self.get_quality_dimensions()
-        
+
         dimension_scores = {}
         improvement_suggestions = []
-        
+
         for dimension, weight in quality_dimensions.items():
-            score = await self._assess_dimension(
-                dimension, 
-                original_message, 
-                response
-            )
+            score = await self._assess_dimension(dimension, original_message, response)
             dimension_scores[dimension] = score
-            
+
             # Generate improvement suggestions for low-scoring dimensions
             if score < 0.6:
                 suggestions = await self._generate_improvement_suggestions(
-                    dimension, 
-                    original_message, 
-                    response, 
-                    score
+                    dimension, original_message, response, score
                 )
                 improvement_suggestions.extend(suggestions)
-        
+
         # Calculate overall score (weighted average)
         total_weight = sum(quality_dimensions.values())
         overall_score = sum(
-            score * quality_dimensions[dim] / total_weight 
+            score * quality_dimensions[dim] / total_weight
             for dim, score in dimension_scores.items()
         )
-        
+
         meets_threshold = overall_score >= self.quality_threshold
-        
+
         return QualityAssessment(
             overall_score=overall_score,
             dimension_scores=dimension_scores,
@@ -204,34 +200,31 @@ class BaseAgent(ABC):
             assessment_details={
                 "iteration": iteration,
                 "threshold": self.quality_threshold,
-                "quality_dimensions": quality_dimensions
-            }
+                "quality_dimensions": quality_dimensions,
+            },
         )
-    
+
     def get_quality_dimensions(self) -> Dict[str, float]:
         """Get quality assessment dimensions and their weights (subclasses can override)"""
         return {
-            "relevance": 0.3,      # How relevant is the response to the user's request
+            "relevance": 0.3,  # How relevant is the response to the user's request
             "completeness": 0.25,  # How complete is the response
-            "accuracy": 0.25,      # How accurate is the information provided
-            "actionability": 0.2   # How actionable/useful is the response
+            "accuracy": 0.25,  # How accurate is the information provided
+            "actionability": 0.2,  # How actionable/useful is the response
         }
-    
+
     async def _assess_dimension(
-        self, 
-        dimension: str, 
-        original_message: AgentMessage, 
-        response: AgentResponse
+        self, dimension: str, original_message: AgentMessage, response: AgentResponse
     ) -> float:
         """Assess a specific quality dimension using LLM-based assessment"""
-        
+
         # Try to use LLM for quality assessment
         try:
             from app.core.llm_service import get_llm_service
             from app.core.prompt_manager import prompt_manager, PromptType
-            
+
             llm_service = get_llm_service()
-            
+
             if llm_service:
                 # Use prompt manager for LLM-based quality assessment
                 assessment_prompt = prompt_manager.get_prompt(
@@ -241,26 +234,28 @@ class BaseAgent(ABC):
                     dimension=dimension,
                     actions_taken=response.actions_taken,
                     next_steps=response.next_steps,
-                    confidence=response.confidence
+                    confidence=response.confidence,
                 )
-                
+
                 # Use structured completion for quality assessment
                 schema = prompt_manager.get_schema(PromptType.QUALITY_ASSESSMENT)
                 assessment_result = await llm_service.structured_completion(
                     messages=[{"role": "user", "content": assessment_prompt}],
                     response_schema=schema,
                     temperature=0.2,
-                    max_tokens=300
+                    max_tokens=300,
                 )
-                
+
                 # Extract score for the specific dimension
-                dimension_score = assessment_result.get("dimension_scores", {}).get(dimension, 0.5)
+                dimension_score = assessment_result.get("dimension_scores", {}).get(
+                    dimension, 0.5
+                )
                 return float(dimension_score)
-                
+
         except Exception as e:
             logger.warning(f"LLM-based quality assessment failed: {e}")
             # Fall back to heuristic assessment if LLM fails
-        
+
         # Fallback to heuristic assessment
         if dimension == "relevance":
             return await self._assess_relevance(original_message, response)
@@ -272,8 +267,10 @@ class BaseAgent(ABC):
             return await self._assess_actionability(original_message, response)
         else:
             return 0.5  # Default neutral score
-    
-    async def _assess_relevance(self, original_message: AgentMessage, response: AgentResponse) -> float:
+
+    async def _assess_relevance(
+        self, original_message: AgentMessage, response: AgentResponse
+    ) -> float:
         """Assess response relevance"""
         # Basic implementation - check if response addresses the message
         if response.success and response.content:
@@ -287,8 +284,10 @@ class BaseAgent(ABC):
                 base_score += 0.1
             return min(base_score, 1.0)
         return 0.3
-    
-    async def _assess_completeness(self, original_message: AgentMessage, response: AgentResponse) -> float:
+
+    async def _assess_completeness(
+        self, original_message: AgentMessage, response: AgentResponse
+    ) -> float:
         """Assess response completeness"""
         # Basic implementation - check if response has all components
         score = 0.5
@@ -299,13 +298,17 @@ class BaseAgent(ABC):
         if response.confidence > 0.7:
             score += 0.1
         return min(score, 1.0)
-    
-    async def _assess_accuracy(self, original_message: AgentMessage, response: AgentResponse) -> float:
+
+    async def _assess_accuracy(
+        self, original_message: AgentMessage, response: AgentResponse
+    ) -> float:
         """Assess response accuracy"""
         # Basic implementation - use confidence as proxy for accuracy
         return response.confidence
-    
-    async def _assess_actionability(self, original_message: AgentMessage, response: AgentResponse) -> float:
+
+    async def _assess_actionability(
+        self, original_message: AgentMessage, response: AgentResponse
+    ) -> float:
         """Assess response actionability"""
         # Basic implementation - check if response provides actionable information
         score = 0.4
@@ -314,23 +317,23 @@ class BaseAgent(ABC):
         if response.next_steps:
             score += 0.3
         return min(score, 1.0)
-    
+
     async def _generate_improvement_suggestions(
-        self, 
-        dimension: str, 
-        original_message: AgentMessage, 
+        self,
+        dimension: str,
+        original_message: AgentMessage,
         response: AgentResponse,
-        current_score: float
+        current_score: float,
     ) -> List[str]:
         """Generate improvement suggestions using LLM-based analysis"""
-        
+
         # Try to use LLM for improvement suggestions
         try:
             from app.core.llm_service import get_llm_service
             from app.core.prompt_manager import prompt_manager, PromptType
-            
+
             llm_service = get_llm_service()
-            
+
             if llm_service:
                 # Use prompt manager for LLM-based quality assessment with suggestions
                 assessment_prompt = prompt_manager.get_prompt(
@@ -340,92 +343,102 @@ class BaseAgent(ABC):
                     dimension=dimension,
                     actions_taken=response.actions_taken,
                     next_steps=response.next_steps,
-                    confidence=response.confidence
+                    confidence=response.confidence,
                 )
-                
+
                 # Use structured completion for quality assessment
                 schema = prompt_manager.get_schema(PromptType.QUALITY_ASSESSMENT)
                 assessment_result = await llm_service.structured_completion(
                     messages=[{"role": "user", "content": assessment_prompt}],
                     response_schema=schema,
                     temperature=0.3,
-                    max_tokens=400
+                    max_tokens=400,
                 )
-                
+
                 # Extract improvement suggestions
                 suggestions = assessment_result.get("improvement_suggestions", [])
                 if suggestions:
                     return suggestions
-                
+
         except Exception as e:
             logger.warning(f"LLM-based improvement suggestions failed: {e}")
             # Fall back to heuristic suggestions if LLM fails
-        
+
         # Fallback to heuristic suggestions
         suggestions = []
-        
+
         if dimension == "relevance" and current_score < 0.6:
-            suggestions.append("Make the response more directly relevant to the user's specific request")
+            suggestions.append(
+                "Make the response more directly relevant to the user's specific request"
+            )
             if not response.actions_taken:
-                suggestions.append("Include specific actions taken to address the user's needs")
-        
+                suggestions.append(
+                    "Include specific actions taken to address the user's needs"
+                )
+
         if dimension == "completeness" and current_score < 0.6:
             suggestions.append("Provide more comprehensive information")
             if not response.next_steps:
                 suggestions.append("Include clear next steps for the user")
-        
+
         if dimension == "accuracy" and current_score < 0.6:
             suggestions.append("Verify the accuracy of the information provided")
             suggestions.append("Use more reliable data sources")
-        
+
         if dimension == "actionability" and current_score < 0.6:
             suggestions.append("Provide more specific and actionable recommendations")
             suggestions.append("Include concrete steps the user can take")
-        
+
         return suggestions
-    
+
     async def _refine_response(
-        self, 
-        original_message: AgentMessage, 
+        self,
+        original_message: AgentMessage,
         current_response: AgentResponse,
-        quality_assessment: Optional[QualityAssessment]
+        quality_assessment: Optional[QualityAssessment],
     ) -> AgentResponse:
         """Refine the response based on quality assessment using LLM-based refinement"""
-        
+
         if not quality_assessment:
             return current_response
-        
+
         # Try to use LLM for response refinement
         try:
             from app.core.llm_service import get_llm_service
             from app.core.prompt_manager import prompt_manager, PromptType
-            
+
             llm_service = get_llm_service()
-            
+
             if llm_service:
                 # Use prompt manager for LLM-based response refinement
                 refinement_prompt = prompt_manager.get_prompt(
                     PromptType.RESPONSE_REFINEMENT,
                     original_response=current_response.content,
                     quality_assessment=quality_assessment.dict(),
-                    improvement_areas=quality_assessment.improvement_suggestions
+                    improvement_areas=quality_assessment.improvement_suggestions,
                 )
-                
+
                 # Use structured completion for response refinement
                 schema = prompt_manager.get_schema(PromptType.RESPONSE_REFINEMENT)
                 refinement_result = await llm_service.structured_completion(
                     messages=[{"role": "user", "content": refinement_prompt}],
                     response_schema=schema,
                     temperature=0.3,
-                    max_tokens=800
+                    max_tokens=800,
                 )
-                
+
                 # Extract refined response components
-                refined_content = refinement_result.get("refined_content", current_response.content)
-                refined_actions = refinement_result.get("refined_actions", current_response.actions_taken)
-                refined_next_steps = refinement_result.get("refined_next_steps", current_response.next_steps)
+                refined_content = refinement_result.get(
+                    "refined_content", current_response.content
+                )
+                refined_actions = refinement_result.get(
+                    "refined_actions", current_response.actions_taken
+                )
+                refined_next_steps = refinement_result.get(
+                    "refined_next_steps", current_response.next_steps
+                )
                 confidence_boost = refinement_result.get("confidence_boost", 0.1)
-                
+
                 return AgentResponse(
                     success=current_response.success,
                     content=refined_content,
@@ -437,29 +450,33 @@ class BaseAgent(ABC):
                         "refined": True,
                         "refinement_method": "llm_based",
                         "improvement_applied": quality_assessment.improvement_suggestions,
-                        "llm_refinement_applied": refinement_result.get("applied_improvements", [])
-                    }
+                        "llm_refinement_applied": refinement_result.get(
+                            "applied_improvements", []
+                        ),
+                    },
                 )
-                
+
         except Exception as e:
             logger.warning(f"LLM-based response refinement failed: {e}")
             # Fall back to heuristic refinement if LLM fails
-        
+
         # Fallback to heuristic refinement
         improved_content = current_response.content
-        
+
         # Add more detail if completeness is low
         if quality_assessment.dimension_scores.get("completeness", 1.0) < 0.6:
             improved_content += "\n\nAdditional details: I've analyzed your request and provided the most relevant information available."
-        
+
         # Add next steps if actionability is low
         improved_next_steps = current_response.next_steps.copy()
         if quality_assessment.dimension_scores.get("actionability", 1.0) < 0.6:
-            improved_next_steps.append("Please let me know if you need more specific guidance")
-        
+            improved_next_steps.append(
+                "Please let me know if you need more specific guidance"
+            )
+
         # Increase confidence slightly after refinement
         improved_confidence = min(current_response.confidence + 0.1, 1.0)
-        
+
         return AgentResponse(
             success=current_response.success,
             content=improved_content,
@@ -470,35 +487,35 @@ class BaseAgent(ABC):
                 **current_response.metadata,
                 "refined": True,
                 "refinement_method": "heuristic_fallback",
-                "improvement_applied": quality_assessment.improvement_suggestions
-            }
+                "improvement_applied": quality_assessment.improvement_suggestions,
+            },
         )
-    
+
     async def act(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute action"""
         # TODO: Implement action execution logic
         self.status = AgentStatus.ACTING
         self.last_activity = datetime.utcnow()
-        
+
         # Subclasses need to implement specific action execution logic
         return await self._execute_action(action, parameters)
-    
+
     @abstractmethod
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute specific action (subclass must implement)"""
         pass
-    
+
     def add_message(self, message: AgentMessage):
         """Add message to conversation history"""
         self.conversation_history.append(message)
         # Keep history within reasonable range
         if len(self.conversation_history) > 100:
             self.conversation_history = self.conversation_history[-100:]
-    
+
     def get_conversation_context(self, last_n: int = 10) -> List[AgentMessage]:
         """Get recent conversation context"""
         return self.conversation_history[-last_n:]
-    
+
     def get_status(self) -> Dict[str, Any]:
         """Get agent status information"""
         return {
@@ -513,11 +530,11 @@ class BaseAgent(ABC):
             "refinement_config": {
                 "enabled": self.refine_enabled,
                 "quality_threshold": self.quality_threshold,
-                "max_iterations": self.max_refine_iterations
+                "max_iterations": self.max_refine_iterations,
             },
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
-    
+
     async def reset(self):
         """Reset agent status"""
         self.status = AgentStatus.IDLE
@@ -528,37 +545,38 @@ class BaseAgent(ABC):
 
 class AgentManager:
     """Agent manager"""
-    
+
     def __init__(self):
         self.agents: Dict[str, BaseAgent] = {}
         self.message_queue: List[AgentMessage] = []
         self.is_running = False
-    
+
     def register_agent(self, agent: BaseAgent):
         """Register agent"""
         self.agents[agent.name] = agent
-    
+
     def get_agent(self, name: str) -> Optional[BaseAgent]:
         """Get agent"""
         return self.agents.get(name)
-    
+
     def list_agents(self) -> List[str]:
         """List all agents"""
         return list(self.agents.keys())
-    
+
     async def send_message(self, message: AgentMessage) -> AgentResponse:
         """Send message to agent"""
         agent = self.get_agent(message.receiver)
         if not agent:
             return AgentResponse(
-                success=False,
-                content=f"Agent '{message.receiver}' not found"
+                success=False, content=f"Agent '{message.receiver}' not found"
             )
-        
+
         agent.add_message(message)
         return await agent.process_message(message)
-    
-    async def broadcast_message(self, message: AgentMessage) -> Dict[str, AgentResponse]:
+
+    async def broadcast_message(
+        self, message: AgentMessage
+    ) -> Dict[str, AgentResponse]:
         """Broadcast message to all agents"""
         responses = {}
         for agent_name, agent in self.agents.items():
@@ -566,19 +584,16 @@ class AgentManager:
                 message.receiver = agent_name
                 responses[agent_name] = await self.send_message(message)
         return responses
-    
+
     def get_system_status(self) -> Dict[str, Any]:
         """Get system status"""
         return {
             "total_agents": len(self.agents),
-            "agents": {
-                name: agent.get_status() 
-                for name, agent in self.agents.items()
-            },
+            "agents": {name: agent.get_status() for name, agent in self.agents.items()},
             "message_queue_size": len(self.message_queue),
-            "is_running": self.is_running
+            "is_running": self.is_running,
         }
 
 
 # Global agent manager
-agent_manager = AgentManager() 
+agent_manager = AgentManager()

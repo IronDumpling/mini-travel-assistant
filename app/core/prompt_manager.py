@@ -5,8 +5,10 @@ Prompt Manager - Centralized prompt template management system
 from typing import Dict, List, Any, Optional
 from enum import Enum
 
+
 class PromptType(Enum):
     """Prompt type enumeration"""
+
     INTENT_ANALYSIS = "intent_analysis"
     REQUIREMENT_EXTRACTION = "requirement_extraction"
     TOOL_SELECTION = "tool_selection"
@@ -17,13 +19,14 @@ class PromptType(Enum):
     RAG_GENERATION = "rag_generation"
     FUNCTION_CALLING = "function_calling"
 
+
 class PromptManager:
     """Centralized prompt template manager"""
-    
+
     def __init__(self):
         self.templates = self._initialize_templates()
         self.schemas = self._initialize_schemas()
-    
+
     def _initialize_templates(self) -> Dict[str, str]:
         """Initialize all prompt templates"""
         return {
@@ -35,24 +38,38 @@ class PromptManager:
             PromptType.QUALITY_ASSESSMENT.value: self._get_quality_assessment_template(),
             PromptType.RESPONSE_REFINEMENT.value: self._get_response_refinement_template(),
             PromptType.RAG_GENERATION.value: self._get_rag_generation_template(),
-            PromptType.FUNCTION_CALLING.value: self._get_function_calling_template()
+            PromptType.FUNCTION_CALLING.value: self._get_function_calling_template(),
         }
-    
+
     def _initialize_schemas(self) -> Dict[str, Dict[str, Any]]:
         """Initialize JSON schemas for structured outputs"""
         return {
             PromptType.INTENT_ANALYSIS.value: {
                 "type": "object",
                 "properties": {
-                    "intent_type": {"type": "string", "enum": ["planning", "query", "recommendation", "modification", "booking", "complaint"]},
+                    "intent_type": {
+                        "type": "string",
+                        "enum": [
+                            "planning",
+                            "query",
+                            "recommendation",
+                            "modification",
+                            "booking",
+                            "complaint",
+                        ],
+                    },
                     "destination": {
                         "type": "object",
                         "properties": {
                             "primary": {"type": "string"},
                             "secondary": {"type": "array", "items": {"type": "string"}},
                             "region": {"type": "string"},
-                            "confidence": {"type": "number", "minimum": 0, "maximum": 1}
-                        }
+                            "confidence": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                        },
                     },
                     "travel_details": {
                         "type": "object",
@@ -65,73 +82,137 @@ class PromptManager:
                                     "mentioned": {"type": "boolean"},
                                     "amount": {"type": "number"},
                                     "currency": {"type": "string"},
-                                    "level": {"type": "string", "enum": ["budget", "mid-range", "luxury"]}
-                                }
+                                    "level": {
+                                        "type": "string",
+                                        "enum": ["budget", "mid-range", "luxury"],
+                                    },
+                                },
                             },
                             "dates": {
                                 "type": "object",
                                 "properties": {
                                     "departure": {"type": "string"},
                                     "return": {"type": "string"},
-                                    "flexibility": {"type": "string", "enum": ["fixed", "flexible", "unknown"]}
-                                }
-                            }
-                        }
+                                    "flexibility": {
+                                        "type": "string",
+                                        "enum": ["fixed", "flexible", "unknown"],
+                                    },
+                                },
+                            },
+                        },
                     },
                     "preferences": {
                         "type": "object",
                         "properties": {
-                            "travel_style": {"type": "string", "enum": ["luxury", "mid-range", "budget", "backpacking", "business", "family"]},
+                            "travel_style": {
+                                "type": "string",
+                                "enum": [
+                                    "luxury",
+                                    "mid-range",
+                                    "budget",
+                                    "backpacking",
+                                    "business",
+                                    "family",
+                                ],
+                            },
                             "interests": {"type": "array", "items": {"type": "string"}},
                             "accommodation_type": {"type": "string"},
-                            "transport_preference": {"type": "string"}
-                        }
+                            "transport_preference": {"type": "string"},
+                        },
                     },
-                    "sentiment": {"type": "string", "enum": ["positive", "neutral", "negative", "excited", "worried"]},
-                    "urgency": {"type": "string", "enum": ["low", "medium", "high", "urgent"]},
+                    "sentiment": {
+                        "type": "string",
+                        "enum": [
+                            "positive",
+                            "neutral",
+                            "negative",
+                            "excited",
+                            "worried",
+                        ],
+                    },
+                    "urgency": {
+                        "type": "string",
+                        "enum": ["low", "medium", "high", "urgent"],
+                    },
                     "missing_info": {"type": "array", "items": {"type": "string"}},
                     "key_requirements": {"type": "array", "items": {"type": "string"}},
                     "information_fusion_strategy": {
                         "type": "object",
                         "properties": {
-                            "knowledge_priority": {"type": "string", "enum": ["very_high", "high", "medium", "low"]},
-                            "tool_priority": {"type": "string", "enum": ["very_high", "high", "medium", "low"]},
-                            "integration_approach": {"type": "string", "enum": ["knowledge_first", "tools_first", "balanced"]},
-                            "response_focus": {"type": "string", "enum": ["comprehensive_plan", "detailed_information", "curated_options", "actionable_steps", "specific_changes"]}
-                        }
+                            "knowledge_priority": {
+                                "type": "string",
+                                "enum": ["very_high", "high", "medium", "low"],
+                            },
+                            "tool_priority": {
+                                "type": "string",
+                                "enum": ["very_high", "high", "medium", "low"],
+                            },
+                            "integration_approach": {
+                                "type": "string",
+                                "enum": ["knowledge_first", "tools_first", "balanced"],
+                            },
+                            "response_focus": {
+                                "type": "string",
+                                "enum": [
+                                    "comprehensive_plan",
+                                    "detailed_information",
+                                    "curated_options",
+                                    "actionable_steps",
+                                    "specific_changes",
+                                ],
+                            },
+                        },
                     },
-                    "confidence_score": {"type": "number", "minimum": 0, "maximum": 1}
+                    "confidence_score": {"type": "number", "minimum": 0, "maximum": 1},
                 },
-                "required": ["intent_type", "destination", "sentiment", "urgency", "information_fusion_strategy", "confidence_score"]
+                "required": [
+                    "intent_type",
+                    "destination",
+                    "sentiment",
+                    "urgency",
+                    "information_fusion_strategy",
+                    "confidence_score",
+                ],
             },
-            
             PromptType.REQUIREMENT_EXTRACTION.value: {
                 "type": "object",
                 "properties": {
-                    "budget_sensitivity": {"type": "string", "enum": ["high", "medium", "low"]},
-                    "time_sensitivity": {"type": "string", "enum": ["urgent", "normal", "flexible"]},
+                    "budget_sensitivity": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                    },
+                    "time_sensitivity": {
+                        "type": "string",
+                        "enum": ["urgent", "normal", "flexible"],
+                    },
                     "travel_style": {"type": "string"},
                     "geographic_scope": {"type": "string"},
                     "tool_necessity_scores": {"type": "object"},
                     "preferences": {"type": "object"},
                     "constraints": {"type": "array", "items": {"type": "string"}},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
                 },
-                "required": ["budget_sensitivity", "time_sensitivity", "confidence"]
+                "required": ["budget_sensitivity", "time_sensitivity", "confidence"],
             },
-            
             PromptType.TOOL_SELECTION.value: {
                 "type": "object",
                 "properties": {
                     "selected_tools": {"type": "array", "items": {"type": "string"}},
                     "tool_priority": {"type": "object"},
-                    "execution_strategy": {"type": "string", "enum": ["sequential", "parallel", "conditional"]},
+                    "execution_strategy": {
+                        "type": "string",
+                        "enum": ["sequential", "parallel", "conditional"],
+                    },
                     "reasoning": {"type": "string"},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
                 },
-                "required": ["selected_tools", "execution_strategy", "reasoning", "confidence"]
+                "required": [
+                    "selected_tools",
+                    "execution_strategy",
+                    "reasoning",
+                    "confidence",
+                ],
             },
-            
             PromptType.QUALITY_ASSESSMENT.value: {
                 "type": "object",
                 "properties": {
@@ -140,36 +221,68 @@ class PromptManager:
                         "type": "object",
                         "properties": {
                             "relevance": {"type": "number", "minimum": 0, "maximum": 1},
-                            "completeness": {"type": "number", "minimum": 0, "maximum": 1},
+                            "completeness": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
                             "accuracy": {"type": "number", "minimum": 0, "maximum": 1},
-                            "practicality": {"type": "number", "minimum": 0, "maximum": 1},
-                            "personalization": {"type": "number", "minimum": 0, "maximum": 1},
-                            "feasibility": {"type": "number", "minimum": 0, "maximum": 1}
-                        }
+                            "practicality": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                            "personalization": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                            "feasibility": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                        },
                     },
-                    "improvement_suggestions": {"type": "array", "items": {"type": "string"}},
+                    "improvement_suggestions": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
                     "missing_elements": {"type": "array", "items": {"type": "string"}},
                     "strengths": {"type": "array", "items": {"type": "string"}},
                     "meets_threshold": {"type": "boolean"},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
                 },
-                "required": ["overall_score", "dimension_scores", "meets_threshold"]
+                "required": ["overall_score", "dimension_scores", "meets_threshold"],
             },
-            
             PromptType.RESPONSE_REFINEMENT.value: {
                 "type": "object",
                 "properties": {
                     "refined_content": {"type": "string"},
                     "refined_actions": {"type": "array", "items": {"type": "string"}},
-                    "refined_next_steps": {"type": "array", "items": {"type": "string"}},
-                    "confidence_boost": {"type": "number", "minimum": 0, "maximum": 0.5},
-                    "applied_improvements": {"type": "array", "items": {"type": "string"}},
-                    "refinement_notes": {"type": "string"}
+                    "refined_next_steps": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "confidence_boost": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.5,
+                    },
+                    "applied_improvements": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "refinement_notes": {"type": "string"},
                 },
-                "required": ["refined_content", "refined_actions", "refined_next_steps"]
-            }
+                "required": [
+                    "refined_content",
+                    "refined_actions",
+                    "refined_next_steps",
+                ],
+            },
         }
-    
+
     def _get_intent_analysis_template(self) -> str:
         """Intent analysis prompt template"""
         return """
@@ -274,7 +387,7 @@ class PromptManager:
             "confidence_score": 0.0-1.0
         }}
         """
-    
+
     def _get_requirement_extraction_template(self) -> str:
         """Requirement extraction prompt template"""
         return """
@@ -320,7 +433,7 @@ class PromptManager:
 
         Provide detailed requirement analysis in JSON format matching the schema.
         """
-    
+
     def _get_tool_selection_template(self) -> str:
         """Tool selection prompt template"""
         return """
@@ -376,7 +489,7 @@ class PromptManager:
             "confidence": 0.0-1.0
         }}
         """
-    
+
     def _get_response_generation_template(self) -> str:
         """Enhanced response generation prompt template with information fusion support"""
         return """
@@ -423,7 +536,7 @@ class PromptManager:
 
         Generate a comprehensive, well-integrated travel planning response.
         """
-    
+
     def _get_information_fusion_template(self) -> str:
         """Information fusion prompt template for intelligent multi-source integration"""
         return """
@@ -474,7 +587,7 @@ class PromptManager:
         
         Generate the intelligently fused response:
         """
-    
+
     def _get_quality_assessment_template(self) -> str:
         """Quality assessment prompt template"""
         return """
@@ -511,7 +624,7 @@ class PromptManager:
 
         Provide detailed analysis in JSON format matching the schema.
         """
-    
+
     def _get_response_refinement_template(self) -> str:
         """Response refinement prompt template"""
         return """
@@ -536,7 +649,7 @@ class PromptManager:
 
         Generate an improved version of the travel response.
         """
-    
+
     def _get_rag_generation_template(self) -> str:
         """RAG generation prompt template"""
         return """
@@ -557,7 +670,7 @@ class PromptManager:
 
         Please provide an accurate and helpful answer:
         """
-    
+
     def _get_function_calling_template(self) -> str:
         """Function calling prompt template"""
         return """
@@ -580,32 +693,35 @@ class PromptManager:
 
         Please analyze the message and call the appropriate functions.
         """
-    
+
     def get_prompt(self, prompt_type: PromptType, **kwargs) -> str:
         """Get and render prompt template"""
         template = self.templates.get(prompt_type.value)
         if not template:
             raise ValueError(f"Prompt template for {prompt_type.value} not found")
-        
+
         return template.format(**kwargs)
-    
+
     def get_schema(self, prompt_type: PromptType) -> Dict[str, Any]:
         """Get corresponding JSON schema"""
         return self.schemas.get(prompt_type.value, {})
-    
-    def validate_response(self, prompt_type: PromptType, response: Dict[str, Any]) -> bool:
+
+    def validate_response(
+        self, prompt_type: PromptType, response: Dict[str, Any]
+    ) -> bool:
         """Validate LLM response against expected schema"""
         schema = self.get_schema(prompt_type)
         if not schema:
             return True
-        
+
         # Basic validation - can be enhanced with jsonschema library
         required_fields = schema.get("required", [])
         return all(field in response for field in required_fields)
-    
+
     def get_available_prompts(self) -> List[str]:
         """Get list of available prompt types"""
         return list(self.templates.keys())
 
+
 # Create global instance
-prompt_manager = PromptManager() 
+prompt_manager = PromptManager()

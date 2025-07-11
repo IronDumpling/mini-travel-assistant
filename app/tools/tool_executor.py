@@ -769,7 +769,6 @@ class ToolExecutor:
         usage_counts = {"low": 0, "medium": 0, "high": 0}
         for level in resource_levels:
             usage_counts[level] = usage_counts.get(level, 0) + 1
-
         # Determine overall usage
         if usage_counts["high"] > 0:
             return "high"
@@ -838,6 +837,147 @@ class ToolExecutor:
                 execution_time=execution_time,
                 error=str(e),
             )
+
+    async def _execute_sequential_with_retry(
+        self,
+        calls: List[ToolCall],
+        context: Optional[ToolExecutionContext],
+        max_retries: int = 2,
+    ) -> Dict[str, ToolOutput]:
+        """Execute tools sequentially with retry logic"""
+
+        results = {}
+
+        for call in calls:
+            retry_count = 0
+            last_error = None
+
+            while retry_count <= max_retries:
+                try:
+                    result = await self.execute_tool(
+                        call.tool_name, call.input_data, context
+                    )
+                    results[call.tool_name] = result
+
+                    # If successful, break retry loop
+                    if result.success:
+                        break
+                    else:
+                        last_error = result.error
+                        retry_count += 1
+                        if retry_count <= max_retries:
+                            await asyncio.sleep(
+                                1.0 * retry_count
+                            )  # Exponential backoff
+
+                except Exception as e:
+                    last_error = str(e)
+                    retry_count += 1
+                    if retry_count <= max_retries:
+                        await asyncio.sleep(1.0 * retry_count)
+
+            # If all retries failed, record the failure
+            if call.tool_name not in results or not results[call.tool_name].success:
+                results[call.tool_name] = ToolOutput(
+                    success=False,
+                    error=f"Failed after {max_retries} retries: {last_error}",
+                )
+                # Stop execution on critical failure
+                break
+
+        return results
+
+    async def _execute_parallel_with_retry(
+        self,
+        calls: List[ToolCall],
+        context: Optional[ToolExecutionContext],
+        max_retries: int = 2,
+    ) -> Dict[str, ToolOutput]:
+        """Execute tools in parallel with retry logic"""
+
+        async def execute_with_retry(call: ToolCall) -> ToolOutput:
+            retry_count = 0
+            last_error = None
+
+            while retry_count <= max_retries:
+                try:
+                    result = await self.execute_tool(
+                        call.tool_name, call.input_data, context
+                    )
+
+                    if result.success:
+                        return result
+                    else:
+                        last_error = result.error
+                        retry_count += 1
+                        if retry_count <= max_retries:
+                            await asyncio.sleep(1.0 * retry_count)
+
+                except Exception as e:
+                    last_error = str(e)
+                    retry_count += 1
+                    if retry_count <= max_retries:
+                        await asyncio.sleep(1.0 * retry_count)
+
+            return ToolOutput(
+                success=False, error=f"Failed after {max_retries} retries: {last_error}"
+            )
+
+        # Execute all tasks in parallel
+        tasks = [execute_with_retry(call) for call in calls]
+        task_results = await asyncio.gather(*tasks)
+
+        # Combine results
+        results = {}
+        for call, result in zip(calls, task_results):
+            results[call.tool_name] = result
+
+        return results
+
+    def _create_tool_input(
+        self, tool: BaseTool, input_data: Dict[str, Any]
+    ) -> ToolInput:
+        """Create tool input object with enhanced validation"""
+
+        # Enhanced input creation with better validation
+        try:
+            # Try to use tool's input schema if available
+            if hasattr(tool, "get_input_schema"):
+                schema = tool.get_input_schema()
+                # Validate input against schema (simplified)
+                validated_data = self._validate_input_data(input_data, schema)
+            else:
+                validated_data = input_data
+
+            return ToolInput(
+                data=validated_data,
+                metadata=input_data.get("user_context", {}),
+                validation_required=True,
+            )
+
+        except Exception as e:
+            logger.warning(f"Input validation failed: {e}, using original data")
+            return ToolInput(
+                data=input_data,
+                metadata=input_data.get("user_context", {}),
+                validation_required=True,
+            )
+
+    def _validate_input_data(
+        self, input_data: Dict[str, Any], schema: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Validate input data against schema (simplified implementation)"""
+
+        # This is a simplified validation - in production you'd use a proper schema validator
+        validated_data = input_data.copy()
+
+        # Basic validation checks
+        if "required" in schema:
+            for required_field in schema["required"]:
+                if required_field not in validated_data:
+                    logger.warning(f"Missing required field: {required_field}")
+
+        return validated_data
 
     async def _execute_sequential_with_retry(
         self,
