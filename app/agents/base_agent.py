@@ -595,7 +595,18 @@ class AgentManager:
             )
 
         agent.add_message(message)
-        return await agent.process_message(message)
+        response = await agent.process_message(message)
+
+        # Add response to conversation history as well
+        response_message = AgentMessage(
+            sender=agent.name,
+            receiver=message.sender,
+            content=response.content,
+            metadata={"response_to": message.id, "success": response.success},
+        )
+        agent.add_message(response_message)
+
+        return response
 
     async def broadcast_message(
         self, message: AgentMessage
