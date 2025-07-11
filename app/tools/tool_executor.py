@@ -429,20 +429,6 @@ Example Queries:
             validation_required=True
         )
 
-    async def _execute_conditional(
-        self, 
-        calls: List[ToolCall],
-        context: Optional[ToolExecutionContext]
-    ) -> Dict[str, ToolOutput]:
-        """Execute tools conditionally"""
-        # TODO: Implement conditional execution logic
-        # 1. Determine whether to execute tools based on conditions
-        # 2. Support if-else logic
-        # 3. Support loop execution
-        
-        # For now, fall back to sequential execution
-        return await self._execute_sequential(calls, context)
-
 
 class ToolExecutor:
     """Tool executor"""
@@ -553,53 +539,386 @@ class ToolExecutor:
         
         return results
     
-    async def auto_execute(
+    def get_tool_metadata(self, tool_name: str) -> Dict[str, Any]:
+        """Get tool metadata for analysis and optimization"""
+        
+        # Define tool metadata for cost and performance analysis
+        tool_metadata = {
+            "flight_search": {
+                "api_cost": 0.6,  # Relative cost score (0-1, lower is more expensive)
+                "avg_execution_time": 3.0,  # Average execution time in seconds
+                "rate_limit": 1000,  # Daily rate limit
+                "failure_rate": 0.05,  # Historical failure rate
+                "data_freshness": "real-time",  # Data freshness
+                "dependencies": [],  # Tool dependencies
+                "resource_usage": "medium"  # Resource usage level
+            },
+            "hotel_search": {
+                "api_cost": 0.5,
+                "avg_execution_time": 2.5,
+                "rate_limit": 2000,
+                "failure_rate": 0.03,
+                "data_freshness": "real-time",
+                "dependencies": [],
+                "resource_usage": "medium"
+            },
+            "attraction_search": {
+                "api_cost": 0.8,  # Lower cost (Google Places API)
+                "avg_execution_time": 2.0,
+                "rate_limit": 5000,
+                "failure_rate": 0.02,
+                "data_freshness": "real-time",
+                "dependencies": [],
+                "resource_usage": "low"
+            }
+        }
+        
+        return tool_metadata.get(tool_name, {
+            "api_cost": 0.5,
+            "avg_execution_time": 2.0,
+            "rate_limit": 1000,
+            "failure_rate": 0.05,
+            "data_freshness": "unknown",
+            "dependencies": [],
+            "resource_usage": "medium"
+        })
+    
+    def analyze_tool_dependencies(self, tools: List[str]) -> Dict[str, Any]:
+        """Analyze tool dependencies for execution optimization"""
+        
+        dependencies = {
+            "has_dependencies": False,
+            "has_strong_dependencies": False,
+            "dependency_chain": [],
+            "parallel_groups": [],
+            "sequential_requirements": []
+        }
+        
+        # Define dependency rules
+        dependency_rules = {
+            ("flight_search", "hotel_search"): "weak",    # Weak dependency: results can cross-reference
+            ("hotel_search", "attraction_search"): "weak", # Weak dependency: hotel location affects attraction choice
+            ("flight_search", "attraction_search"): "none"  # No dependency: can run in parallel
+        }
+        
+        # Analyze dependencies
+        for i, tool1 in enumerate(tools):
+            for j, tool2 in enumerate(tools):
+                if i != j:
+                    dep_type = dependency_rules.get((tool1, tool2), "none")
+                    if dep_type != "none":
+                        dependencies["has_dependencies"] = True
+                        dependencies["dependency_chain"].append({
+                            "from": tool1,
+                            "to": tool2,
+                            "type": dep_type
+                        })
+                        if dep_type == "strong":
+                            dependencies["has_strong_dependencies"] = True
+                            dependencies["sequential_requirements"].append((tool1, tool2))
+        
+        # Group tools for parallel execution
+        if not dependencies["has_strong_dependencies"]:
+            # All tools can run in parallel if no strong dependencies
+            if len(tools) > 1:
+                dependencies["parallel_groups"] = [tools]
+        
+        return dependencies
+    
+    def estimate_resource_cost(self, tools: List[str], parameters: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        """Estimate resource cost for tool execution"""
+        
+        cost_analysis = {
+            "total_api_cost": 0.0,
+            "estimated_execution_time": 0.0,
+            "rate_limit_concerns": [],
+            "resource_usage": "low",
+            "cost_breakdown": {}
+        }
+        
+        total_cost = 0.0
+        max_execution_time = 0.0
+        resource_levels = []
+        
+        for tool_name in tools:
+            tool_metadata = self.get_tool_metadata(tool_name)
+            tool_params = parameters.get(tool_name, {})
+            
+            # Calculate API cost
+            base_cost = tool_metadata["api_cost"]
+            param_multiplier = self._calculate_parameter_cost_multiplier(tool_params)
+            tool_cost = base_cost * param_multiplier
+            
+            # Calculate execution time
+            execution_time = tool_metadata["avg_execution_time"]
+            
+            # Track resource usage
+            resource_levels.append(tool_metadata["resource_usage"])
+            
+            # Check rate limits
+            if tool_metadata["rate_limit"] < 1000:
+                cost_analysis["rate_limit_concerns"].append(tool_name)
+            
+            cost_analysis["cost_breakdown"][tool_name] = {
+                "api_cost": tool_cost,
+                "execution_time": execution_time,
+                "resource_usage": tool_metadata["resource_usage"]
+            }
+            
+            total_cost += tool_cost
+            max_execution_time = max(max_execution_time, execution_time)
+        
+        cost_analysis["total_api_cost"] = total_cost
+        cost_analysis["estimated_execution_time"] = max_execution_time
+        cost_analysis["resource_usage"] = self._aggregate_resource_usage(resource_levels)
+        
+        return cost_analysis
+    
+    def _calculate_parameter_cost_multiplier(self, parameters: Dict[str, Any]) -> float:
+        """Calculate cost multiplier based on parameters"""
+        
+        multiplier = 1.0
+        
+        # More results = higher cost
+        if "max_results" in parameters:
+            max_results = parameters["max_results"]
+            if max_results > 10:
+                multiplier += 0.2
+            elif max_results > 20:
+                multiplier += 0.5
+        
+        # Photo requests = higher cost
+        if parameters.get("include_photos", False):
+            multiplier += 0.3
+        
+        # Broader search radius = higher cost
+        if "radius_meters" in parameters:
+            radius = parameters["radius_meters"]
+            if radius > 10000:
+                multiplier += 0.2
+            elif radius > 50000:
+                multiplier += 0.5
+        
+        return multiplier
+    
+    def _aggregate_resource_usage(self, resource_levels: List[str]) -> str:
+        """Aggregate resource usage levels"""
+        
+        if not resource_levels:
+            return "low"
+        
+        # Count usage levels
+        usage_counts = {"low": 0, "medium": 0, "high": 0}
+        for level in resource_levels:
+            usage_counts[level] = usage_counts.get(level, 0) + 1
+        
+        # Determine overall usage
+        if usage_counts["high"] > 0:
+            return "high"
+        elif usage_counts["medium"] > 1:
+            return "high"
+        elif usage_counts["medium"] > 0:
+            return "medium"
+        else:
+            return "low"
+    
+    async def _execute_with_optimization(
         self, 
-        user_request: str,
-        context: Optional[Dict[str, Any]] = None
+        chain: ToolChain,
+        context: Optional[ToolExecutionContext] = None
     ) -> ExecutionResult:
-        """Automatically select and execute tools"""
-        # TODO: Implement automatic tool execution process
-        # 1. Analyze user request
-        # 2. Select appropriate tools
-        # 3. Create execution chain
-        # 4. Execute tool chain
-        # 5. Return results
+        """Execute with optimization including retry logic and resource management"""
+        
+        start_time = asyncio.get_event_loop().time()
+        results = {}
         
         try:
-            # Get available tool list
-            available_tools = tool_registry.list_tools()
+            # Analyze dependencies and resource requirements
+            dependencies = self.analyze_tool_dependencies([call.tool_name for call in chain.calls])
             
-            # Select tools
-            selected_tools = await self.tool_selector.select_tools(
-                user_request, 
-                available_tools, 
-                context
+            # Get tool parameters for cost analysis
+            tool_params = {}
+            for call in chain.calls:
+                tool_params[call.tool_name] = call.input_data
+            
+            cost_analysis = self.estimate_resource_cost(
+                [call.tool_name for call in chain.calls], 
+                tool_params
             )
             
-            # Create tool chain
-            tool_chain = await self.tool_selector.create_tool_chain(
-                user_request,
-                selected_tools,
-                context
-            )
+            logger.info(f"Executing tool chain with estimated cost: {cost_analysis['total_api_cost']:.2f}")
             
-            # Execute tool chain
-            execution_context = ToolExecutionContext(
-                request_id=f"auto_{int(asyncio.get_event_loop().time())}",
-                metadata=context or {}
-            )
+            # Execute based on optimized strategy
+            if chain.strategy == "sequential":
+                results = await self._execute_sequential_with_retry(chain.calls, context)
+            elif chain.strategy == "parallel":
+                results = await self._execute_parallel_with_retry(chain.calls, context)
+            elif chain.strategy == "conditional":
+                results = await self._execute_conditional(chain.calls, context)
+            else:
+                raise ValueError(f"Unsupported execution strategy: {chain.strategy}")
             
-            return await self.execute_chain(tool_chain, execution_context)
+            execution_time = asyncio.get_event_loop().time() - start_time
+            
+            return ExecutionResult(
+                success=True,
+                results=results,
+                execution_time=execution_time,
+                metadata={
+                    "cost_analysis": cost_analysis,
+                    "dependencies": dependencies,
+                    "optimization_applied": True
+                }
+            )
             
         except Exception as e:
-            # Return error result if auto execution fails
+            execution_time = asyncio.get_event_loop().time() - start_time
             return ExecutionResult(
                 success=False,
-                results={},
-                execution_time=0.0,
-                error=f"Auto execution failed: {str(e)}"
+                results=results,
+                execution_time=execution_time,
+                error=str(e)
             )
+    
+    async def _execute_sequential_with_retry(
+        self, 
+        calls: List[ToolCall],
+        context: Optional[ToolExecutionContext],
+        max_retries: int = 2
+    ) -> Dict[str, ToolOutput]:
+        """Execute tools sequentially with retry logic"""
+        
+        results = {}
+        
+        for call in calls:
+            retry_count = 0
+            last_error = None
+            
+            while retry_count <= max_retries:
+                try:
+                    result = await self.execute_tool(
+                        call.tool_name,
+                        call.input_data,
+                        context
+                    )
+                    results[call.tool_name] = result
+                    
+                    # If successful, break retry loop
+                    if result.success:
+                        break
+                    else:
+                        last_error = result.error
+                        retry_count += 1
+                        if retry_count <= max_retries:
+                            await asyncio.sleep(1.0 * retry_count)  # Exponential backoff
+                
+                except Exception as e:
+                    last_error = str(e)
+                    retry_count += 1
+                    if retry_count <= max_retries:
+                        await asyncio.sleep(1.0 * retry_count)
+            
+            # If all retries failed, record the failure
+            if call.tool_name not in results or not results[call.tool_name].success:
+                results[call.tool_name] = ToolOutput(
+                    success=False,
+                    error=f"Failed after {max_retries} retries: {last_error}"
+                )
+                # Stop execution on critical failure
+                break
+        
+        return results
+    
+    async def _execute_parallel_with_retry(
+        self, 
+        calls: List[ToolCall],
+        context: Optional[ToolExecutionContext],
+        max_retries: int = 2
+    ) -> Dict[str, ToolOutput]:
+        """Execute tools in parallel with retry logic"""
+        
+        async def execute_with_retry(call: ToolCall) -> ToolOutput:
+            retry_count = 0
+            last_error = None
+            
+            while retry_count <= max_retries:
+                try:
+                    result = await self.execute_tool(
+                        call.tool_name,
+                        call.input_data,
+                        context
+                    )
+                    
+                    if result.success:
+                        return result
+                    else:
+                        last_error = result.error
+                        retry_count += 1
+                        if retry_count <= max_retries:
+                            await asyncio.sleep(1.0 * retry_count)
+                
+                except Exception as e:
+                    last_error = str(e)
+                    retry_count += 1
+                    if retry_count <= max_retries:
+                        await asyncio.sleep(1.0 * retry_count)
+            
+            return ToolOutput(
+                success=False,
+                error=f"Failed after {max_retries} retries: {last_error}"
+            )
+        
+        # Execute all tasks in parallel
+        tasks = [execute_with_retry(call) for call in calls]
+        task_results = await asyncio.gather(*tasks)
+        
+        # Combine results
+        results = {}
+        for call, result in zip(calls, task_results):
+            results[call.tool_name] = result
+        
+        return results
+    
+    def _create_tool_input(self, tool: BaseTool, input_data: Dict[str, Any]) -> ToolInput:
+        """Create tool input object with enhanced validation"""
+        
+        # Enhanced input creation with better validation
+        try:
+            # Try to use tool's input schema if available
+            if hasattr(tool, 'get_input_schema'):
+                schema = tool.get_input_schema()
+                # Validate input against schema (simplified)
+                validated_data = self._validate_input_data(input_data, schema)
+            else:
+                validated_data = input_data
+            
+            return ToolInput(
+                data=validated_data,
+                metadata=input_data.get("user_context", {}),
+                validation_required=True
+            )
+            
+        except Exception as e:
+            logger.warning(f"Input validation failed: {e}, using original data")
+            return ToolInput(
+                data=input_data,
+                metadata=input_data.get("user_context", {}),
+                validation_required=True
+            )
+    
+    def _validate_input_data(self, input_data: Dict[str, Any], schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate input data against schema (simplified implementation)"""
+        
+        # This is a simplified validation - in production you'd use a proper schema validator
+        validated_data = input_data.copy()
+        
+        # Basic validation checks
+        if "required" in schema:
+            for required_field in schema["required"]:
+                if required_field not in validated_data:
+                    logger.warning(f"Missing required field: {required_field}")
+        
+        return validated_data
 
 
 # Global tool executor instance
