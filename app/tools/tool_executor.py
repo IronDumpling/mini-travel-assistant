@@ -471,8 +471,6 @@ class ToolExecutor:
                 results = await self._execute_sequential(chain.calls, context)
             elif chain.strategy == "parallel":
                 results = await self._execute_parallel(chain.calls, context)
-            elif chain.strategy == "conditional":
-                results = await self._execute_conditional(chain.calls, context)
             else:
                 raise ValueError(f"Unsupported execution strategy: {chain.strategy}")
             
@@ -753,8 +751,6 @@ class ToolExecutor:
                 results = await self._execute_sequential_with_retry(chain.calls, context)
             elif chain.strategy == "parallel":
                 results = await self._execute_parallel_with_retry(chain.calls, context)
-            elif chain.strategy == "conditional":
-                results = await self._execute_conditional(chain.calls, context)
             else:
                 raise ValueError(f"Unsupported execution strategy: {chain.strategy}")
             
