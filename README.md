@@ -352,17 +352,16 @@ DELETE /api/chat/history/{session_id}
 # Create structured travel plan
 POST /api/plans
 {
-  "origin": "New York",
   "destination": "Tokyo",
-  "start_date": "2024-03-15",
-  "end_date": "2024-03-20",
-  "budget": {"total": 3000, "currency": "USD"},
+  "origin": "New York",
+  "duration_days": 5,
+  "travelers": 2,
+  "budget": 3000,
+  "budget_currency": "USD",
   "trip_style": "ADVENTURE",
-  "travelers": [
-    {"name": "John", "age": 28, "interests": ["culture", "food"]}
-  ],
   "interests": ["temples", "cuisine", "shopping"],
-  "goals": ["Experience authentic Japanese culture"]
+  "special_requirements": "Vegetarian meals preferred",
+  "goals": ["Experience authentic Japanese culture", "Try local street food"]
 }
 
 # Get travel plan
@@ -386,37 +385,57 @@ DELETE /api/plans/{plan_id}
 ```json
 {
   "id": "plan_20241201_143045",
-  "preferences": {
-    "origin": "New York",
+  "request": {
     "destination": "Tokyo",
-    "start_date": "2024-03-15T00:00:00Z",
-    "end_date": "2024-03-20T00:00:00Z",
-    "budget": {"total": 3000, "currency": "USD"},
-    "trip_style": "ADVENTURE"
+    "origin": "New York",
+    "duration_days": 5,
+    "travelers": 2,
+    "budget": 3000,
+    "budget_currency": "USD",
+    "trip_style": "ADVENTURE",
+    "interests": ["temples", "cuisine", "shopping"],
+    "goals": ["Experience authentic Japanese culture"]
   },
-  "daily_plans": [
-    {
-      "date": "2024-03-15",
-      "activities": [
-        {
-          "name": "Tokyo Station Area Exploration",
-          "description": "Explore the historic Tokyo Station and nearby attractions",
-          "start_time": "09:00",
-          "end_time": "12:00",
-          "location": "Tokyo Station, Chiyoda",
-          "estimated_cost": 50.0,
-          "category": "sightseeing"
-        }
-      ],
-      "total_cost": 250.0
-    }
-  ],
-  "total_cost": 2850.0,
-  "status": "generated",
-  "agent_metadata": {
+  "generated_plan": {
+    "overview": "A 5-day adventure-focused trip to Tokyo for 2 travelers with a $3000 budget",
+    "attractions": [
+      {
+        "name": "Senso-ji Temple",
+        "rating": 4.5,
+        "description": "Tokyo's oldest temple in historic Asakusa district",
+        "location": "Asakusa, Tokyo",
+        "category": "cultural",
+        "estimated_cost": 0.0
+      }
+    ],
+    "hotels": [
+      {
+        "name": "Tokyo Budget Hotel",
+        "rating": 4.0,
+        "price_per_night": 120.0,
+        "location": "Shinjuku, Tokyo",
+        "amenities": ["wifi", "breakfast", "air_conditioning"]
+      }
+    ],
+    "flights": [
+      {
+        "airline": "ANA",
+        "price": 850.0,
+        "duration": 780,
+        "departure_time": "2024-03-15T10:30:00",
+        "arrival_time": "2024-03-16T15:30:00"
+      }
+    ],
+    "estimated_total_cost": 2850.0,
+    "itinerary_summary": "Day 1: Arrive and explore Asakusa...",
+    "travel_tips": ["Book JR Pass for transportation", "Try local street food"]
+  },
+  "created_at": "2024-12-01T14:30:45.123Z",
+  "framework_metadata": {
     "confidence": 0.85,
     "refinement_used": true,
-    "quality_score": 0.87
+    "quality_score": 0.87,
+    "processing_time": 2.3
   }
 }
 ```
@@ -498,14 +517,15 @@ curl -X POST "http://localhost:8000/api/chat" \
 curl -X POST "http://localhost:8000/api/plans" \
   -H "Content-Type: application/json" \
   -d '{
-    "origin": "Los Angeles",
     "destination": "Tokyo",
-    "start_date": "2024-03-15",
-    "end_date": "2024-03-22",
-    "budget": {"total": 4000, "currency": "USD"},
+    "origin": "Los Angeles",
+    "duration_days": 7,
+    "travelers": 2,
+    "budget": 4000,
+    "budget_currency": "USD",
     "trip_style": "CULTURAL",
-    "travelers": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 32}],
     "interests": ["temples", "food", "art"],
+    "special_requirements": "Prefer traditional accommodations",
     "goals": ["Experience authentic culture", "Try local cuisine"]
   }'
 
