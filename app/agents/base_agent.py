@@ -117,6 +117,9 @@ class BaseAgent(ABC):
                 current_response = await self.process_message(message)
             else:
                 # Refine based on previous assessment
+                if current_response is None:
+                    raise ValueError("Current response is None during refinement")
+
                 current_response = await self._refine_response(
                     message,
                     current_response,
@@ -160,6 +163,11 @@ class BaseAgent(ABC):
 
             current_response.metadata["refinement_status"] = "in_progress"
 
+        # Ensure we always return a response
+        if current_response is None:
+            current_response = AgentResponse(
+                success=False, content="Failed to process message", confidence=0.0
+            )
         return current_response
 
     async def _assess_response_quality(
