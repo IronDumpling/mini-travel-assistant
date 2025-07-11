@@ -12,6 +12,7 @@ TODO: Implement the following features
 from typing import Dict, List, Any, Optional
 import logging
 import time
+import asyncio
 from app.agents.base_agent import BaseAgent, AgentMessage, AgentResponse, AgentStatus, QualityAssessment
 from app.tools.base_tool import tool_registry
 from app.tools.tool_executor import get_tool_executor
@@ -657,7 +658,7 @@ class TravelAgent(BaseAgent):
         
         # Initialize enhanced plan structure
         plan = {
-            "intent_type": intent["type"],
+            "intent_type": intent.get("type") or intent.get("intent_type", "query"),
             "destination": structured_analysis.get("destination", {}),
             "actions": [],
             "tools_to_use": [],
@@ -919,7 +920,7 @@ class TravelAgent(BaseAgent):
         # Extract key information from intent
         base_requirements = {
             "destination": intent.get("destination", "unknown"),
-            "intent_type": intent["type"],
+            "intent_type": intent.get("type") or intent.get("intent_type", "query"),
             "time_constraints": intent.get("time_info", {}),
             "budget_constraints": intent.get("budget_info", {}),
             "urgency": intent.get("urgency", "normal")
@@ -1357,7 +1358,7 @@ class TravelAgent(BaseAgent):
         """Fallback basic action plan (original implementation)"""
         
         plan = {
-            "intent_type": intent["type"],
+            "intent_type": intent.get("type") or intent.get("intent_type", "query"),
             "actions": [],
             "tools_to_use": [],
             "execution_strategy": "sequential",
@@ -1366,21 +1367,23 @@ class TravelAgent(BaseAgent):
         }
         
         # Basic action planning based on intent type
-        if intent["type"] == "planning":
+        intent_type = intent.get("type") or intent.get("intent_type", "query")
+        
+        if intent_type == "planning":
             plan["tools_to_use"] = ["flight_search", "hotel_search", "attraction_search"]
             plan["next_steps"] = [
                 "Provide detailed travel itinerary",
                 "Include budget estimates",
                 "Suggest booking timeline"
             ]
-        elif intent["type"] == "recommendation":
+        elif intent_type == "recommendation":
             plan["tools_to_use"] = ["attraction_search"]
             plan["next_steps"] = [
                 "Provide personalized recommendations",
                 "Include practical tips",
                 "Suggest related activities"
             ]
-        elif intent["type"] == "query":
+        elif intent_type == "query":
             plan["tools_to_use"] = []
             plan["next_steps"] = [
                 "Provide detailed answer",
@@ -1637,7 +1640,10 @@ class TravelAgent(BaseAgent):
                 # Template-based response generation (fallback)
                 response_parts = []
                 
-                if intent["type"] == "planning":
+                # Handle both new and legacy intent formats
+                intent_type = intent.get("type") or intent.get("intent_type", "query")
+                
+                if intent_type == "planning":
                     response_parts.append("🎯 **Travel Planning Assistant**")
                     response_parts.append(f"Based on your request for {intent.get('destination', 'your destination')}, here's what I found:")
                     
@@ -1672,7 +1678,7 @@ class TravelAgent(BaseAgent):
                     response_parts.append("- I can help you compare prices and make bookings")
                     response_parts.append("- Ask me about specific aspects like dining, transportation, or activities")
                     
-                elif intent["type"] == "recommendation":
+                elif intent_type == "recommendation":
                     response_parts.append("💡 **Travel Recommendations**")
                     response_parts.append(f"Here are my recommendations for {intent.get('destination', 'your destination')}:")
                     
@@ -1688,7 +1694,7 @@ class TravelAgent(BaseAgent):
                     response_parts.append("- Help you plan a complete itinerary?")
                     response_parts.append("- Search for specific activities or attractions?")
                     
-                elif intent["type"] == "query":
+                elif intent_type == "query":
                     response_parts.append("❓ **Travel Information**")
                     
                     if relevant_docs:
@@ -1709,9 +1715,11 @@ class TravelAgent(BaseAgent):
             
             else:
                 error_msg = execution_result.get("error", "Unknown error")
-                return f"I encountered an issue while processing your {intent['type']} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
+                intent_type = intent.get("type") or intent.get("intent_type", "travel")
+                return f"I encountered an issue while processing your {intent_type} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
                 
         except Exception as e:
+            logger.error(f"Error calling DeepSeek API: {e}")
             return f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
     
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
