@@ -10,12 +10,14 @@ TODO: Implement the following features
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
-import asyncio
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AgentStatus(str, Enum):
@@ -221,8 +223,45 @@ class BaseAgent(ABC):
         original_message: AgentMessage, 
         response: AgentResponse
     ) -> float:
-        """Assess a specific quality dimension (subclasses should override)"""
-        # Default implementation - subclasses should provide more sophisticated assessment
+        """Assess a specific quality dimension using LLM-based assessment"""
+        
+        # Try to use LLM for quality assessment
+        try:
+            from app.core.llm_service import get_llm_service
+            from app.core.prompt_manager import prompt_manager, PromptType
+            
+            llm_service = get_llm_service()
+            
+            if llm_service:
+                # Use prompt manager for LLM-based quality assessment
+                assessment_prompt = prompt_manager.get_prompt(
+                    PromptType.QUALITY_ASSESSMENT,
+                    original_message=original_message.content,
+                    agent_response=response.content,
+                    dimension=dimension,
+                    actions_taken=response.actions_taken,
+                    next_steps=response.next_steps,
+                    confidence=response.confidence
+                )
+                
+                # Use structured completion for quality assessment
+                schema = prompt_manager.get_schema(PromptType.QUALITY_ASSESSMENT)
+                assessment_result = await llm_service.structured_completion(
+                    messages=[{"role": "user", "content": assessment_prompt}],
+                    response_schema=schema,
+                    temperature=0.2,
+                    max_tokens=300
+                )
+                
+                # Extract score for the specific dimension
+                dimension_score = assessment_result.get("dimension_scores", {}).get(dimension, 0.5)
+                return float(dimension_score)
+                
+        except Exception as e:
+            logger.warning(f"LLM-based quality assessment failed: {e}")
+            # Fall back to heuristic assessment if LLM fails
+        
+        # Fallback to heuristic assessment
         if dimension == "relevance":
             return await self._assess_relevance(original_message, response)
         elif dimension == "completeness":
@@ -283,7 +322,46 @@ class BaseAgent(ABC):
         response: AgentResponse,
         current_score: float
     ) -> List[str]:
-        """Generate improvement suggestions for a specific dimension"""
+        """Generate improvement suggestions using LLM-based analysis"""
+        
+        # Try to use LLM for improvement suggestions
+        try:
+            from app.core.llm_service import get_llm_service
+            from app.core.prompt_manager import prompt_manager, PromptType
+            
+            llm_service = get_llm_service()
+            
+            if llm_service:
+                # Use prompt manager for LLM-based quality assessment with suggestions
+                assessment_prompt = prompt_manager.get_prompt(
+                    PromptType.QUALITY_ASSESSMENT,
+                    original_message=original_message.content,
+                    agent_response=response.content,
+                    dimension=dimension,
+                    actions_taken=response.actions_taken,
+                    next_steps=response.next_steps,
+                    confidence=response.confidence
+                )
+                
+                # Use structured completion for quality assessment
+                schema = prompt_manager.get_schema(PromptType.QUALITY_ASSESSMENT)
+                assessment_result = await llm_service.structured_completion(
+                    messages=[{"role": "user", "content": assessment_prompt}],
+                    response_schema=schema,
+                    temperature=0.3,
+                    max_tokens=400
+                )
+                
+                # Extract improvement suggestions
+                suggestions = assessment_result.get("improvement_suggestions", [])
+                if suggestions:
+                    return suggestions
+                
+        except Exception as e:
+            logger.warning(f"LLM-based improvement suggestions failed: {e}")
+            # Fall back to heuristic suggestions if LLM fails
+        
+        # Fallback to heuristic suggestions
         suggestions = []
         
         if dimension == "relevance" and current_score < 0.6:
@@ -312,12 +390,62 @@ class BaseAgent(ABC):
         current_response: AgentResponse,
         quality_assessment: Optional[QualityAssessment]
     ) -> AgentResponse:
-        """Refine the response based on quality assessment (subclasses should override)"""
-        # Default implementation - basic improvements
+        """Refine the response based on quality assessment using LLM-based refinement"""
+        
         if not quality_assessment:
             return current_response
         
-        # Apply improvement suggestions
+        # Try to use LLM for response refinement
+        try:
+            from app.core.llm_service import get_llm_service
+            from app.core.prompt_manager import prompt_manager, PromptType
+            
+            llm_service = get_llm_service()
+            
+            if llm_service:
+                # Use prompt manager for LLM-based response refinement
+                refinement_prompt = prompt_manager.get_prompt(
+                    PromptType.RESPONSE_REFINEMENT,
+                    original_response=current_response.content,
+                    quality_assessment=quality_assessment.dict(),
+                    improvement_areas=quality_assessment.improvement_suggestions
+                )
+                
+                # Use structured completion for response refinement
+                schema = prompt_manager.get_schema(PromptType.RESPONSE_REFINEMENT)
+                refinement_result = await llm_service.structured_completion(
+                    messages=[{"role": "user", "content": refinement_prompt}],
+                    response_schema=schema,
+                    temperature=0.3,
+                    max_tokens=800
+                )
+                
+                # Extract refined response components
+                refined_content = refinement_result.get("refined_content", current_response.content)
+                refined_actions = refinement_result.get("refined_actions", current_response.actions_taken)
+                refined_next_steps = refinement_result.get("refined_next_steps", current_response.next_steps)
+                confidence_boost = refinement_result.get("confidence_boost", 0.1)
+                
+                return AgentResponse(
+                    success=current_response.success,
+                    content=refined_content,
+                    actions_taken=refined_actions,
+                    next_steps=refined_next_steps,
+                    confidence=min(current_response.confidence + confidence_boost, 1.0),
+                    metadata={
+                        **current_response.metadata,
+                        "refined": True,
+                        "refinement_method": "llm_based",
+                        "improvement_applied": quality_assessment.improvement_suggestions,
+                        "llm_refinement_applied": refinement_result.get("applied_improvements", [])
+                    }
+                )
+                
+        except Exception as e:
+            logger.warning(f"LLM-based response refinement failed: {e}")
+            # Fall back to heuristic refinement if LLM fails
+        
+        # Fallback to heuristic refinement
         improved_content = current_response.content
         
         # Add more detail if completeness is low
@@ -341,22 +469,10 @@ class BaseAgent(ABC):
             metadata={
                 **current_response.metadata,
                 "refined": True,
+                "refinement_method": "heuristic_fallback",
                 "improvement_applied": quality_assessment.improvement_suggestions
             }
         )
-
-    async def think(self, context: Dict[str, Any]) -> str:
-        """Thinking process"""
-        # TODO: Implement thinking logic
-        # 1. Analyze current context
-        # 2. Make a plan
-        # 3. Evaluate different choices
-        # 4. Return thinking result
-        self.status = AgentStatus.THINKING
-        self.last_activity = datetime.utcnow()
-        
-        # Default implementation, subclasses can override
-        return f"Agent {self.name} is thinking how to handle: {context}"
     
     async def act(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute action"""

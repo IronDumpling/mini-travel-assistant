@@ -2,7 +2,7 @@
 System Endpoints - Health checks and system status
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from app.tools.base_tool import tool_registry
 from app.agents.base_agent import agent_manager
@@ -85,4 +85,106 @@ async def system_status():
         return JSONResponse(
             status_code=500,
             content={"error": f"Failed to retrieve system status: {str(e)}"}
+        )
+
+@router.get("/system/chromadb")
+async def chromadb_status():
+    """Get ChromaDB status and statistics"""
+    try:
+        from app.core.rag_engine import get_rag_engine
+        rag_engine = get_rag_engine()
+        
+        # Get vector store stats
+        vector_stats = rag_engine.vector_store.get_stats()
+        
+        # Get collection information
+        client = rag_engine.vector_store.client
+        collections = client.list_collections()
+        
+        collection_info = []
+        for collection in collections:
+            try:
+                count = collection.count()
+                metadata = collection.metadata or {}
+                collection_info.append({
+                    "name": collection.name,
+                    "document_count": count,
+                    "metadata": metadata
+                })
+            except Exception as e:
+                collection_info.append({
+                    "name": collection.name,
+                    "error": str(e)
+                })
+        
+        return {
+            "chromadb_path": "./data/chroma_db",
+            "total_collections": len(collections),
+            "collections": collection_info,
+            "vector_store_stats": vector_stats
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to retrieve ChromaDB status: {str(e)}"}
+        )
+
+@router.get("/system/chromadb/search")
+async def search_chromadb(query: str, collection_name: str = "travel_knowledge", top_k: int = 5):
+    """Search ChromaDB with a query"""
+    try:
+        from app.core.rag_engine import get_rag_engine
+        rag_engine = get_rag_engine()
+        
+        # Get collection
+        try:
+            collection = rag_engine.vector_store.client.get_collection(name=collection_name)
+        except Exception as e:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Collection '{collection_name}' not found: {str(e)}"}
+            )
+        
+        # Perform text search
+        results = collection.query(
+            query_texts=[query],
+            n_results=top_k,
+            include=['documents', 'metadatas', 'distances']
+        )
+        
+        if not results['documents'] or not results['documents'][0]:
+            return {
+                "query": query,
+                "collection": collection_name,
+                "results": [],
+                "total_found": 0
+            }
+        
+        # Process results
+        processed_results = []
+        if results['documents'] and results['documents'][0]:
+            for i, (doc_content, metadata, distance) in enumerate(zip(
+                results['documents'][0],
+                results['metadatas'][0] if results['metadatas'] else [],
+                results['distances'][0] if results['distances'] else []
+            )):
+                similarity = 1 - distance
+                processed_results.append({
+                    "rank": i + 1,
+                    "similarity_score": round(similarity, 3),
+                    "content_preview": doc_content[:300] + "..." if len(doc_content) > 300 else doc_content,
+                    "metadata": metadata or {}
+                })
+        
+        return {
+            "query": query,
+            "collection": collection_name,
+            "results": processed_results,
+            "total_found": len(processed_results)
+        }
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to search ChromaDB: {str(e)}"}
         ) 

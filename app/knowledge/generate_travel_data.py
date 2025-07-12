@@ -14,20 +14,14 @@ Usage:
 """
 
 import json
-import yaml
 import argparse
 import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-import uuid
-import requests
 from dataclasses import dataclass, asdict
-import logging
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Use centralized logging
+from loguru import logger
 
 
 @dataclass

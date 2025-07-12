@@ -173,11 +173,6 @@ class BaseTool(ABC):
             "error_rate": self.error_count / max(self.execution_count, 1),
             "last_execution_time": self.last_execution_time
         }
-    
-    def to_langchain_tool(self):
-        """Convert to LangChain tool format"""
-        # TODO: 实现LangChain工具适配器
-        pass
 
 
 class ToolRegistry:

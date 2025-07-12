@@ -7,7 +7,8 @@ python-multipart>=0.0.6
 
 # AI和LLM相关
 openai>=1.3.0
-# anthropic>=0.7.0  # 可选：如果需要使用Claude
+tenacity>=8.2.0  # For retry logic
+anthropic>=0.7.0  # Claude API integration
 
 # RAG和向量数据库
 chromadb>=0.4.0
@@ -28,6 +29,7 @@ alembic>=1.12.0  # 数据库迁移
 aiohttp>=3.9.1
 requests>=2.31.0
 httpx>=0.25.1
+beautifulsoup4>=4.12.0  # For HTML parsing in web scraping
 
 # 数据处理和工具
 pandas>=2.0.0

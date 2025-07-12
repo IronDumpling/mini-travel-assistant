@@ -4,7 +4,7 @@ Agent Management Endpoints - Agent configuration and status
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from app.agents.travel_agent import TravelAgent
+from app.agents.base_agent import agent_manager
 
 router = APIRouter()
 
@@ -26,12 +26,22 @@ async def configure_agent_refinement(config: RefinementConfig):
     Configure the self-refinement settings for the travel agent.
     """
     try:
-        # This would typically be stored per session or user
-        # For now, return the configuration
+        # Get the registered travel agent
+        agent = agent_manager.get_agent("travel_agent")
+        if not agent:
+            raise HTTPException(status_code=404, detail="Travel agent not found")
+        
+        # Configure refinement settings on the actual agent instance
+        agent.configure_refinement(
+            enabled=config.enabled,
+            quality_threshold=config.quality_threshold,
+            max_iterations=config.max_iterations
+        )
+        
         return AgentConfigResponse(
-            message="Agent refinement configured",
+            message="Agent refinement configured successfully",
             config=config.model_dump(),
-            note="Configuration applied to new agent instances"
+            note="Configuration applied to the active travel agent instance"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Configuration failed: {str(e)}")
@@ -42,7 +52,11 @@ async def get_agent_status():
     Get the current status and capabilities of the travel agent.
     """
     try:
-        agent = TravelAgent()
+        # Get the registered travel agent
+        agent = agent_manager.get_agent("travel_agent")
+        if not agent:
+            raise HTTPException(status_code=404, detail="Travel agent not found")
+        
         status = agent.get_status()
         
         return {
@@ -54,7 +68,9 @@ async def get_agent_status():
             },
             "refinement_config": status["refinement_config"],
             "quality_dimensions": agent.get_quality_dimensions(),
-            "system_status": "operational"
+            "system_status": "operational",
+            "agent_instance_id": id(agent),  # Add instance ID to verify same agent
+            "conversation_history_length": len(agent.conversation_history)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
@@ -65,7 +81,10 @@ async def get_agent_capabilities():
     Get detailed information about agent capabilities and tools.
     """
     try:
-        agent = TravelAgent()
+        # Get the registered travel agent
+        agent = agent_manager.get_agent("travel_agent")
+        if not agent:
+            raise HTTPException(status_code=404, detail="Travel agent not found")
         
         return {
             "agent_type": "TravelAgent",
@@ -84,7 +103,9 @@ async def get_agent_capabilities():
                 "iterative_improvement": True,
                 "confidence_scoring": True,
                 "multi_dimensional_evaluation": True
-            }
+            },
+            "agent_instance_active": True,
+            "tools_registered": len(agent.get_available_tools())
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get capabilities: {str(e)}")
@@ -96,11 +117,20 @@ async def reset_agent():
     Useful for clearing any temporary configurations or state.
     """
     try:
-        # TODO: Implement agent reset functionality
+        # Get the registered travel agent
+        agent = agent_manager.get_agent("travel_agent")
+        if not agent:
+            raise HTTPException(status_code=404, detail="Travel agent not found")
+        
+        # Reset the agent state
+        await agent.reset()
+        
         return {
-            "message": "Agent reset to default state",
+            "message": "Agent reset to default state successfully",
             "status": "success",
-            "note": "Reset functionality not yet fully implemented"
+            "agent_instance_id": id(agent),
+            "conversation_history_cleared": True,
+            "status_reset": True
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent reset failed: {str(e)}")
