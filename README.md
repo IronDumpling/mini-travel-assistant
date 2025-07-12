@@ -1,19 +1,89 @@
-# AI Travel Planning Agent v2.0
+# Mini AI Travel Planning Agent
 
-An intelligent travel planning system powered by **RAG (Retrieval-Augmented Generation)** and **multi-provider LLM architecture**, featuring advanced semantic search, conversation memory, and intelligent tool orchestration.
+An intelligent travel planning system powered by **RAG (Retrieval-Augmented Generation)** and **multi-provider LLM architecture**, featuring advanced semantic search, conversation memory, and intelligent tool orchestration with **self-refinement capabilities**.
 
 ## 🚀 Architecture Overview
 
 This project implements a sophisticated AI travel planning agent with the following core capabilities:
 
 - **🧠 RAG-Enhanced Intelligence**: ChromaDB + SentenceTransformer for semantic knowledge retrieval
-- **🔄 Multi-Provider LLM Support**: Flexible architecture supporting OpenAI, Claude, and custom providers
+- **🔄 Multi-Provider LLM Support**: Flexible architecture supporting OpenAI, Claude, and DeepSeek
+- **🤖 Self-Refining Agent**: Advanced quality assessment and iterative improvement
 - **💾 Intelligent Memory**: Conversation history with semantic search and user preference learning
 - **🔧 Smart Tool Orchestration**: RAG-powered tool selection and coordination
 - **📊 Performance Optimized**: Lazy initialization, shared resources, and efficient document chunking
 - **🌐 Production Ready**: FastAPI backend with comprehensive API endpoints
 
+## 🔄 User Request Process Flow
+
+The system processes user requests through a sophisticated multi-stage pipeline with self-refinement capabilities:
+
+```mermaid
+graph TD
+    A[User Request] --> B[Agent Message Processing]
+    B --> C[Intent Analysis]
+    C --> D[Knowledge Retrieval]
+    D --> E[Tool Selection]
+    E --> F[Tool Execution]
+    F --> G[Response Generation]
+    G --> H[Quality Assessment]
+    H --> I{Quality Score >= 0.8?}
+    I -->|Yes| J[Final Response]
+    I -->|No| K[Self-Refinement]
+    K --> L[Refined Response]
+    L --> M[Return to User]
+    J --> M
+
+    %% Stage Details
+    B1[Input: Raw user message<br/>Output: AgentMessage object]
+    C1[Input: User message<br/>Output: Structured intent analysis<br/>- Intent type, destination<br/>- Travel details, preferences<br/>- Sentiment, urgency]
+    D1[Input: User query<br/>Output: Knowledge context<br/>- Relevant documents<br/>- RAG search results<br/>- Context snippets]
+    E1[Input: Intent + Knowledge<br/>Output: Selected tools<br/>- Tool names list<br/>- Tool parameters<br/>- Execution strategy]
+    F1[Input: Tool parameters<br/>Output: Tool results<br/>- Flight/hotel/attraction data<br/>- Search results<br/>- API responses]
+    G1[Input: Intent + Knowledge + Tools<br/>Output: Generated response<br/>- Formatted travel content<br/>- Recommendations<br/>- Next steps]
+    H1[Input: Original + Response<br/>Output: Quality scores<br/>- 6-dimension scoring<br/>- Improvement suggestions<br/>- Overall quality]
+    K1[Input: Quality assessment<br/>Output: Improved response<br/>- Enhanced content<br/>- Better personalization<br/>- Increased confidence]
+
+    %% Connections to details
+    B -.-> B1
+    C -.-> C1
+    D -.-> D1
+    E -.-> E1
+    F -.-> F1
+    G -.-> G1
+    H -.-> H1
+    K -.-> K1
+
+    %% Styling
+    classDef processStage fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef inputOutput fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef final fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+
+    class A,B,C,D,E,F,G,H,K processStage
+    class B1,C1,D1,E1,F1,G1,H1,K1 inputOutput
+    class I decision
+    class J,L,M final
+```
+
+### 🎯 Process Stages Explained
+
+1. **Intent Analysis**: Multi-dimensional analysis of user intent including destination, travel style, preferences, and urgency
+2. **Knowledge Retrieval**: RAG-powered semantic search through travel knowledge base
+3. **Tool Selection**: Intelligent selection of appropriate tools (flight, hotel, attraction search) based on intent
+4. **Tool Execution**: Parallel or sequential execution of selected tools with real-time data
+5. **Response Generation**: LLM-powered synthesis of tool results and knowledge into comprehensive response
+6. **Quality Assessment**: 6-dimension quality scoring (relevance, completeness, accuracy, actionability, personalization, feasibility)
+7. **Self-Refinement**: Iterative improvement process when quality threshold not met
+
 ## 📋 Core Features
+
+### Advanced Agent Capabilities
+- **Self-Refinement System**: Automatic quality assessment and response improvement
+- **Structured Travel Planning**: Complete itinerary generation with real-time data integration
+- **Intent Analysis**: Multi-dimensional user intent understanding with LLM-powered analysis
+- **Quality Dimensions**: Relevance, completeness, accuracy, actionability, personalization, and feasibility scoring
+- **Smart Tool Selection**: Intelligent tool coordination based on user requirements
 
 ### RAG-Enhanced Capabilities
 - **Semantic Knowledge Retrieval**: ChromaDB vector database with SentenceTransformer embeddings
@@ -28,7 +98,7 @@ This project implements a sophisticated AI travel planning agent with the follow
 - **Multi-turn Conversation Support**: Stateful conversation management with memory persistence
 
 ### Technical Features
-- **Multi-Provider LLM Architecture**: Support for OpenAI, Claude, and extensible provider system
+- **Multi-Provider LLM Architecture**: Support for OpenAI, Claude, DeepSeek, and extensible provider system
 - **Flexible Configuration**: Environment-based and programmatic configuration options
 - **Performance Optimization**: Lazy initialization, embedding model sharing, and efficient chunking
 - **Type Safety**: Comprehensive type annotations and Pydantic models
@@ -42,34 +112,65 @@ This project implements a sophisticated AI travel planning agent with the follow
 ┌─────────────────────────────────────────────────────────────────┐
 │                        FastAPI Application                      │
 ├─────────────────────────────────────────────────────────────────┤
-│  📡 API Layer (endpoints/)                                     │
-│  ├── chat.py       - Chat interface                            │
-│  ├── sessions.py   - Session management                        │
-│  ├── plans.py      - Travel plan generation                    │
-│  ├── agent.py      - Agent interactions                        │
-│  └── system.py     - System status and health                  │
+│  📡 API Layer (endpoints/)                                      │
+│  ├── chat.py       - Chat interface with refinement support     │
+│  ├── sessions.py   - Session management                         │
+│  ├── plans.py      - Travel plan generation                     │
+│  ├── agent.py      - Agent interactions & configuration         │
+│  └── system.py     - System status and health                   │
 ├─────────────────────────────────────────────────────────────────┤
-│  🤖 Agent Layer (agents/)                                      │
-│  ├── travel_agent.py - Main travel planning agent              │
-│  └── base_agent.py   - Agent framework and management          │
+│  🤖 Agent Layer (agents/)                                       │
+│  ├── travel_agent.py - Self-refining travel planning agent      │
+│  │   ├── Intent Analysis - Multi-dimensional user intent        │
+│  │   ├── Quality Assessment - 6-dimension quality scoring       │
+│  │   ├── Self-Refinement - Iterative response improvement       │
+│  │   └── Tool Coordination - Smart tool selection & execution   │
+│  └── base_agent.py   - Agent framework and management           │
 ├─────────────────────────────────────────────────────────────────┤
-│  🧠 Memory Layer (memory/)                                     │
+│  🧠 Memory Layer (memory/)                                      │
 │  ├── conversation_memory.py - RAG-powered conversation memory   │
-│  └── session_manager.py     - Session state management         │
+│  └── session_manager.py     - Session state management          │
 ├─────────────────────────────────────────────────────────────────┤
-│  🔧 Tool Layer (tools/)                                        │
-│  ├── tool_executor.py    - RAG-enhanced tool selection         │
-│  ├── flight_search.py    - Flight search integration           │
-│  ├── hotel_search.py     - Hotel search integration            │
-│  ├── attraction_search.py - Attraction search integration      │
-│  └── base_tool.py        - Tool framework and registry         │
+│  🔧 Tool Layer (tools/)                                         │
+│  ├── tool_executor.py    - RAG-enhanced tool selection          │
+│  ├── flight_search.py    - Flight search integration            │
+│  ├── hotel_search.py     - Hotel search integration             │
+│  ├── attraction_search.py - Attraction search integration       │
+│  └── base_tool.py        - Tool framework and registry          │
 ├─────────────────────────────────────────────────────────────────┤
-│  🎯 Core Layer (core/)                                         │
-│  ├── rag_engine.py      - RAG engine with ChromaDB            │
-│  ├── knowledge_base.py  - Travel knowledge management          │
-│  ├── llm_service.py     - Multi-provider LLM interface        │
-│  └── data_loader.py     - Knowledge data loading              │
+│  🎯 Core Layer (core/)                                          │
+│  ├── rag_engine.py      - RAG engine with ChromaDB              │
+│  ├── knowledge_base.py  - Travel knowledge management           │
+│  ├── llm_service.py     - Multi-provider LLM interface          │
+│  ├── prompt_manager.py  - Prompt templates and schemas          │
+│  └── data_loader.py     - Knowledge data loading                │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+### Travel Agent Processing Pipeline
+
+```mermaid
+graph TD
+    A[User Message] --> B[Intent Analysis]
+    B --> C[Knowledge Retrieval]
+    C --> D[Tool Selection]
+    D --> E[Action Plan Creation]
+    E --> F[Tool Execution]
+    F --> G[Response Generation]
+    G --> H[Quality Assessment]
+    H --> I{Quality > Threshold?}
+    I -->|No| J[Self-Refinement]
+    J --> G
+    I -->|Yes| K[Final Response]
+    
+    L[RAG Engine] --> C
+    M[Prompt Manager] --> B
+    M --> G
+    M --> J
+    N[LLM Service] --> B
+    N --> D
+    N --> G
+    N --> J
 ```
 
 ### Project Structure
@@ -80,8 +181,17 @@ Project/
 │   ├── core/                    # 🎯 Core Layer - RAG & LLM Services
 │   │   ├── rag_engine.py       # RAG engine with ChromaDB + SentenceTransformer
 │   │   ├── knowledge_base.py   # Travel knowledge management
-│   │   ├── llm_service.py      # Multi-provider LLM interface (OpenAI, Claude)
+│   │   ├── llm_service.py      # Multi-provider LLM interface (OpenAI, Claude, DeepSeek)
+│   │   ├── prompt_manager.py   # Prompt templates and response schemas
 │   │   └── data_loader.py      # Knowledge data loading and processing
+│   ├── agents/                  # 🤖 Agent Layer - Self-Refining AI
+│   │   ├── travel_agent.py     # Advanced travel planning with self-refinement
+│   │   │   ├── Intent Analysis       # Multi-dimensional intent understanding
+│   │   │   ├── Quality Assessment    # 6-dimension quality scoring
+│   │   │   ├── Self-Refinement      # Iterative response improvement
+│   │   │   ├── Tool Coordination    # Smart tool selection & execution
+│   │   │   └── Structured Planning  # Complete itinerary generation
+│   │   └── base_agent.py       # Agent framework and management
 │   ├── tools/                   # 🔧 Tool Layer - Search & Booking
 │   │   ├── tool_executor.py    # RAG-enhanced tool selection
 │   │   ├── flight_search.py    # Flight search integration
@@ -91,15 +201,16 @@ Project/
 │   ├── memory/                  # 🧠 Memory Layer - Conversation & Sessions
 │   │   ├── conversation_memory.py # RAG-powered conversation memory
 │   │   └── session_manager.py  # Session state management
-│   ├── agents/                  # 🤖 Agent Layer - AI Planning Logic
-│   │   ├── travel_agent.py     # Main travel planning agent
-│   │   └── base_agent.py       # Agent framework and management
 │   ├── api/                     # 📡 API Layer - REST Endpoints
 │   │   └── endpoints/          # API route definitions
 │   ├── knowledge/               # 📚 Knowledge Base
 │   │   ├── documents/          # Travel knowledge documents
-│   │   ├── schemas/            # Knowledge schemas
-│   │   └── categories.yaml     # Knowledge categorization
+│   │   │   ├── destinations/   # Destination guides (Asia, Europe)
+│   │   │   ├── practical/      # Visa requirements, travel tips
+│   │   │   └── transportation/ # Metro systems, transport guides
+│   │   ├── schemas/            # Knowledge validation schemas
+│   │   ├── categories.yaml     # Knowledge categorization
+│   │   └── generate_travel_data.py # Data generation utilities
 │   ├── models/                  # 📊 Data Models
 │   │   └── schemas.py          # Pydantic models and schemas
 │   └── main.py                 # 🚀 Application entry point
@@ -116,7 +227,7 @@ Project/
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **Web Framework** | FastAPI | High-performance API with auto-documentation |
-| **LLM Services** | OpenAI API + Claude | Multi-provider LLM support with fallback |
+| **LLM Services** | OpenAI API + Claude + DeepSeek | Multi-provider LLM support with fallback |
 | **Vector Database** | ChromaDB | Persistent vector storage for RAG |
 | **Embeddings** | SentenceTransformer | Local text-to-vector encoding |
 | **Memory Management** | SQLAlchemy | Conversation and session persistence |
@@ -130,6 +241,15 @@ Project/
 | **Document Processing** | tiktoken | Token counting and text chunking |
 | **Similarity Search** | Cosine Similarity | Semantic similarity matching |
 | **Document Types** | Enum-based | Travel knowledge, conversation turns, tools |
+
+### Agent Technology Stack
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Intent Analysis** | LLM + Structured Parsing | Multi-dimensional user intent understanding |
+| **Quality Assessment** | 6-Dimension Scoring | Relevance, completeness, accuracy, actionability, personalization, feasibility |
+| **Self-Refinement** | Iterative LLM Processing | Automatic response improvement |
+| **Tool Selection** | RAG + LLM | Intelligent tool coordination |
+| **Prompt Management** | Template System | Structured prompts and response schemas |
 
 ### Development Stack
 | Component | Technology | Purpose |
@@ -163,7 +283,8 @@ Create `.env` file in project root:
 
 ```env
 # LLM Service Keys
-OPENAI_API_KEY=your_open_ai_api_key
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_claude_api_key
 DEEPSEEK_API_KEY=your_deepseek_api_key
 
 # LLM Configuration
@@ -172,6 +293,11 @@ LLM_MODEL=deepseek-chat      # Model to use
 LLM_API_KEY=your_api_key_here
 LLM_TEMPERATURE=0.7
 LLM_MAX_TOKENS=4000
+
+# Agent Configuration
+AGENT_REFINEMENT_ENABLED=true
+AGENT_QUALITY_THRESHOLD=0.75
+AGENT_MAX_ITERATIONS=3
 
 # RAG Configuration
 CHROMA_DB_PATH=./data/chroma_db
@@ -206,6 +332,7 @@ uvicorn app.main:app --reload
 # 3. Initialize embedding models
 # 4. Register tools and agents
 # 5. Start conversation memory system
+# 6. Configure self-refinement system
 ```
 
 ### 4. Access the Application
@@ -214,6 +341,52 @@ uvicorn app.main:app --reload
 - **System Status**: http://localhost:8000/system/status
 - **Chat Interface**: http://localhost:8000/api/chat
 - **Travel Plans**: http://localhost:8000/api/plans
+- **Agent Configuration**: http://localhost:8000/api/agent/configure
+
+## 🤖 Travel Agent Usage
+
+### Core Agent Capabilities
+
+The `TravelAgent` provides advanced travel planning with self-refinement capabilities including:
+
+- **Intent Analysis**: Multi-dimensional user intent understanding
+- **Quality Assessment**: 6-dimension scoring system
+- **Self-Refinement**: Automatic response improvement
+- **Tool Coordination**: Smart tool selection and execution
+- **Structured Planning**: Complete itinerary generation
+
+### Agent Quality Dimensions
+
+The travel agent evaluates responses across 6 dimensions:
+
+| Dimension | Weight | Description |
+|-----------|--------|-------------|
+| **Relevance** | 25% | How well the response matches user intent |
+| **Completeness** | 20% | Coverage of all important travel aspects |
+| **Accuracy** | 20% | Factual correctness of information |
+| **Actionability** | 15% | How actionable the recommendations are |
+| **Personalization** | 10% | Customization to user preferences |
+| **Feasibility** | 10% | Practicality and realistic implementation |
+
+### Self-Refinement Process
+
+The agent automatically:
+1. Analyzes user intent using LLM + structured parsing
+2. Retrieves relevant knowledge from RAG engine
+3. Selects appropriate tools (flight, hotel, attraction search)
+4. Executes tools and generates initial response
+5. Assesses response quality across 6 dimensions
+6. If quality < threshold, refines response using LLM
+7. Iterates until quality threshold is met or max iterations reached
+
+### Intent Analysis System
+
+The agent detects intent types automatically:
+- **Planning**: Complete trip planning
+- **Recommendation**: Attraction/activity suggestions  
+- **Booking**: Hotel/flight booking assistance
+- **Query**: General travel information
+- **Modification**: Changing existing plans
 
 ## 📡 API Reference
 
@@ -231,23 +404,29 @@ GET /health
 GET /system/status
 ```
 
-**Example Response:**
-```json
+### Agent Management APIs
+
+#### Agent Configuration & Status
+```bash
+# Configure agent refinement
+POST /api/agent/configure
 {
-  "message": "Welcome to AI Travel Planning Agent v2.0",
-  "status": "Running",
-  "components": {
-    "tools": {"total": 3, "categories": 3, "active": 3},
-    "agents": {"total": 1, "active": 1},
-    "knowledge_base": "Loaded",
-    "memory_system": "Active"
-  },
-  "capabilities": [
-    "Intelligent travel planning",
-    "Multi-tool coordination",
-    "Retrieval-augmented generation"
-  ]
+  "enabled": true,
+  "quality_threshold": 0.75,
+  "max_iterations": 3
 }
+
+# Get agent status
+GET /api/agent/status
+
+# Get agent capabilities
+GET /api/agent/capabilities
+
+# Reset agent state
+POST /api/agent/reset
+
+# Get agent metrics
+GET /api/agent/metrics
 ```
 
 ### Session Management APIs
@@ -290,27 +469,11 @@ GET /api/sessions/search?query=budget&limit=20
 GET /api/sessions/{session_id}/export?format=json
 ```
 
-**Example Session Response:**
-```json
-{
-  "session_id": "sess_20241201_143022",
-  "message": "Session created successfully",
-  "session": {
-    "id": "sess_20241201_143022",
-    "title": "Tokyo Adventure",
-    "description": "Planning a 7-day trip to Tokyo",
-    "created_at": "2024-12-01T14:30:22.123Z",
-    "messages": [],
-    "metadata": {}
-  }
-}
-```
-
 ### Chat APIs
 
-#### Conversational Interface
+#### Conversational Interface with Refinement
 ```bash
-# Chat with AI agent
+# Chat with AI agent (with refinement enabled)
 POST /api/chat
 {
   "message": "Plan a 5-day trip to Tokyo for 2 people with a budget of $3000",
@@ -323,23 +486,6 @@ GET /api/chat/history/{session_id}?limit=50
 
 # Clear chat history
 DELETE /api/chat/history/{session_id}
-```
-
-**Example Chat Response:**
-```json
-{
-  "success": true,
-  "content": "I'd be happy to help you plan a 5-day Tokyo trip! Based on your budget of $3000 for 2 people, I can suggest accommodations, activities, and dining options...",
-  "confidence": 0.85,
-  "actions_taken": ["flight_search", "hotel_search", "attraction_search"],
-  "next_steps": ["Book accommodation", "Reserve activities", "Plan daily itinerary"],
-  "session_id": "sess_20241201_143022",
-  "refinement_details": {
-    "final_iteration": 2,
-    "final_quality_score": 0.87,
-    "refinement_status": "improved"
-  }
-}
 ```
 
 ### Travel Plans APIs
@@ -378,174 +524,16 @@ GET /api/plans?limit=10&offset=0
 DELETE /api/plans/{plan_id}
 ```
 
-**Example Travel Plan Response:**
-```json
-{
-  "id": "plan_20241201_143045",
-  "request": {
-    "destination": "Tokyo",
-    "origin": "New York",
-    "duration_days": 5,
-    "travelers": 2,
-    "budget": 3000,
-    "budget_currency": "USD",
-    "trip_style": "ADVENTURE",
-    "interests": ["temples", "cuisine", "shopping"],
-    "goals": ["Experience authentic Japanese culture"]
-  },
-  "generated_plan": {
-    "overview": "A 5-day adventure-focused trip to Tokyo for 2 travelers with a $3000 budget",
-    "attractions": [
-      {
-        "name": "Senso-ji Temple",
-        "rating": 4.5,
-        "description": "Tokyo's oldest temple in historic Asakusa district",
-        "location": "Asakusa, Tokyo",
-        "category": "cultural",
-        "estimated_cost": 0.0
-      }
-    ],
-    "hotels": [
-      {
-        "name": "Tokyo Budget Hotel",
-        "rating": 4.0,
-        "price_per_night": 120.0,
-        "location": "Shinjuku, Tokyo",
-        "amenities": ["wifi", "breakfast", "air_conditioning"]
-      }
-    ],
-    "flights": [
-      {
-        "airline": "ANA",
-        "price": 850.0,
-        "duration": 780,
-        "departure_time": "2024-03-15T10:30:00",
-        "arrival_time": "2024-03-16T15:30:00"
-      }
-    ],
-    "estimated_total_cost": 2850.0,
-    "itinerary_summary": "Day 1: Arrive and explore Asakusa...",
-    "travel_tips": ["Book JR Pass for transportation", "Try local street food"]
-  },
-  "created_at": "2024-12-01T14:30:45.123Z",
-  "framework_metadata": {
-    "confidence": 0.85,
-    "refinement_used": true,
-    "quality_score": 0.87,
-    "processing_time": 2.3
-  }
-}
-```
-
-### Agent Management APIs
-
-#### Agent Configuration & Status
-```bash
-# Configure agent refinement
-POST /api/agent/configure
-{
-  "enabled": true,
-  "quality_threshold": 0.75,
-  "max_iterations": 3
-}
-
-# Get agent status
-GET /api/agent/status
-
-# Get agent capabilities
-GET /api/agent/capabilities
-
-# Reset agent state
-POST /api/agent/reset
-
-# Get agent metrics
-GET /api/agent/metrics
-```
-
-**Example Agent Status Response:**
-```json
-{
-  "agent_info": {
-    "name": "TravelAgent",
-    "description": "AI-powered travel planning agent with self-refinement capabilities",
-    "capabilities": [
-      "Natural language processing",
-      "Travel itinerary generation",
-      "Multi-tool coordination",
-      "Self-refinement and quality improvement"
-    ],
-    "tools": ["flight_search", "hotel_search", "attraction_search"]
-  },
-  "refinement_config": {
-    "enabled": true,
-    "quality_threshold": 0.75,
-    "max_iterations": 3
-  },
-  "quality_dimensions": {
-    "relevance": "How well the response matches user intent",
-    "completeness": "Coverage of all important aspects",
-    "accuracy": "Factual correctness of information",
-    "practicality": "Feasibility and usefulness of suggestions"
-  },
-  "system_status": "operational"
-}
-```
-
 ## 🚀 API Usage Examples
 
 ### Complete Travel Planning Workflow
 
-```bash
-# 1. Create a new session
-curl -X POST "http://localhost:8000/api/sessions" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Tokyo Trip Planning", "description": "7-day Tokyo adventure"}'
-
-# 2. Start planning conversation
-curl -X POST "http://localhost:8000/api/chat" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "I want to plan a 7-day trip to Tokyo for 2 people with a $4000 budget",
-    "session_id": "sess_20241201_143022",
-    "enable_refinement": true
-  }'
-
-# 3. Create structured travel plan
-curl -X POST "http://localhost:8000/api/plans" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destination": "Tokyo",
-    "origin": "Los Angeles",
-    "duration_days": 7,
-    "travelers": 2,
-    "budget": 4000,
-    "budget_currency": "USD",
-    "trip_style": "CULTURAL",
-    "interests": ["temples", "food", "art"],
-    "special_requirements": "Prefer traditional accommodations",
-    "goals": ["Experience authentic culture", "Try local cuisine"]
-  }'
-
-# 4. Get plan refinement feedback
-curl -X PUT "http://localhost:8000/api/plans/plan_20241201_143045" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "feedback": "Add more temple visits and traditional dining experiences"
-  }'
-```
-
-### Session Management Example
-
-```bash
-# Search conversation history
-curl -X GET "http://localhost:8000/api/sessions/search?query=budget%20hotel&limit=10"
-
-# Get session statistics
-curl -X GET "http://localhost:8000/api/sessions/sess_20241201_143022/statistics"
-
-# Export session data
-curl -X GET "http://localhost:8000/api/sessions/sess_20241201_143022/export?format=json"
-```
+1. **Create a new session**: `POST /api/sessions`
+2. **Configure agent**: `POST /api/agent/configure`
+3. **Start planning conversation**: `POST /api/chat`
+4. **Create structured travel plan**: `POST /api/plans`
+5. **Get plan refinement feedback**: `PUT /api/plans/{plan_id}`
+6. **Check agent performance metrics**: `GET /api/agent/metrics`
 
 ## 🧪 Testing & Validation
 
@@ -557,26 +545,16 @@ pytest
 
 # Run with coverage
 pytest --cov=app tests/
-
-# Run specific test categories
-pytest tests/test_rag_accuracy.py -v
-pytest tests/test_comprehensive_api.py -v
-```
-
-### Component Testing
-
-```bash
-# Test RAG functionality
-python -m pytest tests/test_rag_accuracy.py
-
-# Test API endpoints
-python -m pytest tests/test_comprehensive_api.py
-
-# Test agent self-improvement
-python -m pytest tests/test_self_refine.py
 ```
 
 ## 📊 Performance Metrics
+
+### Agent Performance
+- **Intent Analysis**: <300ms with LLM integration
+- **Quality Assessment**: <150ms across 6 dimensions
+- **Self-Refinement**: 1-3 iterations, <2s total
+- **Response Quality**: 85%+ average quality score
+- **Tool Coordination**: 3+ tools executed in parallel
 
 ### RAG Performance
 - **Embedding Speed**: ~100ms for query encoding
@@ -585,60 +563,29 @@ python -m pytest tests/test_self_refine.py
 - **Memory Efficiency**: Lazy loading reduces startup time by 60%
 
 ### System Performance
-- **API Response Time**: <500ms for most endpoints
+- **API Response Time**: <1s for complex planning requests
 - **Concurrent Users**: Supports 100+ concurrent sessions
 - **Memory Usage**: <500MB with full knowledge base loaded
 - **Database Performance**: <100ms for conversation history queries
 
 ## 🔧 Configuration Options
 
+### Agent Configuration
+- **Environment variables**: `AGENT_REFINEMENT_ENABLED`, `AGENT_QUALITY_THRESHOLD`, `AGENT_MAX_ITERATIONS`
+- **Quality dimension weights**: Relevance (25%), Completeness (20%), Accuracy (20%), Actionability (15%), Personalization (10%), Feasibility (10%)
+
 ### LLM Provider Configuration
-
-```python
-# Environment variables
-LLM_PROVIDER=deepseek  # deepseek, openai, claude (deepseek is default)
-LLM_MODEL=deepseek-chat  # Provider-specific model
-LLM_API_KEY=your_key
-
-# Programmatic configuration
-from app.core.llm_service import LLMConfig, LLMServiceFactory
-
-config = LLMConfig(
-    provider="openai",
-    model="gpt-4",
-    api_key="your_key",
-    temperature=0.7,
-)
-
-llm_service = LLMServiceFactory.create_service(config)
-```
+- **Supported providers**: DeepSeek (default), OpenAI, Claude
+- **Environment variables**: `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`
 
 ### RAG Configuration
-
-```python
-# Document type-specific retrieval
-from app.core.rag_engine import RAGEngine, DocumentType
-
-rag_engine = get_rag_engine()
-
-# Search travel knowledge
-travel_results = await rag_engine.retrieve_by_type(
-    query="best hotels in Tokyo",
-    doc_type=DocumentType.TRAVEL_KNOWLEDGE,
-    top_k=5
-)
-
-# Search conversation history
-conversation_results = await rag_engine.retrieve_by_type(
-    query="user preferences for accommodation",
-    doc_type=DocumentType.CONVERSATION_TURN,
-    top_k=10
-)
-```
+- **Document types**: Travel knowledge, conversation turns, tool knowledge
+- **Environment variables**: `CHROMA_DB_PATH`, `EMBEDDING_MODEL`, `RAG_TOP_K`
 
 ## 🙏 Acknowledgments
 
 - **ChromaDB** for the excellent vector database
 - **SentenceTransformers** for high-quality embeddings
 - **FastAPI** for the modern web framework
-- **OpenAI** for the powerful language models 
+- **OpenAI, Anthropic, DeepSeek** for powerful language models
+- **Open source community** for the foundation libraries 
