@@ -168,78 +168,17 @@ class KnowledgeBase:
             for knowledge in knowledge_items:
                 self.knowledge_items[knowledge.id] = knowledge
             
-            # Load default knowledge if no files found
-            if not self.knowledge_items:
-                logger.info("No knowledge files found, loading default knowledge...")
-                await self._load_default_travel_knowledge()
-            
-            logger.info(f"Loaded {len(self.knowledge_items)} knowledge items")
+            # Log appropriate message based on what was loaded
+            if self.knowledge_items:
+                logger.info(f"Loaded {len(self.knowledge_items)} knowledge items from files")
+            else:
+                logger.warning("No knowledge files found in the documents directory")
+                logger.info("Please ensure knowledge files are present in app/knowledge/documents/")
             
         except Exception as e:
             logger.error(f"Failed to load knowledge data: {e}")
-            await self._load_default_travel_knowledge()
-    
-    async def _load_default_travel_knowledge(self):
-        """Load default travel knowledge data"""
-        default_knowledge = [
-            {
-                "id": "paris_eiffel_tower",
-                "title": "Eiffel Tower - Paris",
-                "content": """The Eiffel Tower is an iconic landmark in Paris, France. Built in 1889, it stands 324 meters tall and offers spectacular views of the city.
-
-**Visiting Information:**
-- Opening Hours: 9:00 AM - 11:00 PM (extended hours in summer)
-- Ticket Prices: Adults €29.40 (top floor), €18.10 (second floor)
-- Best Time to Visit: Early morning or late evening to avoid crowds
-- Location: Champ de Mars, 5 Avenue Anatole France, 75007 Paris
-
-**Tips:**
-- Book tickets online in advance to skip lines
-- Visit during sunset for the most beautiful views
-- Take the stairs to the second floor for a discount
-- Security checks can cause delays, arrive early""",
-                "category": "destinations",
-                "location": "Paris, France",
-                "tags": ["Paris", "Eiffel Tower", "Landmark", "France", "Europe"],
-                "language": "en"
-            },
-            {
-                "id": "japan_tourist_visa",
-                "title": "Japan Tourist Visa Requirements",
-                "content": """Information for obtaining a tourist visa to Japan.
-
-**Required Documents:**
-1. **Passport**: Valid for at least 6 months, with 2 blank pages
-2. **Visa Application Form**: Completed and signed
-3. **Photo**: 2-inch color photo on white background
-4. **Employment Certificate**: Company letterhead with position and salary
-5. **Bank Statements**: Last 6 months showing sufficient funds
-6. **Travel Itinerary**: Detailed travel plan with dates and locations
-7. **Hotel Reservations**: Confirmed bookings for entire stay
-8. **Flight Reservations**: Round-trip flight booking confirmation
-
-**Application Process:**
-1. Prepare documents (3-5 business days)
-2. Submit application at consulate or authorized agency
-3. Processing time: 5-7 business days
-4. Collect passport with visa
-
-**Important Notes:**
-- Apply 1 month in advance for regular season
-- Apply 2 months in advance for peak seasons (cherry blossom, autumn)
-- First-time applicants recommended to use authorized travel agencies""",
-                "category": "practical",
-                "location": "Japan",
-                "tags": ["Japan", "Visa", "Tourism", "Application", "Requirements"],
-                "language": "en"
-            }
-        ]
-        
-        for knowledge_data in default_knowledge:
-            knowledge = TravelKnowledge(**knowledge_data)
-            self.knowledge_items[knowledge.id] = knowledge
-            
-        logger.info(f"Created {len(default_knowledge)} default knowledge items")
+            # Don't fall back to hardcoded data - let the system handle empty knowledge gracefully
+            logger.warning("Knowledge base will operate with empty knowledge set")
     
     async def _build_index(self):
         """Build vector index for all knowledge items"""
