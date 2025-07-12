@@ -7,9 +7,7 @@ Features include text search, nearby search, place details, and photo retrieval.
 
 import os
 from typing import List, Optional, Dict, Any
-from datetime import datetime
 import aiohttp
-import json
 from pydantic import BaseModel, Field
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
 
@@ -62,10 +60,8 @@ class AttractionSearchTool(BaseTool):
         )
         super().__init__(metadata)
         
-        # Load API key from environment
-        self.api_key = os.getenv("ATTRACTION_SEARCH_API_KEY")
-        if not self.api_key:
-            raise ValueError("ATTRACTION_SEARCH_API_KEY environment variable is required")
+        # API key will be checked when the tool is actually used
+        self.api_key = None
         
         # Google Places API (New) endpoints
         self.base_url = "https://places.googleapis.com/v1"
@@ -74,9 +70,19 @@ class AttractionSearchTool(BaseTool):
         self.place_details_url = f"{self.base_url}/places"
         self.place_photos_url = f"{self.base_url}/places"
 
+    def _ensure_api_key(self) -> None:
+        """Ensure API key is available, checking environment if not already loaded."""
+        if not self.api_key:
+            self.api_key = os.getenv("ATTRACTION_SEARCH_API_KEY")
+            if not self.api_key:
+                raise ValueError("ATTRACTION_SEARCH_API_KEY environment variable is required")
+
     async def _execute(self, input_data: AttractionSearchInput, context: ToolExecutionContext) -> AttractionSearchOutput:
         """Execute attraction search using Google Places API (New)"""
         try:
+            # Ensure API key is available before proceeding
+            self._ensure_api_key()
+            
             # Determine search strategy based on input
             if input_data.query:
                 # Use text search for specific queries

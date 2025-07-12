@@ -2,7 +2,7 @@
 System Endpoints - Health checks and system status
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from app.tools.base_tool import tool_registry
 from app.agents.base_agent import agent_manager

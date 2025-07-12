@@ -9,11 +9,9 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel
 import openai
 import anthropic
-import httpx
 import json
 import logging
 import os
-import asyncio
 import re
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -51,7 +49,6 @@ class BaseLLMService(ABC):
     def __init__(self, config: LLMConfig):
         self.config = config
         self.model = config.model
-        self.mock_mode = False  # Add mock_mode property for compatibility
     
     @abstractmethod
     async def chat_completion(

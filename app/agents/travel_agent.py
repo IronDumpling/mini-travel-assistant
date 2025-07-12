@@ -12,7 +12,6 @@ TODO: Implement the following features
 from typing import Dict, List, Any, Optional
 import logging
 import time
-import asyncio
 from app.agents.base_agent import BaseAgent, AgentMessage, AgentResponse, AgentStatus, QualityAssessment
 from app.tools.base_tool import tool_registry
 from app.tools.tool_executor import get_tool_executor
@@ -196,19 +195,13 @@ class TravelAgent(BaseAgent):
         try:
             from app.core.prompt_manager import prompt_manager, PromptType
             
-            if self.llm_service and not self.llm_service.mock_mode:
+            if self.llm_service:
                 # Use prompt manager for LLM-based travel response refinement
                 refinement_prompt = prompt_manager.get_prompt(
                     PromptType.RESPONSE_REFINEMENT,
-                    user_message=original_message.content,
-                    current_response=current_response.content,
+                    original_response=current_response.content,
                     quality_assessment=quality_assessment.dict(),
-                    improvement_suggestions=quality_assessment.improvement_suggestions,
-                    dimension_scores=quality_assessment.dimension_scores,
-                    actions_taken=current_response.actions_taken,
-                    next_steps=current_response.next_steps,
-                    agent_type="travel_agent",  # Add travel-specific context
-                    travel_dimensions=["personalization", "feasibility"]  # Travel-specific dimensions
+                    improvement_areas=quality_assessment.improvement_suggestions
                 )
                 
                 # Use structured completion for response refinement
@@ -246,8 +239,8 @@ class TravelAgent(BaseAgent):
                 )
                 
         except Exception as e:
+            logger.error(f"LLM-based refinement failed: {e}")
             # Fall back to travel-specific heuristic refinement
-            pass
         
         # Fallback to travel-specific heuristic refinement
         improved_content = current_response.content
@@ -388,7 +381,7 @@ class TravelAgent(BaseAgent):
         )
         
         try:
-            if self.llm_service and not self.llm_service.mock_mode:
+            if self.llm_service:
                 # Use real LLM service with structured output
                 schema = prompt_manager.get_schema(PromptType.INTENT_ANALYSIS)
                 response = await self.llm_service.structured_completion(
@@ -721,7 +714,7 @@ class TravelAgent(BaseAgent):
                 intent_analysis=structured_analysis
             )
             
-            if self.llm_service and not self.llm_service.mock_mode:
+            if self.llm_service:
                 # Use real LLM for tool selection
                 schema = prompt_manager.get_schema(PromptType.TOOL_SELECTION)
                 response = await self.llm_service.structured_completion(
@@ -941,28 +934,18 @@ class TravelAgent(BaseAgent):
                     intent_analysis=intent
                 )
                 
-                if not self.llm_service.mock_mode:
-                    # Use structured completion for requirement extraction
-                    schema = prompt_manager.get_schema(PromptType.REQUIREMENT_EXTRACTION)
-                    response = await self.llm_service.structured_completion(
-                        messages=[{"role": "user", "content": requirement_prompt}],
-                        response_schema=schema,
-                        temperature=0.3,
-                        max_tokens=600
-                    )
-                    
-                    # Use structured response directly
-                    enhanced_requirements = response
-                    base_requirements.update(enhanced_requirements)
-                else:
-                    # Use basic completion for mock mode
-                    response = await self.llm_service.chat_completion([
-                        {"role": "user", "content": requirement_prompt}
-                    ])
-                    
-                    # Parse LLM response (simplified for now)
-                    enhanced_requirements = self._parse_llm_requirements(response.get("content", ""))
-                    base_requirements.update(enhanced_requirements)
+                # Use structured completion for requirement extraction
+                schema = prompt_manager.get_schema(PromptType.REQUIREMENT_EXTRACTION)
+                response = await self.llm_service.structured_completion(
+                    messages=[{"role": "user", "content": requirement_prompt}],
+                    response_schema=schema,
+                    temperature=0.3,
+                    max_tokens=600
+                )
+                
+                # Use structured response directly
+                enhanced_requirements = response
+                base_requirements.update(enhanced_requirements)
                 
             except Exception as e:
                 logger.warning(f"LLM requirement analysis failed: {e}")
@@ -1605,7 +1588,7 @@ class TravelAgent(BaseAgent):
             
             if execution_result["success"]:
                 # Try to use LLM with prompt manager for response generation
-                if self.llm_service and not self.llm_service.mock_mode:
+                if self.llm_service:
                     try:
                         # Build structured context for LLM
                         user_message = execution_result.get("original_message", "")

@@ -12,7 +12,7 @@ TODO: Improve the following features
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import aiohttp
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
 
 class Flight(BaseModel):

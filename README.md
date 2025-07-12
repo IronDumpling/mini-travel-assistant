@@ -167,7 +167,7 @@ OPENAI_API_KEY=your_open_ai_api_key
 DEEPSEEK_API_KEY=your_deepseek_api_key
 
 # LLM Configuration
-LLM_PROVIDER=deepseek        # deepseek, openai, claude, or mock (deepseek is default)
+LLM_PROVIDER=deepseek        # deepseek, openai, claude (deepseek is default)
 LLM_MODEL=deepseek-chat      # Model to use
 LLM_API_KEY=your_api_key_here
 LLM_TEMPERATURE=0.7
@@ -192,9 +192,6 @@ HOST=0.0.0.0
 PORT=8000
 DEBUG=True
 LOG_LEVEL=INFO
-
-# Development Mode
-MOCK_MODE=true               # Set to false for production
 ```
 
 ### 3. Launch the System
@@ -599,7 +596,7 @@ python -m pytest tests/test_self_refine.py
 
 ```python
 # Environment variables
-LLM_PROVIDER=deepseek  # deepseek, openai, claude, mock (deepseek is default)
+LLM_PROVIDER=deepseek  # deepseek, openai, claude (deepseek is default)
 LLM_MODEL=deepseek-chat  # Provider-specific model
 LLM_API_KEY=your_key
 
@@ -611,7 +608,6 @@ config = LLMConfig(
     model="gpt-4",
     api_key="your_key",
     temperature=0.7,
-    mock_mode=False
 )
 
 llm_service = LLMServiceFactory.create_service(config)

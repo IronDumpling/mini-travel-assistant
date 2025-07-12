@@ -13,8 +13,7 @@ TODO: Implement the following features
 """
 
 from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
 from pydantic import BaseModel, Field
 from app.core.rag_engine import get_rag_engine, Document
 import logging
