@@ -645,23 +645,54 @@ class AgentManager:
 
     async def send_message(self, message: AgentMessage) -> AgentResponse:
         """Send message to agent"""
+
+        # Validate message
+        if not message.receiver or not message.content:
+            return AgentResponse(
+                success=False,
+                content="I couldn't process your message. Please make sure you're sending to a valid agent with some content.",
+                confidence=0.0,
+            )
+
+        # Get agent
         agent = self.get_agent(message.receiver)
         if not agent:
             return AgentResponse(
-                success=False, content=f"Agent '{message.receiver}' not found"
+                success=False,
+                content=f"I couldn't find the agent '{message.receiver}'. Available agents: {', '.join(self.list_agents())}",
+                confidence=0.0,
             )
 
-        agent.add_message(message)
-        response = await agent.process_message(message)
+        # Add message to history (non-critical, continue if it fails)
+        try:
+            agent.add_message(message)
+        except Exception:
+            pass  # Silently continue - history is not critical
 
-        # Add response to conversation history as well
-        response_message = AgentMessage(
-            sender=agent.name,
-            receiver=message.sender,
-            content=response.content,
-            metadata={"response_to": message.id, "success": response.success},
-        )
-        agent.add_message(response_message)
+        # Process message with timeout
+        try:
+            response = await asyncio.wait_for(
+                agent.process_message(message), timeout=30.0
+            )
+        except asyncio.TimeoutError:
+            agent.status = AgentStatus.ERROR
+            return AgentResponse(
+                success=False,
+                content="I'm taking too long to respond. Please try again in a moment.",
+                confidence=0.0,
+            )
+
+        # Add response to history (non-critical)
+        try:
+            response_message = AgentMessage(
+                sender=agent.name,
+                receiver=message.sender,
+                content=response.content,
+                metadata={"response_to": message.id, "success": response.success},
+            )
+            agent.add_message(response_message)
+        except Exception:
+            pass  # Silently continue - history is not critical
 
         return response
 
