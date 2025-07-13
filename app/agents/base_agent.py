@@ -587,6 +587,15 @@ class BaseAgent(ABC):
 
     def add_message(self, message: AgentMessage):
         """Add message to conversation history"""
+
+        # Skip adding if content is empty or None
+        if not message.content or not message.content.strip():
+            return
+
+        # Validate message has required fields
+        if not message.sender or not message.receiver:
+            return
+
         self.conversation_history.append(message)
         # Keep history within reasonable range
         if len(self.conversation_history) > 100:
@@ -594,7 +603,17 @@ class BaseAgent(ABC):
 
     def get_conversation_context(self, last_n: int = 10) -> List[AgentMessage]:
         """Get recent conversation context"""
-        return self.conversation_history[-last_n:]
+        # Ensure last_n is positive
+        if last_n <= 0:
+            return []
+
+        # Ensure we have a conversation history
+        if not self.conversation_history:
+            return []
+
+        # Ensure we don't exceed the list length
+        actual_n = min(last_n, len(self.conversation_history))
+        return self.conversation_history[-actual_n:]
 
     def get_status(self) -> Dict[str, Any]:
         """Get agent status information"""
