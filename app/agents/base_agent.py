@@ -108,28 +108,71 @@ class BaseAgent(ABC):
         iteration = 0
         current_response = None
         refinement_history = []
+        start_time = datetime.now(timezone.utc)
 
         while iteration < self.max_refine_iterations:
             iteration += 1
 
-            # Generate response
+            # Generate response with timeout
             if iteration == 1:
-                current_response = await self.process_message(message)
+                try:
+                    current_response = await asyncio.wait_for(
+                        self.process_message(message),
+                        timeout=15.0,  # 15 second timeout per iteration
+                    )
+                except asyncio.TimeoutError:
+                    current_response = AgentResponse(
+                        success=False,
+                        content="I'm taking too long to process your request. Please try again.",
+                        confidence=0.0,
+                    )
+                    break
             else:
                 # Refine based on previous assessment
                 if current_response is None:
-                    raise ValueError("Current response is None during refinement")
+                    current_response = AgentResponse(
+                        success=False,
+                        content="Unable to refine response - no previous response available",
+                        confidence=0.0,
+                    )
+                    break
 
-                current_response = await self._refine_response(
-                    message,
-                    current_response,
-                    refinement_history[-1] if refinement_history else None,
+                try:
+                    current_response = await asyncio.wait_for(
+                        self._refine_response(
+                            message,
+                            current_response,
+                            refinement_history[-1] if refinement_history else None,
+                        ),
+                        timeout=10.0,  # 10 second timeout for refinement
+                    )
+                except asyncio.TimeoutError:
+                    # Continue with current response if refinement times out
+                    current_response.metadata["refinement_timeout"] = True
+                    break
+
+            # Assess quality with timeout and fallback
+            try:
+                quality_assessment = await asyncio.wait_for(
+                    self._assess_response_quality(message, current_response, iteration),
+                    timeout=8.0,  # 8 second timeout for quality assessment
                 )
-
-            # Assess quality
-            quality_assessment = await self._assess_response_quality(
-                message, current_response, iteration
-            )
+            except asyncio.TimeoutError:
+                # Use fallback quality assessment
+                quality_assessment = QualityAssessment(
+                    overall_score=0.5,
+                    dimension_scores={
+                        "relevance": 0.5,
+                        "completeness": 0.5,
+                        "accuracy": 0.5,
+                        "actionability": 0.5,
+                    },
+                    improvement_suggestions=[
+                        "Quality assessment timed out, using fallback"
+                    ],
+                    meets_threshold=False,
+                    assessment_details={"fallback": True, "iteration": iteration},
+                )
 
             refinement_history.append(quality_assessment)
 
@@ -146,6 +189,9 @@ class BaseAgent(ABC):
                         }
                         for i, assess in enumerate(refinement_history)
                     ],
+                    "total_time": (
+                        datetime.now(timezone.utc) - start_time
+                    ).total_seconds(),
                 }
             )
 
@@ -153,6 +199,16 @@ class BaseAgent(ABC):
             if quality_assessment.meets_threshold:
                 current_response.metadata["refinement_status"] = "completed_early"
                 break
+
+            # Check for diminishing returns (stop if quality isn't improving)
+            if iteration > 1 and len(refinement_history) >= 2:
+                current_score = quality_assessment.overall_score
+                previous_score = refinement_history[-2].overall_score
+                if current_score <= previous_score + 0.05:  # No significant improvement
+                    current_response.metadata["refinement_status"] = (
+                        "diminishing_returns"
+                    )
+                    break
 
             # If this is the last iteration, mark as completed
             if iteration >= self.max_refine_iterations:
@@ -168,6 +224,7 @@ class BaseAgent(ABC):
             current_response = AgentResponse(
                 success=False, content="Failed to process message", confidence=0.0
             )
+
         return current_response
 
     async def _assess_response_quality(
