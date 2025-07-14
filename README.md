@@ -1,4 +1,4 @@
-# Mini AI Travel Planning Agent
+# Mini AI Travel Assistant
 
 An intelligent travel planning system powered by **RAG (Retrieval-Augmented Generation)** and **multi-provider LLM architecture**, featuring advanced semantic search, conversation memory, and intelligent tool orchestration with **self-refinement capabilities**.
 
