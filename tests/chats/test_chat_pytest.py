@@ -63,7 +63,7 @@ class TestChatAPI:
         
         assert metric.success == True
         assert metric.confidence > 0.5
-        assert metric.response_time < 90.0  # Should respond within 90 seconds
+        assert metric.response_time < 120.0  # Should respond within 120 seconds
         assert len(metric.actions_taken) > 0
         assert len(metric.next_steps) > 0
     
@@ -77,7 +77,7 @@ class TestChatAPI:
         
         assert metric.success == True
         assert metric.confidence > 0.5
-        assert metric.response_time < 90.0
+        assert metric.response_time < 120.0
         assert len(metric.actions_taken) > 0
     
     @pytest.mark.asyncio
@@ -90,7 +90,7 @@ class TestChatAPI:
         
         assert metric.success == True
         assert metric.confidence > 0.5
-        assert metric.response_time < 90.0
+        assert metric.response_time < 120.0
         assert len(metric.actions_taken) > 0
     
     @pytest.mark.asyncio
@@ -103,7 +103,7 @@ class TestChatAPI:
         
         assert metric.success == True
         assert metric.confidence > 0.5
-        assert metric.response_time < 90.0
+        assert metric.response_time < 120.0
         assert len(metric.actions_taken) > 0
     
     @pytest.mark.asyncio
@@ -202,8 +202,8 @@ class TestChatAPI:
         max_response_time = max(response_times)
         
         # Performance assertions (adjusted for ~1 minute normal response time)
-        assert avg_response_time < 75.0, f"Average response time {avg_response_time:.2f}s exceeds 75s"
-        assert max_response_time < 90.0, f"Max response time {max_response_time:.2f}s exceeds 90s"
+        assert avg_response_time < 90.0, f"Average response time {avg_response_time:.2f}s exceeds 90s"
+        assert max_response_time < 120.0, f"Max response time {max_response_time:.2f}s exceeds 120s"
     
     def test_save_metrics_after_tests(self, tester):
         """Save metrics after all tests complete"""

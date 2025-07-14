@@ -1,10 +1,10 @@
 """
-Simple test script to check if the Chat API server is working
+Connectivity test script to check if the Chat API server is working
+Tests basic server connectivity, sessions API, and chat API functionality
 """
 
 import asyncio
 import httpx
-import json
 from datetime import datetime
 
 
@@ -46,7 +46,7 @@ async def test_sessions_api():
         try:
             # Test creating a session
             session_data = {
-                "title": "Simple Test Session",
+                "title": "Connectivity Test Session",
                 "description": "Testing if sessions API works"
             }
             
@@ -88,7 +88,7 @@ async def test_chat_api(session_id):
             chat_data = {
                 "message": "Hello, can you help me plan a simple day trip to Paris?",
                 "session_id": session_id,
-                "enable_refinement": False  # Keep it simple for this test
+                "enable_refinement": False  # Keep it simple for connectivity test
             }
             
             print("📤 Sending chat message...")
@@ -129,8 +129,8 @@ async def test_chat_api(session_id):
 
 
 async def main():
-    """Main test function"""
-    print("🚀 Simple Chat API Test")
+    """Main connectivity test function"""
+    print("🚀 Chat API Connectivity Test")
     print("=" * 40)
     
     # Test server connection
@@ -148,17 +148,18 @@ async def main():
     chat_success = await test_chat_api(session_id)
     
     print("\n" + "=" * 40)
-    print("📊 Test Summary:")
+    print("📊 Connectivity Test Summary:")
     print("✅ Server Connection: OK")
     print("✅ Sessions API: OK")
     print(f"{'✅' if chat_success else '❌'} Chat API: {'OK' if chat_success else 'FAILED'}")
     
     if chat_success:
-        print("\n🎉 All tests passed! Your Chat API is working correctly.")
+        print("\n🎉 All connectivity tests passed! Your Chat API is working correctly.")
         print("💡 You can now run the full test suite with:")
-        print("   python run_tests.py")
+        print("   python run_tests.py                    # Reliable tests without refinement")
+        print("   python run_tests.py --refinement       # Full tests with refinement (slower)")
     else:
-        print("\n⚠️  Basic tests passed but chat API had issues.")
+        print("\n⚠️  Basic connectivity tests passed but chat API had issues.")
         print("💡 Check the server logs for more details.")
 
 

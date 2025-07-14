@@ -4,11 +4,18 @@ Metrics Analyzer for Chat API Test Results
 
 import json
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
-import matplotlib.pyplot as plt
 from dataclasses import dataclass
+
+try:
+    import matplotlib.pyplot as plt
+    PLOTTING_AVAILABLE = True
+except ImportError:
+    PLOTTING_AVAILABLE = False
+    print("Warning: matplotlib not available. Visualizations will be skipped.")
 
 
 @dataclass
@@ -162,22 +169,28 @@ class MetricsAnalyzer:
         with_refinement = self.df[self.df['enable_refinement'] == True]
         without_refinement = self.df[self.df['enable_refinement'] == False]
         
-        comparison = {
-            'with_refinement': {
+        comparison = {}
+        
+        # Only include data for groups that exist
+        if len(with_refinement) > 0:
+            successful_with = with_refinement[with_refinement['success']]
+            comparison['with_refinement'] = {
                 'count': len(with_refinement),
                 'success_rate': with_refinement['success'].mean() * 100,
                 'avg_response_time': with_refinement['response_time'].mean(),
-                'avg_confidence': with_refinement[with_refinement['success']]['confidence'].mean(),
+                'avg_confidence': successful_with['confidence'].mean() if len(successful_with) > 0 else 0.0,
                 'median_response_time': with_refinement['response_time'].median()
-            },
-            'without_refinement': {
+            }
+        
+        if len(without_refinement) > 0:
+            successful_without = without_refinement[without_refinement['success']]
+            comparison['without_refinement'] = {
                 'count': len(without_refinement),
                 'success_rate': without_refinement['success'].mean() * 100,
                 'avg_response_time': without_refinement['response_time'].mean(),
-                'avg_confidence': without_refinement[without_refinement['success']]['confidence'].mean(),
+                'avg_confidence': successful_without['confidence'].mean() if len(successful_without) > 0 else 0.0,
                 'median_response_time': without_refinement['response_time'].median()
             }
-        }
         
         return comparison
     
@@ -214,29 +227,42 @@ class MetricsAnalyzer:
         # Refinement Impact
         report.append("REFINEMENT IMPACT ANALYSIS")
         report.append("-" * 30)
-        with_ref = refinement_comparison['with_refinement']
-        without_ref = refinement_comparison['without_refinement']
         
-        report.append(f"With Refinement ({with_ref['count']} tests):")
-        report.append(f"  Success Rate: {with_ref['success_rate']:.1f}%")
-        report.append(f"  Avg Response Time: {with_ref['avg_response_time']:.2f}s")
-        report.append(f"  Avg Confidence: {with_ref['avg_confidence']:.2f}")
-        report.append("")
+        if 'with_refinement' in refinement_comparison:
+            with_ref = refinement_comparison['with_refinement']
+            report.append(f"With Refinement ({with_ref['count']} tests):")
+            report.append(f"  Success Rate: {with_ref['success_rate']:.1f}%")
+            report.append(f"  Avg Response Time: {with_ref['avg_response_time']:.2f}s")
+            report.append(f"  Avg Confidence: {with_ref['avg_confidence']:.2f}")
+            report.append("")
         
-        report.append(f"Without Refinement ({without_ref['count']} tests):")
-        report.append(f"  Success Rate: {without_ref['success_rate']:.1f}%")
-        report.append(f"  Avg Response Time: {without_ref['avg_response_time']:.2f}s")
-        report.append(f"  Avg Confidence: {without_ref['avg_confidence']:.2f}")
-        report.append("")
+        if 'without_refinement' in refinement_comparison:
+            without_ref = refinement_comparison['without_refinement']
+            report.append(f"Without Refinement ({without_ref['count']} tests):")
+            report.append(f"  Success Rate: {without_ref['success_rate']:.1f}%")
+            report.append(f"  Avg Response Time: {without_ref['avg_response_time']:.2f}s")
+            report.append(f"  Avg Confidence: {without_ref['avg_confidence']:.2f}")
+            report.append("")
         
-        # Performance insights
-        time_diff = with_ref['avg_response_time'] - without_ref['avg_response_time']
-        confidence_diff = with_ref['avg_confidence'] - without_ref['avg_confidence']
-        
-        report.append("Key Insights:")
-        report.append(f"  Response Time Impact: {time_diff:+.2f}s ({'slower' if time_diff > 0 else 'faster'} with refinement)")
-        report.append(f"  Confidence Impact: {confidence_diff:+.2f} ({'higher' if confidence_diff > 0 else 'lower'} with refinement)")
-        report.append("")
+        # Performance insights (only if both groups exist)
+        if 'with_refinement' in refinement_comparison and 'without_refinement' in refinement_comparison:
+            with_ref = refinement_comparison['with_refinement']
+            without_ref = refinement_comparison['without_refinement']
+            time_diff = with_ref['avg_response_time'] - without_ref['avg_response_time']
+            confidence_diff = with_ref['avg_confidence'] - without_ref['avg_confidence']
+            
+            report.append("Key Insights:")
+            report.append(f"  Response Time Impact: {time_diff:+.2f}s ({'slower' if time_diff > 0 else 'faster'} with refinement)")
+            report.append(f"  Confidence Impact: {confidence_diff:+.2f} ({'higher' if confidence_diff > 0 else 'lower'} with refinement)")
+            report.append("")
+        elif 'with_refinement' in refinement_comparison:
+            report.append("Key Insights:")
+            report.append("  Only refinement-enabled tests available")
+            report.append("")
+        elif 'without_refinement' in refinement_comparison:
+            report.append("Key Insights:")
+            report.append("  Only refinement-disabled tests available")
+            report.append("")
         
         # Scenario Analysis
         report.append("SCENARIO ANALYSIS")
@@ -298,11 +324,23 @@ class MetricsAnalyzer:
         if self.df is None:
             raise ValueError("No metrics loaded")
         
+        if not PLOTTING_AVAILABLE:
+            print("Skipping visualizations - matplotlib/seaborn not available")
+            return
+        
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
         # Set up the plotting style
-        plt.style.use('seaborn-v0_8')
+        try:
+            plt.style.use('seaborn-v0_8')
+        except OSError:
+            # Fall back to seaborn if seaborn-v0_8 not available
+            try:
+                plt.style.use('seaborn')
+            except OSError:
+                # Use default style if seaborn not available
+                plt.style.use('default')
         
         # 1. Response Time Distribution
         plt.figure(figsize=(10, 6))
@@ -318,18 +356,38 @@ class MetricsAnalyzer:
         refinement_stats = self.df.groupby('enable_refinement')['success'].agg(['count', 'sum', 'mean'])
         
         plt.figure(figsize=(8, 6))
-        categories = ['Without Refinement', 'With Refinement']
-        success_rates = [refinement_stats.loc[False, 'mean'] * 100, refinement_stats.loc[True, 'mean'] * 100]
         
-        bars = plt.bar(categories, success_rates, color=['lightcoral', 'lightgreen'], alpha=0.7)
-        plt.ylabel('Success Rate (%)')
-        plt.title('Success Rate: With vs Without Refinement')
-        plt.ylim(0, 100)
+        # Check which refinement types are available
+        has_false = False in refinement_stats.index
+        has_true = True in refinement_stats.index
         
-        # Add value labels on bars
-        for bar, rate in zip(bars, success_rates):
-            plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1, 
-                    f'{rate:.1f}%', ha='center', va='bottom')
+        categories = []
+        success_rates = []
+        colors = []
+        
+        if has_false:
+            categories.append('Without Refinement')
+            success_rates.append(refinement_stats.loc[False, 'mean'] * 100)
+            colors.append('lightcoral')
+        
+        if has_true:
+            categories.append('With Refinement')
+            success_rates.append(refinement_stats.loc[True, 'mean'] * 100)
+            colors.append('lightgreen')
+        
+        if len(categories) == 0:
+            plt.text(0.5, 0.5, 'No data available', ha='center', va='center', transform=plt.gca().transAxes)
+            plt.title('Success Rate: With vs Without Refinement')
+        else:
+            bars = plt.bar(categories, success_rates, color=colors, alpha=0.7)
+            plt.ylabel('Success Rate (%)')
+            plt.title('Success Rate: With vs Without Refinement')
+            plt.ylim(0, 100)
+            
+            # Add value labels on bars
+            for bar, rate in zip(bars, success_rates):
+                plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1, 
+                        f'{rate:.1f}%', ha='center', va='bottom')
         
         plt.savefig(output_path / 'success_rate_by_refinement.png', dpi=300, bbox_inches='tight')
         plt.close()
@@ -338,13 +396,33 @@ class MetricsAnalyzer:
         plt.figure(figsize=(10, 6))
         successful_tests = self.df[self.df['success'] == True]
         
-        scatter = plt.scatter(successful_tests['response_time'], successful_tests['confidence'], 
-                            c=successful_tests['enable_refinement'], cmap='RdYlBu', alpha=0.7)
-        plt.xlabel('Response Time (seconds)')
-        plt.ylabel('Confidence Score')
-        plt.title('Confidence Score vs Response Time')
-        plt.colorbar(scatter, label='Refinement Enabled')
-        plt.grid(True, alpha=0.3)
+        if len(successful_tests) > 0:
+            # Check if we have both refinement types
+            refinement_values = successful_tests['enable_refinement'].unique()
+            
+            if len(refinement_values) > 1:
+                # Multiple refinement types - use color coding
+                scatter = plt.scatter(successful_tests['response_time'], successful_tests['confidence'], 
+                                    c=successful_tests['enable_refinement'], cmap='RdYlBu', alpha=0.7)
+                plt.colorbar(scatter, label='Refinement Enabled')
+            else:
+                # Single refinement type - use single color
+                color = 'lightgreen' if refinement_values[0] else 'lightcoral'
+                label = f"Refinement {'Enabled' if refinement_values[0] else 'Disabled'}"
+                plt.scatter(successful_tests['response_time'], successful_tests['confidence'], 
+                           c=color, alpha=0.7, label=label)
+                plt.legend()
+            
+            plt.xlabel('Response Time (seconds)')
+            plt.ylabel('Confidence Score')
+            plt.title('Confidence Score vs Response Time')
+            plt.grid(True, alpha=0.3)
+        else:
+            plt.text(0.5, 0.5, 'No successful tests to plot', ha='center', va='center', transform=plt.gca().transAxes)
+            plt.xlabel('Response Time (seconds)')
+            plt.ylabel('Confidence Score')
+            plt.title('Confidence Score vs Response Time')
+        
         plt.savefig(output_path / 'confidence_vs_response_time.png', dpi=300, bbox_inches='tight')
         plt.close()
         

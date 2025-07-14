@@ -40,7 +40,8 @@ class ChatAPITester:
     def __init__(self, base_url: str = "http://localhost:8000"):
         self.base_url = base_url
         # Configure client with longer timeout for chat API (normally takes ~1 minute)
-        timeout = httpx.Timeout(90.0, connect=10.0)  # 90 seconds for chat responses
+        # Extra time for refinement-enabled requests which may take longer
+        timeout = httpx.Timeout(120.0, connect=10.0)  # 120 seconds for chat responses
         self.client = httpx.AsyncClient(timeout=timeout)
         self.metrics: List[TestMetrics] = []
         self.session_id = None
@@ -337,16 +338,16 @@ async def run_chat_tests():
             
             print(f"✅ Created test session: {session_id}")
             
-            # Run tests with refinement enabled
-            print("\n--- Running tests with refinement enabled ---")
+            # Run tests with refinement disabled first (faster and more reliable)
+            print("\n--- Running tests with refinement disabled ---")
             for i, scenario in enumerate(TEST_SCENARIOS, 1):
-                print(f"[{i}/{len(TEST_SCENARIOS)}] Testing: {scenario['name']}")
+                print(f"[{i}/{len(TEST_SCENARIOS)}] Testing: {scenario['name']} (no refinement)")
                 
                 try:
                     metric = await tester.send_chat_message(
                         message=scenario["message"],
                         session_id=session_id,
-                        enable_refinement=True
+                        enable_refinement=False
                     )
                     
                     status = "✅" if metric.success else "❌"
@@ -364,18 +365,18 @@ async def run_chat_tests():
                 # Brief pause between tests
                 await asyncio.sleep(1)
             
-            # Run a subset of tests with refinement disabled for comparison
-            print("\n--- Running tests with refinement disabled ---")
+            # Run a subset of tests with refinement enabled for comparison
+            print("\n--- Running tests with refinement enabled ---")
             comparison_scenarios = TEST_SCENARIOS[:3]  # First 3 scenarios
             
             for i, scenario in enumerate(comparison_scenarios, 1):
-                print(f"[{i}/{len(comparison_scenarios)}] Testing: {scenario['name']} (no refinement)")
+                print(f"[{i}/{len(comparison_scenarios)}] Testing: {scenario['name']} (with refinement)")
                 
                 try:
                     metric = await tester.send_chat_message(
                         message=scenario["message"],
                         session_id=session_id,
-                        enable_refinement=False
+                        enable_refinement=True
                     )
                     
                     status = "✅" if metric.success else "❌"

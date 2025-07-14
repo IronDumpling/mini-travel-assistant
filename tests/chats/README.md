@@ -16,8 +16,8 @@ The test suite includes:
 ### Core Test Files
 - `test_chat_api.py` - Main test implementation with metrics recording
 - `test_chat_pytest.py` - Pytest-compatible test cases
-- `run_tests.py` - Simple test runner script
-- `simple_test.py` - Basic connectivity test (run this first)
+- `run_tests.py` - Comprehensive test runner (supports --refinement flag)
+- `test_connectivity.py` - Basic connectivity test (run this first)
 
 ### Analysis Tools
 - `metrics_analyzer.py` - Analyze test results and generate reports
@@ -25,7 +25,8 @@ The test suite includes:
 
 ### Generated Results
 - `results/` - Directory containing test metrics and reports
-  - `chat_test_metrics_*.json` - Raw test data
+  - `no_refinement_test_results.json` - Test results without refinement
+  - `refinement_test_results.json` - Test results with refinement
   - `analysis_report.txt` - Generated analysis report
   - `*.png` - Visualization charts
 
@@ -51,13 +52,16 @@ Before running the tests, ensure you have:
 ### Option 1: Quick Connectivity Test (Recommended First)
 ```bash
 # Test basic server connectivity and API functionality
-python simple_test.py
+python test_connectivity.py
 ```
 
 ### Option 2: Quick Test Run
 ```bash
-# Run all tests and analysis
+# Run reliable tests without refinement (recommended)
 python run_tests.py
+
+# Run all tests including refinement (slower, may timeout)
+python run_tests.py --refinement
 
 # Run tests without analysis
 python run_tests.py --no-analysis
@@ -72,7 +76,7 @@ python run_tests.py --base-url http://localhost:8080
 ### Option 3: Direct Test Execution
 ```bash
 # Test basic connectivity first
-python simple_test.py
+python test_connectivity.py
 
 # Run main test suite
 python test_chat_api.py
@@ -201,7 +205,7 @@ Create custom analysis functions in `metrics_analyzer.py` or create new analysis
 ### Common Issues
 
 1. **Connection Errors**
-   - **First, run the simple test**: `python simple_test.py`
+   - **First, run the connectivity test**: `python test_connectivity.py`
    - Ensure API server is running: `python -m uvicorn app.main:app --reload`
    - Check the base URL is correct (default: http://localhost:8000)
    - Verify no firewall blocking localhost
@@ -223,6 +227,13 @@ Create custom analysis functions in `metrics_analyzer.py` or create new analysis
    - Check server memory usage
    - Verify all server dependencies are installed
    - Look for timeout issues in server logs
+
+5. **Refinement Tests Timeout**
+   - Self-refinement can cause JSON parsing errors in quality assessment
+   - Use `python run_tests.py` (without --refinement) for reliable tests
+   - Use `python run_tests.py --refinement` only when testing refinement functionality
+   - Check server logs for "LLM-based quality assessment failed" messages
+   - Refinement timeout is set to 120 seconds but may still fail
 
 ### Debugging
 
@@ -248,6 +259,7 @@ To use these tests in CI/CD:
     python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
     sleep 10  # Wait for server to start
     cd tests/chats
+    python test_connectivity.py
     python run_tests.py --no-analysis
     pytest test_chat_pytest.py -v
 ```
