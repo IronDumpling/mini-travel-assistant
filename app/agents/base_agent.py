@@ -85,6 +85,16 @@ class BaseAgent(ABC):
         self.max_refine_iterations: int = 3
         self.refine_enabled: bool = True
 
+        # Error handling and state management
+        self.error_count: int = 0
+        self.max_errors: int = 5
+        self.last_error: Optional[str] = None
+        self.error_history: List[Dict[str, Any]] = []
+        self.is_healthy: bool = True
+
+        # Simple state management
+        self.state_timeout_seconds: int = 60  # Max time in active states
+
     @abstractmethod
     async def process_message(self, message: AgentMessage) -> AgentResponse:
         """Process message (subclass must implement)"""
@@ -118,18 +128,37 @@ class BaseAgent(ABC):
                 try:
                     current_response = await asyncio.wait_for(
                         self.process_message(message),
-                        timeout=15.0,  # 15 second timeout per iteration
+                        timeout=30.0,  # 30 second timeout
                     )
                 except asyncio.TimeoutError:
+                    self.record_error(
+                        "Timeout during initial process_message",
+                        {"message_id": message.id, "iteration": iteration},
+                    )
                     current_response = AgentResponse(
                         success=False,
                         content="I'm taking too long to process your request. Please try again.",
                         confidence=0.0,
                     )
                     break
+                except Exception as e:
+                    self.record_error(
+                        f"Exception during initial process_message: {str(e)}",
+                        {"message_id": message.id, "iteration": iteration},
+                    )
+                    current_response = AgentResponse(
+                        success=False,
+                        content="An error occurred while processing your request.",
+                        confidence=0.0,
+                    )
+                    break
             else:
                 # Refine based on previous assessment
                 if current_response is None:
+                    self.record_error(
+                        "No previous response available for refinement",
+                        {"message_id": message.id, "iteration": iteration},
+                    )
                     current_response = AgentResponse(
                         success=False,
                         content="Unable to refine response - no previous response available",
@@ -144,20 +173,35 @@ class BaseAgent(ABC):
                             current_response,
                             refinement_history[-1] if refinement_history else None,
                         ),
-                        timeout=10.0,  # 10 second timeout for refinement
+                        timeout=15.0,  # 15 second timeout for refinement
                     )
                 except asyncio.TimeoutError:
+                    self.record_error(
+                        "Timeout during response refinement",
+                        {"message_id": message.id, "iteration": iteration},
+                    )
                     # Continue with current response if refinement times out
                     current_response.metadata["refinement_timeout"] = True
+                    break
+                except Exception as e:
+                    self.record_error(
+                        f"Exception during response refinement: {str(e)}",
+                        {"message_id": message.id, "iteration": iteration},
+                    )
+                    current_response.metadata["refinement_exception"] = str(e)
                     break
 
             # Assess quality with timeout and fallback
             try:
                 quality_assessment = await asyncio.wait_for(
                     self._assess_response_quality(message, current_response, iteration),
-                    timeout=8.0,  # 8 second timeout for quality assessment
+                    timeout=10.0,  # 10 second timeout for quality assessment
                 )
             except asyncio.TimeoutError:
+                self.record_error(
+                    "Timeout during quality assessment",
+                    {"message_id": message.id, "iteration": iteration},
+                )
                 # Use fallback quality assessment
                 quality_assessment = QualityAssessment(
                     overall_score=0.5,
@@ -172,6 +216,20 @@ class BaseAgent(ABC):
                     ],
                     meets_threshold=False,
                     assessment_details={"fallback": True, "iteration": iteration},
+                )
+            except Exception as e:
+                self.record_error(
+                    f"Exception during quality assessment: {str(e)}",
+                    {"message_id": message.id, "iteration": iteration},
+                )
+                quality_assessment = QualityAssessment(
+                    overall_score=0.0,
+                    dimension_scores={},
+                    improvement_suggestions=[
+                        "Quality assessment failed due to exception"
+                    ],
+                    meets_threshold=False,
+                    assessment_details={"exception": str(e), "iteration": iteration},
                 )
 
             refinement_history.append(quality_assessment)
@@ -221,6 +279,10 @@ class BaseAgent(ABC):
 
         # Ensure we always return a response
         if current_response is None:
+            self.record_error(
+                "Failed to process message (no response generated)",
+                {"message_id": message.id},
+            )
             current_response = AgentResponse(
                 success=False, content="Failed to process message", confidence=0.0
             )
@@ -565,20 +627,26 @@ class BaseAgent(ABC):
         # 2. Make a plan
         # 3. Evaluate different choices
         # 4. Return thinking result
-        self.status = AgentStatus.THINKING
-        self.last_activity = datetime.now(timezone.utc)
+        self.set_status(AgentStatus.THINKING)
 
         # Default implementation, subclasses can override
-        return f"Agent {self.name} is thinking how to handle: {context}"
+        result = f"Agent {self.name} is thinking how to handle: {context}"
+
+        # Return to IDLE after thinking
+        self.set_status(AgentStatus.IDLE)
+        return result
 
     async def act(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute action"""
         # TODO: Implement action execution logic
-        self.status = AgentStatus.ACTING
-        self.last_activity = datetime.now(timezone.utc)
+        self.set_status(AgentStatus.ACTING)
 
         # Subclasses need to implement specific action execution logic
-        return await self._execute_action(action, parameters)
+        result = await self._execute_action(action, parameters)
+
+        # Return to IDLE after acting
+        self.set_status(AgentStatus.IDLE)
+        return result
 
     @abstractmethod
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
@@ -632,6 +700,7 @@ class BaseAgent(ABC):
                 "max_iterations": self.max_refine_iterations,
             },
             "metadata": self.metadata,
+            "health": self.get_health_status(),
         }
 
     async def reset(self):
@@ -641,6 +710,68 @@ class BaseAgent(ABC):
         self.metadata.clear()
         self.last_activity = datetime.now(timezone.utc)
 
+        # Reset error state
+        self.error_count = 0
+        self.last_error = None
+        self.error_history.clear()
+        self.is_healthy = True
+
+    def record_error(self, error: str, context: Optional[Dict[str, Any]] = None):
+        """Record an error and update agent state"""
+        self.error_count += 1
+        self.last_error = error
+        self.last_activity = datetime.now(timezone.utc)
+
+        error_record = {
+            "timestamp": datetime.now(timezone.utc),
+            "error": error,
+            "context": context or {},
+            "error_count": self.error_count,
+        }
+        self.error_history.append(error_record)
+
+        # Keep error history manageable
+        if len(self.error_history) > 20:
+            self.error_history = self.error_history[-20:]
+
+        # Mark as unhealthy if too many errors
+        if self.error_count >= self.max_errors:
+            self.is_healthy = False
+            self.status = AgentStatus.ERROR
+
+    def clear_errors(self):
+        """Clear error state and mark as healthy"""
+        self.error_count = 0
+        self.last_error = None
+        self.error_history.clear()
+        self.is_healthy = True
+        if self.status == AgentStatus.ERROR:
+            self.status = AgentStatus.IDLE
+
+    def get_health_status(self) -> Dict[str, Any]:
+        """Get agent health status"""
+        return {
+            "is_healthy": self.is_healthy,
+            "error_count": self.error_count,
+            "max_errors": self.max_errors,
+            "last_error": self.last_error,
+            "error_history_length": len(self.error_history),
+            "status": self.status,
+        }
+
+    def set_status(self, new_status: AgentStatus):
+        """Set agent status"""
+        self.status = new_status
+        self.last_activity = datetime.now(timezone.utc)
+
+    def force_idle(self):
+        """Force agent to IDLE state"""
+        if self.status != AgentStatus.IDLE:
+            self.record_error(
+                f"Forced from {self.status} to IDLE", {"forced_recovery": True}
+            )
+            self.set_status(AgentStatus.IDLE)
+
 
 class AgentManager:
     """Agent manager"""
@@ -649,6 +780,8 @@ class AgentManager:
         self.agents: Dict[str, BaseAgent] = {}
         self.message_queue: List[AgentMessage] = []
         self.is_running = False
+        self.error_count: int = 0
+        self.last_error: Optional[str] = None
 
     def register_agent(self, agent: BaseAgent):
         """Register agent"""
@@ -691,13 +824,22 @@ class AgentManager:
         # Process message with timeout
         try:
             response = await asyncio.wait_for(
-                agent.process_message(message), timeout=30.0
+                agent.process_message(message), timeout=60.0
             )
         except asyncio.TimeoutError:
-            agent.status = AgentStatus.ERROR
+            agent.record_error("Message processing timeout", {"message_id": message.id})
             return AgentResponse(
                 success=False,
                 content="I'm taking too long to respond. Please try again in a moment.",
+                confidence=0.0,
+            )
+        except Exception as e:
+            agent.record_error(
+                f"Message processing error: {str(e)}", {"message_id": message.id}
+            )
+            return AgentResponse(
+                success=False,
+                content="I encountered an error while processing your message. Please try again.",
                 confidence=0.0,
             )
 
@@ -728,12 +870,49 @@ class AgentManager:
 
     def get_system_status(self) -> Dict[str, Any]:
         """Get system status"""
+        healthy_agents = [
+            name for name, agent in self.agents.items() if agent.is_healthy
+        ]
+        unhealthy_agents = [
+            name for name, agent in self.agents.items() if not agent.is_healthy
+        ]
+
         return {
             "total_agents": len(self.agents),
+            "healthy_agents": len(healthy_agents),
+            "unhealthy_agents": len(unhealthy_agents),
             "agents": {name: agent.get_status() for name, agent in self.agents.items()},
             "message_queue_size": len(self.message_queue),
             "is_running": self.is_running,
+            "system_health": {
+                "overall_healthy": len(unhealthy_agents) == 0,
+                "error_count": self.error_count,
+                "last_error": self.last_error,
+            },
         }
+
+    def get_unhealthy_agents(self) -> List[str]:
+        """Get list of unhealthy agents"""
+        return [name for name, agent in self.agents.items() if not agent.is_healthy]
+
+    def clear_agent_errors(self, agent_name: str) -> bool:
+        """Clear errors for a specific agent"""
+        agent = self.get_agent(agent_name)
+        if agent:
+            agent.clear_errors()
+            return True
+        return False
+
+    def force_all_agents_idle(self) -> List[str]:
+        """Force all agents to IDLE state (simple recovery)"""
+        forced_agents = []
+
+        for name, agent in self.agents.items():
+            if agent.status != AgentStatus.IDLE:
+                agent.force_idle()
+                forced_agents.append(name)
+
+        return forced_agents
 
 
 # Global agent manager
