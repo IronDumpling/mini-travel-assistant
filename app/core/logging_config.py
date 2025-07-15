@@ -21,14 +21,25 @@ class InterceptHandler(logging.Handler):
         # Get corresponding Loguru level if it exists
         try:
             level = logger.level(record.levelname).name
-        except ValueError:
+        except (ValueError, TypeError):
             level = record.levelno
 
-        # Find caller from where the logged message originated
+        # Find caller from where the logged message originated with safety bounds
         frame, depth = logging.currentframe(), 2
-        while frame.f_code.co_filename == logging.__file__:
-            frame = frame.f_back
-            depth += 1
+        max_depth = 20  # Safety limit to prevent infinite loops
+        
+        try:
+            # Safely traverse frames with bounds checking
+            while (frame and 
+                   frame.f_back and 
+                   depth < max_depth and
+                   frame.f_code.co_filename == logging.__file__):
+                frame = frame.f_back
+                depth += 1
+        except (AttributeError, OSError):
+            # Handle cases where file path comparison fails
+            # or frame attributes are not accessible
+            depth = 2
 
         logger.opt(depth=depth, exception=record.exc_info).log(
             level, record.getMessage()
