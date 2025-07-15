@@ -129,9 +129,17 @@ def setup_logging():
 
 
 def get_logger(name: str = None):
-    """Get a logger instance that works with the centralized logging system"""
-    if name:
-        return logger.bind(name=name)
+    """Get a logger instance that works with the centralized logging system
+    
+    Args:
+        name: Module name (optional, kept for backward compatibility)
+              Loguru automatically captures the module name in the 'name' field
+    
+    Returns:
+        Loguru logger instance configured with centralized logging
+    """
+    # Loguru automatically captures the module name in the 'name' field
+    # No need to bind it manually since it would conflict with the reserved 'name' attribute
     return logger
 
 

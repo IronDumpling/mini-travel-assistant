@@ -160,36 +160,97 @@ class KnowledgeBase:
     async def _load_knowledge_data(self):
         """Load knowledge data from files"""
         try:
+            # 🔧 DEBUG: Log knowledge loading start
+            logger.info(f"📚 STARTING KNOWLEDGE DATA LOADING...")
+            logger.info(f"  - Data loader: {self.data_loader}")
+            logger.info(f"  - Knowledge directory: {self.knowledge_dir}")
+            
             # Load from files using data loader
             knowledge_items = await self.data_loader.load_all_data()
             
+            # 🔧 DEBUG: Log loaded items summary
+            logger.info(f"📊 KNOWLEDGE LOADING RESULTS:")
+            logger.info(f"  - Total items loaded: {len(knowledge_items)}")
+            
             # Process loaded knowledge
             self.knowledge_items.clear()
+            processed_count = 0
+            berlin_count = 0
+            
             for knowledge in knowledge_items:
                 self.knowledge_items[knowledge.id] = knowledge
+                processed_count += 1
+                
+                # 🔧 DEBUG: Log each knowledge item
+                logger.debug(f"📖 PROCESSED KNOWLEDGE {processed_count}: {knowledge.id}")
+                logger.debug(f"  - Title: {knowledge.title}")
+                logger.debug(f"  - Location: {knowledge.location}")
+                logger.debug(f"  - Category: {knowledge.category}")
+                logger.debug(f"  - Content length: {len(knowledge.content)}")
+                logger.debug(f"  - Tags: {knowledge.tags}")
+                
+                # 🔧 DEBUG: Track Berlin content specifically
+                if (knowledge.location and 'berlin' in knowledge.location.lower()) or 'berlin' in knowledge.title.lower():
+                    berlin_count += 1
+                    logger.info(f"🏛️ BERLIN KNOWLEDGE LOADED: {knowledge.id}")
+                    logger.info(f"  - Title: {knowledge.title}")
+                    logger.info(f"  - Location: {knowledge.location}")
+                    logger.info(f"  - Content preview: {knowledge.content[:200]}...")
+            
+            # 🔧 DEBUG: Log final knowledge stats
+            logger.info(f"✅ KNOWLEDGE PROCESSING COMPLETE:")
+            logger.info(f"  - Total processed: {processed_count}")
+            logger.info(f"  - Berlin items found: {berlin_count}")
+            logger.info(f"  - Items in memory: {len(self.knowledge_items)}")
             
             # Log appropriate message based on what was loaded
             if self.knowledge_items:
                 logger.info(f"Loaded {len(self.knowledge_items)} knowledge items from files")
+                
+                # 🔧 DEBUG: Log knowledge by category
+                category_stats = {}
+                location_stats = {}
+                for knowledge in self.knowledge_items.values():
+                    category_stats[knowledge.category] = category_stats.get(knowledge.category, 0) + 1
+                    if knowledge.location:
+                        location_stats[knowledge.location] = location_stats.get(knowledge.location, 0) + 1
+                
+                logger.info(f"📊 KNOWLEDGE BREAKDOWN:")
+                logger.info(f"  - By category: {dict(sorted(category_stats.items()))}")
+                logger.info(f"  - By location: {dict(sorted(location_stats.items()))}")
+                
+                if 'Berlin' not in location_stats:
+                    logger.warning(f"⚠️ NO BERLIN KNOWLEDGE FOUND IN PROCESSED ITEMS!")
+                
             else:
                 logger.warning("No knowledge files found in the documents directory")
                 logger.info("Please ensure knowledge files are present in app/knowledge/documents/")
             
         except Exception as e:
-            logger.error(f"Failed to load knowledge data: {e}")
+            logger.error(f"❌ FAILED to load knowledge data: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             # Don't fall back to hardcoded data - let the system handle empty knowledge gracefully
             logger.warning("Knowledge base will operate with empty knowledge set")
     
     async def _build_index(self):
         """Build vector index for all knowledge items"""
         try:
+            # 🔧 DEBUG: Log indexing start
+            logger.info(f"🔧 STARTING KNOWLEDGE INDEX BUILDING...")
+            logger.info(f"  - Knowledge items to index: {len(self.knowledge_items)}")
+            
             if not self.knowledge_items:
                 logger.warning("No knowledge items to index")
                 return
             
             # Convert knowledge items to documents
             documents = []
-            for knowledge in self.knowledge_items.values():
+            berlin_docs = 0
+            
+            for i, knowledge in enumerate(self.knowledge_items.values()):
+                # 🔧 DEBUG: Log document creation
+                logger.debug(f"🏗️ CREATING DOCUMENT {i+1}: {knowledge.id}")
+                
                 doc = Document(
                     id=knowledge.id,
                     content=f"{knowledge.title}\n\n{knowledge.content}",
@@ -203,27 +264,62 @@ class KnowledgeBase:
                     doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Add proper document type
                 )
                 documents.append(doc)
+                
+                # 🔧 DEBUG: Track Berlin documents
+                if 'berlin' in doc.content.lower() or 'berlin' in str(doc.metadata).lower():
+                    berlin_docs += 1
+                    logger.info(f"🏛️ BERLIN DOCUMENT CREATED FOR INDEXING: {doc.id}")
+                    logger.info(f"  - Title: {knowledge.title}")
+                    logger.info(f"  - Location metadata: {doc.metadata.get('location')}")
+                    logger.info(f"  - Content length: {len(doc.content)}")
+                    logger.info(f"  - Content preview: {doc.content[:200]}...")
+                
+                logger.debug(f"  - Document created with {len(doc.content)} chars")
+                logger.debug(f"  - Metadata: {doc.metadata}")
+            
+            # 🔧 DEBUG: Log documents prepared for indexing
+            logger.info(f"📋 DOCUMENTS PREPARED FOR INDEXING:")
+            logger.info(f"  - Total documents: {len(documents)}")
+            logger.info(f"  - Berlin documents: {berlin_docs}")
+            logger.info(f"  - RAG engine: {self.rag_engine}")
             
             # Index documents in RAG engine
+            logger.info(f"🚀 STARTING RAG INDEXING...")
             success = await self.rag_engine.index_documents(documents)
             
             if success:
-                logger.info(f"Successfully indexed {len(documents)} knowledge items")
+                logger.info(f"✅ Successfully indexed {len(documents)} knowledge items")
+                logger.info(f"  - Berlin documents indexed: {berlin_docs}")
+                
+                # 🔧 DEBUG: Verify indexing worked by checking vector store stats
+                vector_stats = self.rag_engine.vector_store.get_stats()
+                logger.info(f"📊 POST-INDEXING VECTOR STORE STATS:")
+                logger.info(f"  - Total documents in vector store: {vector_stats.get('total_documents', 'Unknown')}")
+                
             else:
-                logger.error("Failed to index knowledge items")
+                logger.error("❌ Failed to index knowledge items")
                 
         except Exception as e:
-            logger.error(f"Failed to build knowledge index: {e}")
+            logger.error(f"❌ Failed to build knowledge index: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             raise
     
     async def add_knowledge(self, knowledge: TravelKnowledge) -> bool:
         """Add new knowledge item"""
         try:
+            # 🔧 DEBUG: Log knowledge addition
+            logger.info(f"➕ ADDING NEW KNOWLEDGE ITEM: {knowledge.id}")
+            logger.info(f"  - Title: {knowledge.title}")
+            logger.info(f"  - Location: {knowledge.location}")
+            logger.info(f"  - Category: {knowledge.category}")
+            logger.info(f"  - Content length: {len(knowledge.content)}")
+            
             if len(knowledge.content.strip()) < 10:
                 raise ValueError("Content too short")
             
             # Add to memory
             self.knowledge_items[knowledge.id] = knowledge
+            logger.debug(f"  - Added to memory: {knowledge.id}")
             
             # Create document and index
             doc = Document(
@@ -239,19 +335,25 @@ class KnowledgeBase:
                 doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Add proper document type
             )
             
+            # 🔧 DEBUG: Log document creation for indexing
+            logger.debug(f"  - Document created for indexing: {doc.id}")
+            logger.debug(f"  - Document metadata: {doc.metadata}")
+            
             # Index in RAG engine
+            logger.debug(f"  - Indexing in RAG engine...")
             success = await self.rag_engine.index_documents([doc])
             
             if success:
-                logger.info(f"Added knowledge item: {knowledge.id}")
+                logger.info(f"✅ Added knowledge item: {knowledge.id}")
                 return True
             else:
                 del self.knowledge_items[knowledge.id]
-                logger.error(f"Failed to index knowledge item: {knowledge.id}")
+                logger.error(f"❌ Failed to index knowledge item: {knowledge.id}")
                 return False
                 
         except Exception as e:
-            logger.error(f"Failed to add knowledge item: {e}")
+            logger.error(f"❌ Failed to add knowledge item: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             return False
     
     async def update_knowledge(self, knowledge_id: str, updated_knowledge: TravelKnowledge) -> bool:
@@ -325,12 +427,38 @@ class KnowledgeBase:
     ) -> List[Dict[str, Any]]:
         """Search knowledge using RAG engine with semantic search"""
         try:
+            # 🔧 DEBUG: Log search operation start
+            logger.info(f"🔍 KNOWLEDGE SEARCH OPERATION:")
+            logger.info(f"  - Query: '{query}'")
+            logger.info(f"  - Category filter: {category}")
+            logger.info(f"  - Location filter: {location}")
+            logger.info(f"  - Top K: {top_k}")
+            logger.info(f"  - Min score: {min_score}")
+            logger.info(f"  - Available knowledge items: {len(self.knowledge_items)}")
+            
+            # 🔧 DEBUG: Check for Berlin in query
+            if 'berlin' in query.lower():
+                logger.info(f"🏛️ BERLIN SEARCH QUERY DETECTED!")
+                # Check if we have Berlin knowledge
+                berlin_knowledge = [k for k in self.knowledge_items.values() 
+                                  if k.location and 'berlin' in k.location.lower()]
+                logger.info(f"  - Berlin knowledge items available: {len(berlin_knowledge)}")
+                for bk in berlin_knowledge:
+                    logger.info(f"    - {bk.id}: {bk.title}")
+            
             # Build filter metadata
             filter_metadata = {}
             if category:
                 filter_metadata["category"] = category
+                logger.info(f"  - Added category filter: {category}")
             if location:
                 filter_metadata["location"] = location
+                logger.info(f"  - Added location filter: {location}")
+            
+            # 🔧 DEBUG: Log RAG engine call
+            logger.info(f"🧠 CALLING RAG ENGINE RETRIEVE...")
+            logger.info(f"  - Filter metadata: {filter_metadata}")
+            logger.info(f"  - Doc type filter: {DocumentType.TRAVEL_KNOWLEDGE}")
             
             # Use RAG engine for semantic search with travel knowledge filter
             result = await self.rag_engine.retrieve(
@@ -340,10 +468,31 @@ class KnowledgeBase:
                 doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Filter for travel knowledge only
             )
             
+            # 🔧 DEBUG: Log RAG engine results
+            logger.info(f"📊 RAG ENGINE RESULTS:")
+            logger.info(f"  - Documents returned: {len(result.documents)}")
+            logger.info(f"  - Scores: {result.scores}")
+            logger.info(f"  - Query: {result.query}")
+            logger.info(f"  - Total results: {result.total_results}")
+            
+            for i, (doc, score) in enumerate(zip(result.documents, result.scores)):
+                logger.info(f"  📄 RAG RESULT {i+1}:")
+                logger.info(f"    - Score: {score:.4f}")
+                logger.info(f"    - Document ID: {doc.id}")
+                logger.info(f"    - Metadata: {doc.metadata}")
+                logger.info(f"    - Content preview: {doc.content[:100]}...")
+                
+                # 🔧 DEBUG: Check for Berlin content mismatch
+                if 'berlin' in query.lower() and 'berlin' not in doc.content.lower():
+                    logger.warning(f"    🚨 BERLIN QUERY MISMATCH!")
+                    logger.warning(f"    - Query has 'berlin' but result doesn't")
+                    logger.warning(f"    - Result location: {doc.metadata.get('location', 'Unknown')}")
+            
             # Process and filter results
             knowledge_results = []
             for doc, score in zip(result.documents, result.scores):
                 if score < min_score:
+                    logger.debug(f"  - Skipping doc {doc.id} due to low score: {score:.4f}")
                     continue
                     
                 # Find the original knowledge item
@@ -354,16 +503,42 @@ class KnowledgeBase:
                         "relevance_score": score,
                         "highlights": self._extract_highlights(doc.content, query)
                     })
+                    logger.debug(f"  - Added knowledge result: {knowledge.id} (score: {score:.4f})")
+                else:
+                    logger.warning(f"  - Knowledge item not found for doc: {doc.id}")
             
             # Sort by relevance score and limit results
             knowledge_results.sort(key=lambda x: x["relevance_score"], reverse=True)
             knowledge_results = knowledge_results[:top_k]
             
+            # 🔧 DEBUG: Log final search results
+            logger.info(f"✅ KNOWLEDGE SEARCH COMPLETE:")
+            logger.info(f"  - Final results: {len(knowledge_results)}")
+            logger.info(f"  - Query: '{query}'")
+            
+            for i, result in enumerate(knowledge_results):
+                knowledge = result["knowledge"]
+                score = result["relevance_score"]
+                logger.info(f"  📖 FINAL RESULT {i+1}:")
+                logger.info(f"    - Knowledge ID: {knowledge.id}")
+                logger.info(f"    - Title: {knowledge.title}")
+                logger.info(f"    - Location: {knowledge.location}")
+                logger.info(f"    - Score: {score:.4f}")
+                
+                # 🔧 DEBUG: Final Berlin analysis
+                if 'berlin' in query.lower():
+                    if knowledge.location and 'berlin' in knowledge.location.lower():
+                        logger.info(f"    ✅ CORRECT BERLIN RESULT!")
+                    else:
+                        logger.error(f"    🚨 INCORRECT RESULT FOR BERLIN QUERY!")
+                        logger.error(f"    - Expected Berlin but got: {knowledge.location}")
+            
             logger.info(f"Found {len(knowledge_results)} relevant knowledge items for query: '{query}'")
             return knowledge_results
             
         except Exception as e:
-            logger.error(f"Knowledge search failed: {e}")
+            logger.error(f"❌ Knowledge search failed: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             return []
     
     def _extract_highlights(self, content: str, query: str) -> List[str]:
@@ -392,6 +567,9 @@ class KnowledgeBase:
     
     def get_knowledge_stats(self) -> Dict[str, Any]:
         """Get knowledge base statistics"""
+        # 🔧 DEBUG: Log stats generation
+        logger.debug(f"📊 GENERATING KNOWLEDGE BASE STATS...")
+        
         stats = {
             "total_knowledge_items": len(self.knowledge_items),
             "total_categories": len(self.categories),
@@ -406,6 +584,16 @@ class KnowledgeBase:
         for knowledge in self.knowledge_items.values():
             stats["items_by_category"][knowledge.category] = stats["items_by_category"].get(knowledge.category, 0) + 1
             stats["items_by_language"][knowledge.language] = stats["items_by_language"].get(knowledge.language, 0) + 1
+        
+        # 🔧 DEBUG: Log Berlin content in stats
+        berlin_items = [k for k in self.knowledge_items.values() 
+                       if k.location and 'berlin' in k.location.lower()]
+        if berlin_items:
+            logger.debug(f"📊 BERLIN CONTENT IN STATS: {len(berlin_items)} items")
+            for item in berlin_items:
+                logger.debug(f"  - {item.id}: {item.title}")
+        else:
+            logger.warning(f"📊 NO BERLIN CONTENT FOUND IN STATS!")
         
         return stats
 

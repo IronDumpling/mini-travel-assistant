@@ -129,9 +129,29 @@ class ChromaVectorStore:
             if not documents:
                 return True
             
+            # 🔧 DEBUG: Log document addition process
+            logger.info(f"🗂️ ADDING DOCUMENTS TO VECTOR STORE:")
+            logger.info(f"  - Collection: {self.collection_name}")
+            logger.info(f"  - Documents to add: {len(documents)}")
+            
             # Prepare data for batch insertion
             ids = [doc.id for doc in documents]
             contents = [doc.content for doc in documents]
+            
+            # 🔧 DEBUG: Log document details
+            for i, doc in enumerate(documents):
+                logger.info(f"📄 DOC {i+1}: {doc.id}")
+                logger.info(f"  - Content length: {len(doc.content)}")
+                logger.info(f"  - Content preview: {doc.content[:100]}...")
+                logger.info(f"  - Metadata: {doc.metadata}")
+                logger.info(f"  - Doc type: {doc.doc_type}")
+                
+                # 🔧 DEBUG: Special attention to Berlin content
+                if 'berlin' in doc.content.lower() or 'berlin' in str(doc.metadata).lower():
+                    logger.info(f"🏛️ BERLIN DOCUMENT DETECTED: {doc.id}")
+                    logger.info(f"  - Title in metadata: {doc.metadata.get('title', 'N/A')}")
+                    logger.info(f"  - Location in metadata: {doc.metadata.get('location', 'N/A')}")
+            
             # Convert list values in metadata to strings for ChromaDB compatibility
             metadatas = []
             for doc in documents:
@@ -146,15 +166,34 @@ class ChromaVectorStore:
                 processed_metadata["doc_type"] = doc.doc_type.value
                 metadatas.append(processed_metadata)
             
+            # 🔧 DEBUG: Log embedding generation start
+            logger.info(f"🧠 GENERATING EMBEDDINGS...")
+            logger.info(f"  - Embedding model: {embedding_model.model_name if hasattr(embedding_model, 'model_name') else 'Unknown'}")
+            logger.info(f"  - Number of texts: {len(contents)}")
+            
             # Generate embeddings using provided embedding model
             embeddings = await embedding_model.encode(contents)
+            
+            # 🔧 DEBUG: Log embedding results
+            logger.info(f"✅ EMBEDDINGS GENERATED:")
+            logger.info(f"  - Embedding dimensions: {len(embeddings[0]) if embeddings else 0}")
+            logger.info(f"  - Total embeddings: {len(embeddings)}")
+            
+            # Log sample embedding values for Berlin content
+            for i, doc in enumerate(documents):
+                if 'berlin' in doc.content.lower():
+                    logger.info(f"🏛️ BERLIN EMBEDDING SAMPLE: {doc.id}")
+                    logger.info(f"  - First 5 dims: {embeddings[i][:5]}")
+                    logger.info(f"  - Embedding magnitude: {sum(x*x for x in embeddings[i])**0.5:.4f}")
             
             # Check for existing documents
             try:
                 existing_docs = self.collection.get(ids=ids)
                 existing_ids = set(existing_docs['ids'] if existing_docs['ids'] else [])
+                logger.info(f"🔍 EXISTING DOCUMENTS CHECK: {len(existing_ids)} found")
             except Exception:
                 existing_ids = set()
+                logger.info(f"🔍 NO EXISTING DOCUMENTS FOUND")
             
             # Separate new and existing documents
             new_docs = []
@@ -179,6 +218,11 @@ class ChromaVectorStore:
                     new_embeddings.append(embeddings[i])
                     new_metadatas.append(metadatas[i])
             
+            # 🔧 DEBUG: Log document categorization
+            logger.info(f"📊 DOCUMENT CATEGORIZATION:")
+            logger.info(f"  - New documents: {len(new_docs)}")
+            logger.info(f"  - Documents to update: {len(update_docs)}")
+            
             # Add new documents
             if new_docs:
                 self.collection.add(
@@ -187,7 +231,12 @@ class ChromaVectorStore:
                     embeddings=new_embeddings,
                     metadatas=new_metadatas
                 )
-                logger.info(f"Added {len(new_docs)} new documents to collection")
+                logger.info(f"✅ ADDED {len(new_docs)} new documents to collection")
+                
+                # 🔧 DEBUG: Log new Berlin documents specifically
+                for i, doc_id in enumerate(new_ids):
+                    if 'berlin' in new_docs[i].lower():
+                        logger.info(f"🏛️ NEW BERLIN DOC ADDED: {doc_id}")
             
             # Update existing documents
             if update_docs:
@@ -197,12 +246,23 @@ class ChromaVectorStore:
                     embeddings=update_embeddings,
                     metadatas=update_metadatas
                 )
-                logger.info(f"Updated {len(update_docs)} existing documents")
+                logger.info(f"✅ UPDATED {len(update_docs)} existing documents")
+                
+                # 🔧 DEBUG: Log updated Berlin documents specifically
+                for i, doc_id in enumerate(update_ids):
+                    if 'berlin' in update_docs[i].lower():
+                        logger.info(f"🏛️ BERLIN DOC UPDATED: {doc_id}")
+            
+            # 🔧 DEBUG: Log final collection stats
+            final_count = self.collection.count()
+            logger.info(f"📈 FINAL COLLECTION STATS:")
+            logger.info(f"  - Total documents in collection: {final_count}")
             
             return True
             
         except Exception as e:
-            logger.error(f"Failed to add documents to vector store: {e}")
+            logger.error(f"❌ FAILED to add documents to vector store: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             return False
     
     async def search(
@@ -213,11 +273,24 @@ class ChromaVectorStore:
     ) -> List[Tuple[Document, float]]:
         """Perform vector similarity search"""
         try:
+            # 🔧 DEBUG: Log search operation start
+            logger.info(f"🔍 VECTOR SEARCH OPERATION:")
+            logger.info(f"  - Collection: {self.collection_name}")
+            logger.info(f"  - Query embedding dims: {len(query_embedding)}")
+            logger.info(f"  - Query embedding sample: {query_embedding[:5]}")
+            logger.info(f"  - Top K: {top_k}")
+            logger.info(f"  - Filter metadata: {filter_metadata}")
+            
             # Build where clause for filtering
             where_clause = {}
             if filter_metadata:
                 for key, value in filter_metadata.items():
                     where_clause[key] = {"$eq": value}
+                logger.info(f"  - Where clause: {where_clause}")
+            
+            # 🔧 DEBUG: Log collection status before search
+            collection_count = self.collection.count()
+            logger.info(f"  - Total documents in collection: {collection_count}")
             
             # Perform search
             results = self.collection.query(
@@ -226,6 +299,33 @@ class ChromaVectorStore:
                 where=where_clause if where_clause else None,
                 include=['documents', 'metadatas', 'distances']
             )
+            
+            # 🔧 DEBUG: Log raw search results
+            logger.info(f"📊 RAW SEARCH RESULTS:")
+            if results['documents'] and results['documents'][0]:
+                logger.info(f"  - Results found: {len(results['documents'][0])}")
+                logger.info(f"  - Distances: {results['distances'][0] if results['distances'] else 'N/A'}")
+                
+                # Log details of each result
+                for i, (doc_text, metadata, distance) in enumerate(zip(
+                    results['documents'][0],
+                    results['metadatas'][0], 
+                    results['distances'][0]
+                )):
+                    similarity_score = 1 - distance
+                    logger.info(f"  📄 RESULT {i+1}:")
+                    logger.info(f"    - Distance: {distance:.4f}")
+                    logger.info(f"    - Similarity: {similarity_score:.4f}")
+                    logger.info(f"    - Metadata: {metadata}")
+                    logger.info(f"    - Content preview: {doc_text[:100]}...")
+                    
+                    # 🔧 DEBUG: Check if result contains Berlin content
+                    if 'berlin' in doc_text.lower():
+                        logger.info(f"    🏛️ BERLIN CONTENT IN RESULT!")
+                    else:
+                        logger.warning(f"    ⚠️ NON-BERLIN CONTENT: {metadata.get('location', 'Unknown location')}")
+            else:
+                logger.warning(f"  - NO RESULTS FOUND!")
             
             # Process results
             documents_with_scores = []
@@ -246,10 +346,17 @@ class ChromaVectorStore:
                     
                     documents_with_scores.append((document, similarity_score))
             
+            # 🔧 DEBUG: Log final processed results
+            logger.info(f"✅ PROCESSED SEARCH RESULTS:")
+            logger.info(f"  - Documents returned: {len(documents_with_scores)}")
+            for i, (doc, score) in enumerate(documents_with_scores):
+                logger.info(f"  📄 FINAL RESULT {i+1}: Score={score:.4f}, Location={doc.metadata.get('location', 'Unknown')}")
+            
             return documents_with_scores
             
         except Exception as e:
-            logger.error(f"Search failed: {e}")
+            logger.error(f"❌ SEARCH FAILED: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             return []
     
     async def delete_documents(self, document_ids: List[str]) -> bool:
@@ -332,19 +439,44 @@ class RAGEngine:
     ) -> RetrievalResult:
         """Retrieve relevant documents based on query with optional type filtering"""
         try:
+            # 🔧 DEBUG: Log retrieval operation start
+            logger.info(f"🎯 RETRIEVAL OPERATION START:")
+            logger.info(f"  - Query: '{query}'")
+            logger.info(f"  - Top K: {top_k}")
+            logger.info(f"  - Filter metadata: {filter_metadata}")
+            logger.info(f"  - Doc type filter: {doc_type}")
+            
             # Ensure embedding model is initialized
             await self._ensure_embedding_initialized()
             
+            # 🔧 DEBUG: Log query analysis
+            if 'berlin' in query.lower():
+                logger.info(f"🏛️ BERLIN QUERY DETECTED!")
+            else:
+                logger.info(f"🌍 NON-BERLIN QUERY: Checking for other locations...")
+                for location in ['tokyo', 'japan', 'london', 'paris', 'rome']:
+                    if location in query.lower():
+                        logger.info(f"  - Found {location.upper()} in query")
+            
             # 1. Encode query to vector
+            logger.info(f"🧠 ENCODING QUERY TO VECTOR...")
             query_embedding = await self.embedding_model.encode([query])
+            
+            # 🔧 DEBUG: Log query embedding details
+            logger.info(f"✅ QUERY EMBEDDING GENERATED:")
+            logger.info(f"  - Embedding dims: {len(query_embedding[0])}")
+            logger.info(f"  - First 5 dims: {query_embedding[0][:5]}")
+            logger.info(f"  - Embedding magnitude: {sum(x*x for x in query_embedding[0])**0.5:.4f}")
             
             # 2. Add document type filter if specified
             if doc_type:
                 if filter_metadata is None:
                     filter_metadata = {}
                 filter_metadata["doc_type"] = doc_type.value
+                logger.info(f"🔧 ADDED DOC TYPE FILTER: {doc_type.value}")
             
             # 3. Search for similar documents
+            logger.info(f"🔍 PERFORMING VECTOR SEARCH...")
             search_results = await self.vector_store.search(
                 query_embedding=query_embedding[0],
                 top_k=top_k,
@@ -355,9 +487,35 @@ class RAGEngine:
             documents = []
             scores = []
             
-            for doc, score in search_results:
+            # 🔧 DEBUG: Log result processing
+            logger.info(f"📊 PROCESSING SEARCH RESULTS:")
+            logger.info(f"  - Raw results count: {len(search_results)}")
+            
+            for i, (doc, score) in enumerate(search_results):
                 documents.append(doc)
                 scores.append(score)
+                
+                # 🔧 DEBUG: Log each processed result
+                logger.info(f"  📄 PROCESSING RESULT {i+1}:")
+                logger.info(f"    - Score: {score:.4f}")
+                logger.info(f"    - Document ID: {doc.id}")
+                logger.info(f"    - Metadata location: {doc.metadata.get('location', 'Unknown')}")
+                logger.info(f"    - Content preview: {doc.content[:100]}...")
+                
+                # 🔧 DEBUG: Score analysis
+                if score < 0.3:
+                    logger.warning(f"    ⚠️ LOW SIMILARITY SCORE: {score:.4f}")
+                elif score < 0.5:
+                    logger.warning(f"    📉 MEDIUM SIMILARITY SCORE: {score:.4f}")
+                else:
+                    logger.info(f"    ✅ GOOD SIMILARITY SCORE: {score:.4f}")
+                
+                # 🔧 DEBUG: Content-query mismatch analysis
+                if 'berlin' in query.lower() and 'berlin' not in doc.content.lower():
+                    logger.warning(f"    🚨 QUERY-RESULT MISMATCH!")
+                    logger.warning(f"    - Query contains 'berlin' but result doesn't")
+                    logger.warning(f"    - Result location: {doc.metadata.get('location', 'Unknown')}")
+                    logger.warning(f"    - Result title: {doc.metadata.get('title', 'Unknown')}")
             
             result = RetrievalResult(
                 documents=documents,
@@ -366,11 +524,26 @@ class RAGEngine:
                 total_results=len(documents)
             )
             
-            logger.info(f"Retrieved {len(documents)} documents for query: '{query[:50]}...'")
+            # 🔧 DEBUG: Log final retrieval summary
+            logger.info(f"🎯 RETRIEVAL OPERATION COMPLETE:")
+            logger.info(f"  - Query: '{query[:50]}...'")
+            logger.info(f"  - Documents retrieved: {len(documents)}")
+            logger.info(f"  - Score range: {min(scores) if scores else 0:.4f} - {max(scores) if scores else 0:.4f}")
+            
+            # 🔧 DEBUG: Final Berlin-specific analysis
+            if 'berlin' in query.lower():
+                berlin_results = sum(1 for doc in documents if 'berlin' in doc.content.lower())
+                logger.info(f"🏛️ BERLIN QUERY ANALYSIS:")
+                logger.info(f"  - Berlin results found: {berlin_results}/{len(documents)}")
+                if berlin_results == 0:
+                    logger.error(f"🚨 BERLIN QUERY RETURNED NO BERLIN CONTENT!")
+                    logger.error(f"  - This indicates a serious RAG retrieval issue")
+            
             return result
             
         except Exception as e:
-            logger.error(f"Retrieval failed: {e}")
+            logger.error(f"❌ RETRIEVAL FAILED: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             return RetrievalResult(
                 documents=[],
                 scores=[],
@@ -448,18 +621,28 @@ Would you like me to search for more specific information or help you with trave
     
     def _chunk_documents(self, documents: List[Document]) -> List[Document]:
         """Intelligent document chunking with overlap"""
+        # 🔧 DEBUG: Log chunking operation start
+        logger.info(f"✂️ DOCUMENT CHUNKING OPERATION:")
+        logger.info(f"  - Input documents: {len(documents)}")
+        
         chunked_docs = []
         
-        for doc in documents:
+        for doc_idx, doc in enumerate(documents):
+            # 🔧 DEBUG: Log document being chunked
+            logger.debug(f"📄 CHUNKING DOC {doc_idx+1}: {doc.id}")
+            logger.debug(f"  - Original content length: {len(doc.content)}")
+            logger.debug(f"  - Doc type: {doc.doc_type}")
+            
             # Split content into paragraphs
             paragraphs = doc.content.split('\n\n')
+            logger.debug(f"  - Paragraphs found: {len(paragraphs)}")
             
             current_chunk = ""
             chunk_id = 0
             max_chunk_size = 1000  # characters
             overlap_size = 200     # characters for overlap
             
-            for paragraph in paragraphs:
+            for para_idx, paragraph in enumerate(paragraphs):
                 paragraph = paragraph.strip()
                 if not paragraph:
                     continue
@@ -470,7 +653,7 @@ Would you like me to search for more specific information or help you with trave
                 else:
                     # Save current chunk if it has content
                     if current_chunk.strip():
-                        chunked_docs.append(Document(
+                        chunk_doc = Document(
                             id=f"{doc.id}_chunk_{chunk_id}",
                             content=current_chunk.strip(),
                             metadata={
@@ -480,7 +663,15 @@ Would you like me to search for more specific information or help you with trave
                                 "chunk_type": "text"
                             },
                             doc_type=doc.doc_type
-                        ))
+                        )
+                        chunked_docs.append(chunk_doc)
+                        
+                        # 🔧 DEBUG: Log chunk creation
+                        logger.debug(f"  ✂️ CREATED CHUNK {chunk_id}: {len(current_chunk.strip())} chars")
+                        if 'berlin' in current_chunk.lower():
+                            logger.info(f"  🏛️ BERLIN CHUNK CREATED: {chunk_doc.id}")
+                            logger.info(f"    - Content preview: {current_chunk.strip()[:100]}...")
+                        
                         chunk_id += 1
                     
                     # Start new chunk with overlap
@@ -492,7 +683,7 @@ Would you like me to search for more specific information or help you with trave
             
             # Save final chunk
             if current_chunk.strip():
-                chunked_docs.append(Document(
+                final_chunk = Document(
                     id=f"{doc.id}_chunk_{chunk_id}",
                     content=current_chunk.strip(),
                     metadata={
@@ -502,7 +693,24 @@ Would you like me to search for more specific information or help you with trave
                         "chunk_type": "text"
                     },
                     doc_type=doc.doc_type
-                ))
+                )
+                chunked_docs.append(final_chunk)
+                
+                # 🔧 DEBUG: Log final chunk
+                logger.debug(f"  ✂️ FINAL CHUNK {chunk_id}: {len(current_chunk.strip())} chars")
+                if 'berlin' in current_chunk.lower():
+                    logger.info(f"  🏛️ BERLIN FINAL CHUNK: {final_chunk.id}")
+        
+        # 🔧 DEBUG: Log chunking summary
+        logger.info(f"✅ CHUNKING COMPLETE:")
+        logger.info(f"  - Input documents: {len(documents)}")
+        logger.info(f"  - Output chunks: {len(chunked_docs)}")
+        logger.info(f"  - Avg chunks per doc: {len(chunked_docs)/len(documents):.1f}")
+        
+        # Count Berlin chunks
+        berlin_chunks = sum(1 for chunk in chunked_docs if 'berlin' in chunk.content.lower())
+        if berlin_chunks > 0:
+            logger.info(f"  🏛️ Berlin chunks created: {berlin_chunks}")
         
         return chunked_docs
     
