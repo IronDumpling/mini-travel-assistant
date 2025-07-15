@@ -13,13 +13,13 @@ from pathlib import Path
 import chromadb
 from sentence_transformers import SentenceTransformer
 import asyncio
-import logging
 from datetime import datetime
 import tiktoken
 from enum import Enum
+from app.core.logging_config import get_logger
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DocumentType(Enum):

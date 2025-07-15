@@ -15,9 +15,9 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
 import uuid
-import logging
+from app.core.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AgentStatus(str, Enum):

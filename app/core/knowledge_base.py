@@ -8,15 +8,15 @@ smart data loading and RAG-enhanced search capabilities.
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 import yaml
-import logging
 from datetime import datetime
 from pydantic import BaseModel
 
 from app.core.rag_engine import Document, DocumentType, get_rag_engine
 from app.core.data_loader import TravelDataLoader
+from app.core.logging_config import get_logger
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class KnowledgeCategory(BaseModel):

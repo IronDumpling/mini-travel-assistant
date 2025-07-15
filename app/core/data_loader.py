@@ -9,16 +9,16 @@ from typing import List, Dict, Optional, Any
 from pathlib import Path
 import json
 import yaml
-import logging
 from datetime import datetime
 import hashlib
 import time
 from pydantic import BaseModel, ValidationError
+from app.core.logging_config import get_logger
 
 # Import will be done locally to avoid circular imports
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DataLoadStats(BaseModel):

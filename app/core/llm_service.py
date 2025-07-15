@@ -10,12 +10,12 @@ from pydantic import BaseModel
 import openai
 import anthropic
 import json
-import logging
 import os
 import re
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from app.core.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class LLMStructuredOutputError(Exception):

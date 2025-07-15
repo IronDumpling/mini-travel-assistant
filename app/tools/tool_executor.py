@@ -12,9 +12,9 @@ from pydantic import BaseModel
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, tool_registry
 from app.core.llm_service import get_llm_service
 from app.core.rag_engine import get_rag_engine, Document
-import logging
+from app.core.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ToolCall(BaseModel):

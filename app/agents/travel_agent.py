@@ -10,15 +10,15 @@ TODO: Implement the following features
 """
 
 from typing import Dict, List, Any, Optional
-import logging
 import time
 from app.agents.base_agent import BaseAgent, AgentMessage, AgentResponse, AgentStatus, QualityAssessment
 from app.tools.base_tool import tool_registry
 from app.tools.tool_executor import get_tool_executor
 from app.core.llm_service import get_llm_service
 from app.core.rag_engine import get_rag_engine
+from app.core.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TravelAgent(BaseAgent):
@@ -30,9 +30,27 @@ class TravelAgent(BaseAgent):
             description="Intelligent travel planning assistant, able to develop personalized travel plans based on user needs"
         )
         
+        logger.info("=== TRAVEL AGENT INITIALIZATION START ===")
+        
+        logger.info("Initializing LLM service...")
         self.llm_service = get_llm_service()
+        logger.info(f"LLM service initialized: {self.llm_service}")
+        
+        logger.info("Initializing RAG engine...")
         self.rag_engine = get_rag_engine()
+        logger.info(f"RAG engine initialized: {self.rag_engine}")
+        logger.info(f"RAG engine vector store: {self.rag_engine.vector_store}")
+        
+        # Check RAG engine stats
+        try:
+            rag_stats = self.rag_engine.vector_store.get_stats()
+            logger.info(f"RAG engine vector store stats: {rag_stats}")
+        except Exception as e:
+            logger.error(f"Failed to get RAG engine stats: {e}")
+        
+        logger.info("Initializing tool executor...")
         self.tool_executor = get_tool_executor()
+        logger.info(f"Tool executor initialized: {self.tool_executor}")
         
         # Agent-specific state
         self.current_planning_context: Optional[Dict[str, Any]] = None
@@ -41,6 +59,13 @@ class TravelAgent(BaseAgent):
         # Travel-specific quality configuration
         self.quality_threshold = 0.8  # Higher threshold for travel planning
         self.refine_enabled = True  # Enable self-refinement by default
+        
+        logger.info("=== TRAVEL AGENT INITIALIZATION COMPLETE ===")
+        logger.info(f"Agent name: {self.name}")
+        logger.info(f"Agent description: {self.description}")
+        logger.info(f"Quality threshold: {self.quality_threshold}")
+        logger.info(f"Self-refinement enabled: {self.refine_enabled}")
+        logger.info("=== END TRAVEL AGENT INITIALIZATION ===")
     
     def get_capabilities(self) -> List[str]:
         """Get agent capabilities"""
@@ -312,10 +337,33 @@ class TravelAgent(BaseAgent):
             self.status = AgentStatus.THINKING
             
             # 1. Understand user intent
+            logger.info(f"=== INTENT ANALYSIS START ===")
+            logger.info(f"Original user message: '{message.content}'")
             intent = await self._analyze_user_intent(message.content)
+            logger.info(f"Intent analysis result: {intent}")
+            logger.info(f"=== INTENT ANALYSIS END ===")
             
             # 2. Retrieve relevant knowledge
+            logger.info(f"=== KNOWLEDGE CONTEXT RETRIEVAL START ===")
+            logger.info(f"Query for knowledge retrieval: '{message.content}'")
             knowledge_context = await self._retrieve_knowledge_context(message.content)
+            logger.info(f"Knowledge context retrieval result:")
+            logger.info(f"  - Total results: {knowledge_context.get('total_results', 0)}")
+            logger.info(f"  - Number of relevant docs: {len(knowledge_context.get('relevant_docs', []))}")
+            logger.info(f"  - Scores: {knowledge_context.get('scores', [])}")
+            logger.info(f"  - Error: {knowledge_context.get('error', 'None')}")
+            
+            # Log details of each retrieved document
+            for i, doc in enumerate(knowledge_context.get('relevant_docs', [])):
+                logger.info(f"  Doc {i+1}:")
+                logger.info(f"    - ID: {doc.get('id', 'unknown')}")
+                logger.info(f"    - Content preview: {doc.get('content', '')[:200]}...")
+                logger.info(f"    - Metadata: {doc.get('metadata', {})}")
+            
+            # Log the full context that will be used
+            context_preview = knowledge_context.get('context', '')[:500]
+            logger.info(f"  - Context preview (first 500 chars): {context_preview}")
+            logger.info(f"=== KNOWLEDGE CONTEXT RETRIEVAL END ===")
             
             # 3. Make a tool action plan
             action_plan = await self._create_action_plan(intent, knowledge_context)
@@ -358,14 +406,24 @@ class TravelAgent(BaseAgent):
     async def _analyze_user_intent(self, user_message: str) -> Dict[str, Any]:
         """Enhanced LLM-powered intent analysis with structured output"""
         
+        logger.info(f"--- Intent Analysis Details ---")
+        logger.info(f"Input message: '{user_message}'")
+        
         # Step 1: Get LLM intent analysis using prompt manager
+        logger.info("Step 1: Getting LLM intent analysis...")
         llm_analysis = await self._get_llm_intent_analysis(user_message)
+        logger.info(f"LLM analysis result: {llm_analysis}")
         
         # Step 2: Use structured response for deep analysis
+        logger.info("Step 2: Parsing structured intent...")
         structured_intent = await self._parse_structured_intent(llm_analysis, user_message)
+        logger.info(f"Structured intent result: {structured_intent}")
         
         # Step 3: Enhance and validate analysis results
+        logger.info("Step 3: Enhancing intent analysis...")
         enhanced_intent = await self._enhance_intent_analysis(structured_intent, user_message)
+        logger.info(f"Enhanced intent result: {enhanced_intent}")
+        logger.info(f"--- Intent Analysis Complete ---")
         
         return enhanced_intent
 
@@ -374,16 +432,23 @@ class TravelAgent(BaseAgent):
         
         from app.core.prompt_manager import prompt_manager, PromptType
         
+        logger.info(f"Getting LLM intent analysis for: '{user_message}'")
+        
         # Build structured prompt using prompt manager
         analysis_prompt = prompt_manager.get_prompt(
             PromptType.INTENT_ANALYSIS,
             user_message=user_message
         )
         
+        logger.info(f"Generated intent analysis prompt (first 300 chars): {analysis_prompt[:300]}...")
+        
         try:
             if self.llm_service:
+                logger.info("LLM service is available, attempting structured completion...")
                 # Use real LLM service with structured output
                 schema = prompt_manager.get_schema(PromptType.INTENT_ANALYSIS)
+                logger.info(f"Intent analysis schema: {schema}")
+                
                 response = await self.llm_service.structured_completion(
                     messages=[{"role": "user", "content": analysis_prompt}],
                     response_schema=schema,
@@ -391,14 +456,22 @@ class TravelAgent(BaseAgent):
                     max_tokens=800
                 )
                 
+                logger.info(f"LLM service response: {response}")
+                logger.info(f"LLM response type: {type(response)}")
+                
                 # Parse LLM response to structured format
                 return response
             else:
+                logger.warning("LLM service is not available, using enhanced fallback")
                 # Use enhanced fallback analysis
                 return await self._enhanced_fallback_intent_analysis(user_message)
                 
         except Exception as e:
             logger.error(f"LLM intent analysis failed: {e}")
+            logger.error(f"Error type: {type(e)}")
+            import traceback
+            logger.error(f"LLM intent analysis traceback: {traceback.format_exc()}")
+            logger.info("Falling back to enhanced fallback intent analysis")
             return await self._enhanced_fallback_intent_analysis(user_message)
 
     async def _parse_structured_intent(self, llm_analysis: Dict[str, Any], user_message: str) -> Dict[str, Any]:
@@ -450,6 +523,9 @@ class TravelAgent(BaseAgent):
     async def _enhanced_fallback_intent_analysis(self, user_message: str) -> Dict[str, Any]:
         """Enhanced fallback intent analysis with better keyword matching"""
         
+        logger.info(f"=== Enhanced Fallback Intent Analysis ===")
+        logger.info(f"Processing message: '{user_message}'")
+        
         user_message_lower = user_message.lower()
         
         # Enhanced intent type detection
@@ -465,6 +541,8 @@ class TravelAgent(BaseAgent):
         elif any(word in user_message_lower for word in ["problem", "issue", "complaint", "wrong", "error"]):
             intent_type = "complaint"
         
+        logger.info(f"Detected intent type: {intent_type}")
+        
         # Enhanced destination detection
         destination = "Unknown"
         destinations = ["tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", "shanghai", 
@@ -472,7 +550,11 @@ class TravelAgent(BaseAgent):
         for dest in destinations:
             if dest in user_message_lower:
                 destination = dest.title()
+                logger.info(f"Detected destination: {destination}")
                 break
+        
+        if destination == "Unknown":
+            logger.info("No destination detected from keyword matching")
         
         # Enhanced time extraction
         time_info = {}
@@ -480,16 +562,19 @@ class TravelAgent(BaseAgent):
         days_match = re.search(r'(\d+)\s*(?:day|days|天|日)', user_message_lower)
         if days_match:
             time_info["duration_days"] = int(days_match.group(1))
+            logger.info(f"Detected duration: {time_info['duration_days']} days")
         
         # Enhanced budget detection
         budget_info = {"budget_mentioned": False}
         if any(word in user_message_lower for word in ["budget", "cost", "price", "money", "spend", "expensive", "cheap"]):
             budget_info["budget_mentioned"] = True
+            logger.info("Budget mentioned in message")
             
             # Try to extract budget amount
             budget_match = re.search(r'[\$€£¥]?(\d+(?:,\d{3})*(?:\.\d{2})?)', user_message)
             if budget_match:
                 budget_info["amount"] = float(budget_match.group(1).replace(',', ''))
+                logger.info(f"Detected budget amount: {budget_info['amount']}")
         
         # Enhanced sentiment analysis
         sentiment = "neutral"
@@ -500,12 +585,16 @@ class TravelAgent(BaseAgent):
         elif any(word in user_message_lower for word in ["can't wait", "looking forward", "dream"]):
             sentiment = "excited"
         
+        logger.info(f"Detected sentiment: {sentiment}")
+        
         # Enhanced urgency detection
         urgency = "medium"
         if any(word in user_message_lower for word in ["urgent", "asap", "immediately", "quickly", "soon"]):
             urgency = "urgent"
         elif any(word in user_message_lower for word in ["flexible", "whenever", "no rush"]):
             urgency = "low"
+        
+        logger.info(f"Detected urgency: {urgency}")
         
         # Create structured fallback response
         structured_analysis = {
@@ -544,8 +633,10 @@ class TravelAgent(BaseAgent):
             "confidence_score": 0.6
         }
         
+        logger.info(f"Created structured analysis: {structured_analysis}")
+        
         # Legacy format for backward compatibility
-        return {
+        legacy_result = {
             "type": intent_type,
             "destination": destination,
             "time_info": time_info,
@@ -558,6 +649,11 @@ class TravelAgent(BaseAgent):
             },
             "structured_analysis": structured_analysis
         }
+        
+        logger.info(f"Returning legacy format result: {legacy_result}")
+        logger.info(f"=== Enhanced Fallback Intent Analysis Complete ===")
+        
+        return legacy_result
 
     def _extract_entities(self, user_message: str) -> Dict[str, Any]:
         """Extract additional entities from user message"""
@@ -617,31 +713,68 @@ class TravelAgent(BaseAgent):
     
     async def _retrieve_knowledge_context(self, query: str) -> Dict[str, Any]:
         """Retrieve knowledge context"""
+        logger.info(f"--- Knowledge Context Retrieval Details ---")
+        logger.info(f"RAG query: '{query}'")
+        
         try:
             # Use RAG engine to retrieve relevant knowledge
+            logger.info("Calling RAG engine retrieve method...")
+            logger.info(f"RAG engine instance: {self.rag_engine}")
+            
             result = await self.rag_engine.retrieve(query, top_k=5)
+            logger.info(f"RAG engine raw result: {result}")
+            logger.info(f"RAG result type: {type(result)}")
+            logger.info(f"RAG result documents count: {len(result.documents)}")
+            logger.info(f"RAG result scores: {result.scores}")
+            logger.info(f"RAG result total_results: {result.total_results}")
             
             # Process retrieved documents
             contexts = []
-            for doc in result.documents:
+            for i, doc in enumerate(result.documents):
+                logger.info(f"Processing document {i+1}:")
+                logger.info(f"  Document ID: {doc.id}")
+                logger.info(f"  Document content length: {len(doc.content)}")
+                logger.info(f"  Document metadata: {doc.metadata}")
+                logger.info(f"  Document content preview: {doc.content[:300]}...")
+                
                 contexts.append({
                     "id": doc.id,
                     "content": doc.content[:500] + "..." if len(doc.content) > 500 else doc.content,
                     "metadata": doc.metadata
                 })
             
-            return {
+            full_context = "\n\n".join([doc.content for doc in result.documents])
+            logger.info(f"Full context length: {len(full_context)}")
+            logger.info(f"Full context preview: {full_context[:600]}...")
+            
+            return_value = {
                 "relevant_docs": contexts,
-                "context": "\n\n".join([doc.content for doc in result.documents]),
+                "context": full_context,
                 "total_results": result.total_results,
                 "scores": result.scores
             }
+            
+            logger.info(f"Returning knowledge context: {return_value}")
+            logger.info(f"--- Knowledge Context Retrieval Complete ---")
+            
+            return return_value
+            
         except Exception as e:
-            return {
+            logger.error(f"Error in knowledge context retrieval: {str(e)}")
+            logger.error(f"Error type: {type(e)}")
+            import traceback
+            logger.error(f"Error traceback: {traceback.format_exc()}")
+            
+            error_result = {
                 "relevant_docs": [],
                 "context": f"Error retrieving context: {str(e)}",
                 "error": str(e)
             }
+            
+            logger.info(f"Returning error result: {error_result}")
+            logger.info(f"--- Knowledge Context Retrieval Complete (with error) ---")
+            
+            return error_result
     
     async def _create_action_plan(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Create intelligent action plan based on structured intention analysis"""
@@ -1578,27 +1711,45 @@ class TravelAgent(BaseAgent):
     async def _generate_response(self, execution_result: Dict[str, Any], intent: Dict[str, Any]) -> str:
         """Generate response content using prompt manager"""
         
+        logger.info(f"=== RESPONSE GENERATION START ===")
+        logger.info(f"Execution result success: {execution_result.get('success', False)}")
+        logger.info(f"Execution result keys: {list(execution_result.keys())}")
+        
         from app.core.prompt_manager import prompt_manager, PromptType
         
         try:
             # Get knowledge context from execution result
             knowledge_context = execution_result.get("knowledge_context", {})
+            logger.info(f"Knowledge context keys: {list(knowledge_context.keys())}")
+            
             relevant_docs = knowledge_context.get("relevant_docs", [])
+            logger.info(f"Number of relevant docs for response: {len(relevant_docs)}")
+            
+            for i, doc in enumerate(relevant_docs):
+                logger.info(f"Response relevant doc {i+1}: ID={doc.get('id', 'unknown')}, content_length={len(doc.get('content', ''))}")
+            
             structured_analysis = intent.get("structured_analysis", {})
+            logger.info(f"Structured analysis keys: {list(structured_analysis.keys())}")
             
             if execution_result["success"]:
                 # Try to use LLM with prompt manager for response generation
                 if self.llm_service:
+                    logger.info("Attempting LLM-based response generation...")
                     try:
                         # Build structured context for LLM
                         user_message = execution_result.get("original_message", "")
                         tool_results = execution_result.get("results", {})
+                        
+                        logger.info(f"User message for LLM: '{user_message}'")
+                        logger.info(f"Tool results keys: {list(tool_results.keys())}")
                         
                         # Format tool results for LLM
                         formatted_tool_results = {}
                         for tool_name, result in tool_results.items():
                             if tool_name in ["flight_search", "hotel_search", "attraction_search"]:
                                 formatted_tool_results[tool_name] = result
+                        
+                        logger.info(f"Formatted tool results: {formatted_tool_results}")
                         
                         # Generate response using prompt manager
                         response_prompt = prompt_manager.get_prompt(
@@ -1609,22 +1760,34 @@ class TravelAgent(BaseAgent):
                             knowledge_context=knowledge_context.get("context", "")
                         )
                         
+                        logger.info(f"Generated prompt for LLM (first 500 chars): {response_prompt[:500]}...")
+                        
                         llm_response = await self.llm_service.chat_completion([
                             {"role": "user", "content": response_prompt}
                         ])
                         
                         if llm_response and llm_response.content:
+                            logger.info(f"LLM response received, length: {len(llm_response.content)}")
+                            logger.info(f"LLM response preview: {llm_response.content[:300]}...")
+                            logger.info(f"=== RESPONSE GENERATION END (LLM) ===")
                             return llm_response.content
+                        else:
+                            logger.warning("LLM response was empty or invalid")
                         
                     except Exception as e:
                         logger.error(f"LLM response generation failed: {e}")
+                        logger.error(f"Falling back to template-based response")
                         # Fall back to template-based response
+                else:
+                    logger.info("No LLM service available, using template-based response")
                 
                 # Template-based response generation (fallback)
+                logger.info("Using template-based response generation...")
                 response_parts = []
                 
                 # Handle both new and legacy intent formats
                 intent_type = intent.get("type") or intent.get("intent_type", "query")
+                logger.info(f"Intent type for response: {intent_type}")
                 
                 if intent_type == "planning":
                     response_parts.append("🎯 **Travel Planning Assistant**")
@@ -1632,14 +1795,20 @@ class TravelAgent(BaseAgent):
                     
                     # Add knowledge-based information
                     if relevant_docs:
+                        logger.info(f"Adding {len(relevant_docs)} knowledge docs to response")
                         response_parts.append("\n📚 **Travel Information:**")
                         for i, doc in enumerate(relevant_docs[:2]):  # Limit to top 2 results
                             doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
                             content = doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "")
                             response_parts.append(f"**{doc_title}**\n{content}")
+                            logger.info(f"Added knowledge doc {i+1}: {doc_title}")
+                    else:
+                        logger.warning("No relevant docs found for planning response")
                     
                     # Add tool results
                     tool_results = execution_result.get("results", {})
+                    logger.info(f"Adding tool results to response: {list(tool_results.keys())}")
+                    
                     if "flight_search" in tool_results and "flights" in tool_results["flight_search"]:
                         response_parts.append("\n✈️ **Flight Options:**")
                         for flight in tool_results["flight_search"]["flights"][:2]:
@@ -1667,10 +1836,14 @@ class TravelAgent(BaseAgent):
                     
                     # Add knowledge-based recommendations
                     if relevant_docs:
+                        logger.info(f"Adding {len(relevant_docs)} knowledge docs to recommendation response")
                         for i, doc in enumerate(relevant_docs[:3]):
                             doc_title = doc.get("metadata", {}).get("title", f"Recommendation {i+1}")
                             content = doc.get("content", "")[:150] + "..." if len(doc.get("content", "")) > 150 else doc.get("content", "")
                             response_parts.append(f"\n**{doc_title}**\n{content}")
+                            logger.info(f"Added recommendation doc {i+1}: {doc_title}")
+                    else:
+                        logger.warning("No relevant docs found for recommendation response")
                     
                     response_parts.append("\n\n🔍 **Would you like me to:**")
                     response_parts.append("- Provide more detailed information about any of these recommendations?")
@@ -1681,12 +1854,15 @@ class TravelAgent(BaseAgent):
                     response_parts.append("❓ **Travel Information**")
                     
                     if relevant_docs:
+                        logger.info(f"Adding {len(relevant_docs)} knowledge docs to query response")
                         response_parts.append("Based on my knowledge, here's what I found:")
                         for i, doc in enumerate(relevant_docs[:2]):
                             doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
                             content = doc.get("content", "")
                             response_parts.append(f"\n**{doc_title}**\n{content}")
+                            logger.info(f"Added query doc {i+1}: {doc_title}")
                     else:
+                        logger.warning("No relevant docs found for query response")
                         response_parts.append("I'd be happy to help you with travel information. Could you provide more specific details about what you're looking for?")
                     
                     response_parts.append("\n\n💬 **Follow-up Questions:**")
@@ -1694,16 +1870,30 @@ class TravelAgent(BaseAgent):
                     response_parts.append("- Would you like me to help you plan a trip?")
                     response_parts.append("- Do you have any specific travel dates in mind?")
                 
-                return "\n".join(response_parts)
+                final_response = "\n".join(response_parts)
+                logger.info(f"Template-based response generated, length: {len(final_response)}")
+                logger.info(f"Template response preview: {final_response[:300]}...")
+                logger.info(f"=== RESPONSE GENERATION END (Template) ===")
+                return final_response
             
             else:
                 error_msg = execution_result.get("error", "Unknown error")
                 intent_type = intent.get("type") or intent.get("intent_type", "travel")
-                return f"I encountered an issue while processing your {intent_type} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
+                error_response = f"I encountered an issue while processing your {intent_type} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
+                
+                logger.info(f"Error response generated: {error_response}")
+                logger.info(f"=== RESPONSE GENERATION END (Error) ===")
+                return error_response
                 
         except Exception as e:
-            logger.error(f"Error calling DeepSeek API: {e}")
-            return f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
+            logger.error(f"Error in response generation: {e}")
+            import traceback
+            logger.error(f"Response generation traceback: {traceback.format_exc()}")
+            
+            error_response = f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
+            logger.info(f"Exception response generated: {error_response}")
+            logger.info(f"=== RESPONSE GENERATION END (Exception) ===")
+            return error_response
     
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute specific action using the complete new framework (required abstract method implementation)"""
