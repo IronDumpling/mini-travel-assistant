@@ -369,6 +369,50 @@ class ChromaVectorStore:
             logger.error(f"Failed to delete documents: {e}")
             return False
     
+    async def clear_documents_by_type(self, doc_type: 'DocumentType') -> bool:
+        """Clear all documents of a specific type from vector database"""
+        try:
+            logger.info(f"🗑️ CLEARING DOCUMENTS BY TYPE: {doc_type.value}")
+            
+            # 获取所有指定类型的文档
+            try:
+                # 使用where条件查询指定类型的文档
+                result = self.collection.get(
+                    where={"doc_type": {"$eq": doc_type.value}},
+                    include=['metadatas']
+                )
+                
+                if result['ids']:
+                    logger.info(f"  - Found {len(result['ids'])} documents of type {doc_type.value}")
+                    
+                    # 删除这些文档
+                    self.collection.delete(ids=result['ids'])
+                    
+                    logger.info(f"✅ CLEARED {len(result['ids'])} documents of type {doc_type.value}")
+                else:
+                    logger.info(f"  - No documents found with type {doc_type.value}")
+                
+                return True
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to query documents by type: {e}")
+                # 如果按类型查询失败，尝试清空整个集合（仅用于调试）
+                logger.info(f"  - Attempting to clear entire collection as fallback...")
+                
+                # 获取所有文档ID
+                all_docs = self.collection.get(include=['metadatas'])
+                if all_docs['ids']:
+                    logger.info(f"  - Clearing all {len(all_docs['ids'])} documents in collection")
+                    self.collection.delete(ids=all_docs['ids'])
+                    logger.info(f"✅ CLEARED entire collection as fallback")
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ FAILED to clear documents by type {doc_type.value}: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
+            return False
+    
     def get_stats(self) -> Dict[str, Any]:
         """Get vector store statistics"""
         try:
