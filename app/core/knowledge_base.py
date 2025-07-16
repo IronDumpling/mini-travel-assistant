@@ -8,15 +8,15 @@ smart data loading and RAG-enhanced search capabilities.
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 import yaml
-import logging
 from datetime import datetime
 from pydantic import BaseModel
 
 from app.core.rag_engine import Document, DocumentType, get_rag_engine
 from app.core.data_loader import TravelDataLoader
+from app.core.logging_config import get_logger
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class KnowledgeCategory(BaseModel):
@@ -78,9 +78,12 @@ class KnowledgeBase:
             # 2. Load knowledge data
             await self._load_knowledge_data()
             
-            # 3. Build RAG index if needed
-            if not self.rag_engine.vector_store.get_stats().get("total_documents", 0):
-                await self._build_index()
+            # 3. 🔧 FORCE REBUILD RAG INDEX - 强制重新构建索引
+            # 直接强制重建索引以确保数据一致性
+            logger.info("🔄 FORCE REBUILDING RAG INDEX - 强制重新构建索引...")
+            logger.info("  - This ensures all documents are properly indexed")
+            logger.info("  - Previous index will be updated/replaced")
+            await self._build_index()
             
             self._initialized = True
             logger.info(f"Knowledge base ready with {len(self.knowledge_items)} items")
@@ -160,97 +163,94 @@ class KnowledgeBase:
     async def _load_knowledge_data(self):
         """Load knowledge data from files"""
         try:
+            # 🔧 DEBUG: Log knowledge loading start
+            logger.info(f"📚 STARTING KNOWLEDGE DATA LOADING...")
+            logger.info(f"  - Data loader: {self.data_loader}")
+            logger.info(f"  - Knowledge directory: {self.knowledge_dir}")
+            
             # Load from files using data loader
             knowledge_items = await self.data_loader.load_all_data()
             
+            # 🔧 DEBUG: Log loaded items summary
+            logger.info(f"📊 KNOWLEDGE LOADING RESULTS:")
+            logger.info(f"  - Total items loaded: {len(knowledge_items)}")
+            
             # Process loaded knowledge
             self.knowledge_items.clear()
+            processed_count = 0
+            berlin_count = 0
+            
             for knowledge in knowledge_items:
                 self.knowledge_items[knowledge.id] = knowledge
+                processed_count += 1
+                
+                            # Log basic processing info
+            logger.debug(f"Processed knowledge item: {knowledge.id}")
+            processed_count += 1
             
-            # Load default knowledge if no files found
-            if not self.knowledge_items:
-                logger.info("No knowledge files found, loading default knowledge...")
-                await self._load_default_travel_knowledge()
-            
-            logger.info(f"Loaded {len(self.knowledge_items)} knowledge items")
+            # Log processing results
+            if self.knowledge_items:
+                logger.info(f"Loaded {len(self.knowledge_items)} knowledge items from files")
+                
+                # Log knowledge by category
+                category_stats = {}
+                location_stats = {}
+                for knowledge in self.knowledge_items.values():
+                    category_stats[knowledge.category] = category_stats.get(knowledge.category, 0) + 1
+                    if knowledge.location:
+                        location_stats[knowledge.location] = location_stats.get(knowledge.location, 0) + 1
+                
+                logger.info(f"Knowledge breakdown by category: {dict(sorted(category_stats.items()))}")
+                logger.info(f"Knowledge breakdown by location: {dict(sorted(location_stats.items()))}")
+                
+            else:
+                logger.warning("No knowledge files found in the documents directory")
+                logger.info("Please ensure knowledge files are present in app/knowledge/documents/")
             
         except Exception as e:
-            logger.error(f"Failed to load knowledge data: {e}")
-            await self._load_default_travel_knowledge()
-    
-    async def _load_default_travel_knowledge(self):
-        """Load default travel knowledge data"""
-        default_knowledge = [
-            {
-                "id": "paris_eiffel_tower",
-                "title": "Eiffel Tower - Paris",
-                "content": """The Eiffel Tower is an iconic landmark in Paris, France. Built in 1889, it stands 324 meters tall and offers spectacular views of the city.
-
-**Visiting Information:**
-- Opening Hours: 9:00 AM - 11:00 PM (extended hours in summer)
-- Ticket Prices: Adults €29.40 (top floor), €18.10 (second floor)
-- Best Time to Visit: Early morning or late evening to avoid crowds
-- Location: Champ de Mars, 5 Avenue Anatole France, 75007 Paris
-
-**Tips:**
-- Book tickets online in advance to skip lines
-- Visit during sunset for the most beautiful views
-- Take the stairs to the second floor for a discount
-- Security checks can cause delays, arrive early""",
-                "category": "destinations",
-                "location": "Paris, France",
-                "tags": ["Paris", "Eiffel Tower", "Landmark", "France", "Europe"],
-                "language": "en"
-            },
-            {
-                "id": "japan_tourist_visa",
-                "title": "Japan Tourist Visa Requirements",
-                "content": """Information for obtaining a tourist visa to Japan.
-
-**Required Documents:**
-1. **Passport**: Valid for at least 6 months, with 2 blank pages
-2. **Visa Application Form**: Completed and signed
-3. **Photo**: 2-inch color photo on white background
-4. **Employment Certificate**: Company letterhead with position and salary
-5. **Bank Statements**: Last 6 months showing sufficient funds
-6. **Travel Itinerary**: Detailed travel plan with dates and locations
-7. **Hotel Reservations**: Confirmed bookings for entire stay
-8. **Flight Reservations**: Round-trip flight booking confirmation
-
-**Application Process:**
-1. Prepare documents (3-5 business days)
-2. Submit application at consulate or authorized agency
-3. Processing time: 5-7 business days
-4. Collect passport with visa
-
-**Important Notes:**
-- Apply 1 month in advance for regular season
-- Apply 2 months in advance for peak seasons (cherry blossom, autumn)
-- First-time applicants recommended to use authorized travel agencies""",
-                "category": "practical",
-                "location": "Japan",
-                "tags": ["Japan", "Visa", "Tourism", "Application", "Requirements"],
-                "language": "en"
-            }
-        ]
-        
-        for knowledge_data in default_knowledge:
-            knowledge = TravelKnowledge(**knowledge_data)
-            self.knowledge_items[knowledge.id] = knowledge
-            
-        logger.info(f"Created {len(default_knowledge)} default knowledge items")
+            logger.error(f"❌ FAILED to load knowledge data: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
+            # Don't fall back to hardcoded data - let the system handle empty knowledge gracefully
+            logger.warning("Knowledge base will operate with empty knowledge set")
     
     async def _build_index(self):
         """Build vector index for all knowledge items"""
         try:
+            # 🔧 DEBUG: Log indexing start
+            logger.info(f"🔧 STARTING KNOWLEDGE INDEX BUILDING...")
+            logger.info(f"  - Knowledge items to index: {len(self.knowledge_items)}")
+            
             if not self.knowledge_items:
                 logger.warning("No knowledge items to index")
                 return
             
+            # 🔧 FORCE REBUILD: 清空现有索引
+            logger.info(f"🗑️ CLEARING EXISTING INDEX...")
+            try:
+                # 获取当前所有文档ID
+                current_stats = self.rag_engine.vector_store.get_stats()
+                current_doc_count = current_stats.get("total_documents", 0)
+                logger.info(f"  - Current documents in vector store: {current_doc_count}")
+                
+                if current_doc_count > 0:
+                    # 清空集合以强制重新索引
+                    await self._clear_travel_knowledge_index()
+                    logger.info(f"✅ CLEARED EXISTING INDEX")
+                else:
+                    logger.info(f"  - No existing documents to clear")
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to clear existing index: {e}")
+                logger.info(f"  - Continuing with indexing (will update existing docs)")
+            
             # Convert knowledge items to documents
             documents = []
-            for knowledge in self.knowledge_items.values():
+            berlin_docs = 0
+            
+            for i, knowledge in enumerate(self.knowledge_items.values()):
+                # 🔧 DEBUG: Log document creation
+                logger.debug(f"🏗️ CREATING DOCUMENT {i+1}: {knowledge.id}")
+                
                 doc = Document(
                     id=knowledge.id,
                     content=f"{knowledge.title}\n\n{knowledge.content}",
@@ -264,17 +264,59 @@ class KnowledgeBase:
                     doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Add proper document type
                 )
                 documents.append(doc)
+                
+                # 🔧 DEBUG: Track Berlin documents
+                if 'berlin' in doc.content.lower() or 'berlin' in str(doc.metadata).lower():
+                    berlin_docs += 1
+                    logger.info(f"🏛️ BERLIN DOCUMENT CREATED FOR INDEXING: {doc.id}")
+                    logger.info(f"  - Title: {knowledge.title}")
+                    logger.info(f"  - Location metadata: {doc.metadata.get('location')}")
+                    logger.info(f"  - Content length: {len(doc.content)}")
+                    logger.info(f"  - Content preview: {doc.content[:200]}...")
+                
+                logger.debug(f"  - Document created with {len(doc.content)} chars")
+                logger.debug(f"  - Metadata: {doc.metadata}")
+            
+            # 🔧 DEBUG: Log documents prepared for indexing
+            logger.info(f"📋 DOCUMENTS PREPARED FOR INDEXING:")
+            logger.info(f"  - Total documents: {len(documents)}")
+            logger.info(f"  - Berlin documents: {berlin_docs}")
+            logger.info(f"  - RAG engine: {self.rag_engine}")
             
             # Index documents in RAG engine
+            logger.info(f"🚀 STARTING RAG INDEXING...")
             success = await self.rag_engine.index_documents(documents)
             
             if success:
-                logger.info(f"Successfully indexed {len(documents)} knowledge items")
+                logger.info(f"✅ Successfully indexed {len(documents)} knowledge items")
+                logger.info(f"  - Berlin documents indexed: {berlin_docs}")
+                
+                # 🔧 DEBUG: Verify indexing worked by checking vector store stats
+                vector_stats = self.rag_engine.vector_store.get_stats()
+                logger.info(f"📊 POST-INDEXING VECTOR STORE STATS:")
+                logger.info(f"  - Total documents in vector store: {vector_stats.get('total_documents', 'Unknown')}")
+                
             else:
-                logger.error("Failed to index knowledge items")
+                logger.error("❌ Failed to index knowledge items")
                 
         except Exception as e:
-            logger.error(f"Failed to build knowledge index: {e}")
+            logger.error(f"❌ Failed to build knowledge index: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
+            raise
+    
+    async def _clear_travel_knowledge_index(self):
+        """Clear all travel knowledge documents from the vector store"""
+        try:
+            logger.info(f"🧹 CLEARING TRAVEL KNOWLEDGE FROM VECTOR STORE...")
+            
+            # 使用ChromaDB的delete方法删除所有旅行知识文档
+            # 通过doc_type过滤来只删除旅行知识文档，保留工具文档
+            await self.rag_engine.vector_store.clear_documents_by_type(DocumentType.TRAVEL_KNOWLEDGE)
+            
+            logger.info(f"✅ TRAVEL KNOWLEDGE INDEX CLEARED")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to clear travel knowledge index: {e}")
             raise
     
     async def add_knowledge(self, knowledge: TravelKnowledge) -> bool:
@@ -297,7 +339,7 @@ class KnowledgeBase:
                     "language": knowledge.language,
                     "title": knowledge.title
                 },
-                doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Add proper document type
+                doc_type=DocumentType.TRAVEL_KNOWLEDGE
             )
             
             # Index in RAG engine
@@ -312,7 +354,8 @@ class KnowledgeBase:
                 return False
                 
         except Exception as e:
-            logger.error(f"Failed to add knowledge item: {e}")
+            logger.error(f"❌ Failed to add knowledge item: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             return False
     
     async def update_knowledge(self, knowledge_id: str, updated_knowledge: TravelKnowledge) -> bool:
@@ -393,18 +436,23 @@ class KnowledgeBase:
             if location:
                 filter_metadata["location"] = location
             
+            logger.debug(f"Knowledge search: query='{query[:50]}...', top_k={top_k}, filters={filter_metadata}")
+            
             # Use RAG engine for semantic search with travel knowledge filter
             result = await self.rag_engine.retrieve(
                 query=query,
                 top_k=top_k * 2,  # Get more candidates for filtering
                 filter_metadata=filter_metadata,
-                doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Filter for travel knowledge only
+                doc_type=DocumentType.TRAVEL_KNOWLEDGE
             )
+            
+            logger.debug(f"RAG engine returned {len(result.documents)} documents with scores: {result.scores}")
             
             # Process and filter results
             knowledge_results = []
             for doc, score in zip(result.documents, result.scores):
                 if score < min_score:
+                    logger.debug(f"  - Skipping doc {doc.id} due to low score: {score:.4f}")
                     continue
                     
                 # Find the original knowledge item
@@ -415,6 +463,9 @@ class KnowledgeBase:
                         "relevance_score": score,
                         "highlights": self._extract_highlights(doc.content, query)
                     })
+                    logger.debug(f"  - Added knowledge result: {knowledge.id} (score: {score:.4f})")
+                else:
+                    logger.warning(f"  - Knowledge item not found for doc: {doc.id}")
             
             # Sort by relevance score and limit results
             knowledge_results.sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -424,7 +475,8 @@ class KnowledgeBase:
             return knowledge_results
             
         except Exception as e:
-            logger.error(f"Knowledge search failed: {e}")
+            logger.error(f"❌ Knowledge search failed: {e}")
+            logger.error(f"  - Error type: {type(e).__name__}")
             return []
     
     def _extract_highlights(self, content: str, query: str) -> List[str]:

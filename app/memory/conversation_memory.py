@@ -16,9 +16,9 @@ from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 from pydantic import BaseModel, Field
 from app.core.rag_engine import get_rag_engine, Document
-import logging
+from app.core.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ConversationTurn(BaseModel):

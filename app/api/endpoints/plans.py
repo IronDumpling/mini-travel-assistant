@@ -10,9 +10,9 @@ from typing import List, Optional, Dict, Any
 from app.api.schemas import TravelRequest, TravelPlan, TravelPlanUpdate, TravelPlanResponse, FrameworkMetadata
 from app.agents.travel_agent import TravelAgent
 from datetime import datetime
-import logging
+from app.core.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 
