@@ -17,13 +17,13 @@ except ImportError as e:
     sys.exit(1)
 
 
-async def run_chat_tests(enable_refinement=False):
-    """Run chat API tests with configurable refinement"""
+async def run_chat_tests(enable_refinement=False, timeout_seconds=300.0):
+    """Run chat API tests with configurable refinement and timeout"""
     refinement_mode = "with" if enable_refinement else "without"
-    print(f"Starting Chat API Tests ({refinement_mode} refinement)...")
+    print(f"Starting Chat API Tests ({refinement_mode} refinement, {timeout_seconds}s timeout)...")
     
     try:
-        async with ChatAPITester() as tester:
+        async with ChatAPITester(timeout_seconds=timeout_seconds) as tester:
             # Create a new session for testing
             print("Creating test session...")
             session_id = await tester.create_session(
@@ -117,6 +117,8 @@ def main():
                        help="Run tests but skip analysis")
     parser.add_argument("--base-url", default="http://localhost:8000",
                        help="Base URL for the API (default: http://localhost:8000)")
+    parser.add_argument("--timeout", type=float, default=300.0,
+                       help="Timeout in seconds for API requests (default: 300.0 = 5 minutes)")
     
     args = parser.parse_args()
     
@@ -133,6 +135,7 @@ def main():
     refinement_mode = "with" if args.refinement else "without"
     print("Starting Chat API Tests...")
     print(f"Base URL: {args.base_url}")
+    print(f"Timeout: {args.timeout} seconds ({args.timeout/60:.1f} minutes)")
     print(f"Refinement: {'Enabled' if args.refinement else 'Disabled'}")
     print("-" * 50)
     print("📋 Prerequisites:")
@@ -151,7 +154,7 @@ def main():
     
     try:
         # Run async tests
-        asyncio.run(run_chat_tests(enable_refinement=args.refinement))
+        asyncio.run(run_chat_tests(enable_refinement=args.refinement, timeout_seconds=args.timeout))
         
         if not args.no_analysis:
             print("\nAnalyzing results...")

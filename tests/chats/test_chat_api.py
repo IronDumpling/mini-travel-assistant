@@ -37,12 +37,13 @@ class TestMetrics:
 class ChatAPITester:
     """Test suite for Chat API with metrics recording"""
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:8000", timeout_seconds: float = 300.0):
         self.base_url = base_url
-        # Configure client with longer timeout for chat API (normally takes ~1 minute)
-        # Extra time for refinement-enabled requests which may take longer
-        timeout = httpx.Timeout(120.0, connect=10.0)  # 120 seconds for chat responses
+        # Configure client with configurable timeout for chat API
+        # Default is 5 minutes (300 seconds) to handle long-running refinement requests
+        timeout = httpx.Timeout(timeout_seconds, connect=10.0)
         self.client = httpx.AsyncClient(timeout=timeout)
+        self.timeout_seconds = timeout_seconds
         self.metrics: List[TestMetrics] = []
         self.session_id = None
         
@@ -333,7 +334,7 @@ async def run_chat_tests():
     print("Starting Chat API Tests...")
     
     try:
-        async with ChatAPITester() as tester:
+        async with ChatAPITester(timeout_seconds=300.0) as tester:
             # Create a new session for testing
             print("Creating test session...")
             session_id = await tester.create_session(

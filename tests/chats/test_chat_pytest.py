@@ -28,7 +28,7 @@ class TestChatAPI:
     @pytest.fixture(scope="session")
     async def tester(self):
         """Create a ChatAPITester instance for the test session"""
-        async with ChatAPITester() as tester:
+        async with ChatAPITester(timeout_seconds=300.0) as tester:
             # Create a session for testing
             session_id = await tester.create_session(
                 title="Pytest Chat API Test Session",
@@ -150,7 +150,7 @@ class TestChatAPI:
     @pytest.mark.asyncio
     async def test_invalid_session_handling(self):
         """Test handling of invalid session ID"""
-        async with ChatAPITester() as tester:
+        async with ChatAPITester(timeout_seconds=300.0) as tester:
             metric = await tester.send_chat_message(
                 message="Test message",
                 session_id="invalid_session_id",
