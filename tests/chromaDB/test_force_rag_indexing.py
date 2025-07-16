@@ -25,7 +25,6 @@ async def force_rag_indexing():
         kb = await get_knowledge_base()
         
         print(f"   📊 Knowledge items loaded: {len(kb.knowledge_items)}")
-        print(f"   📋 Document changes detected: {kb.has_document_changes}")
         
         # Show all knowledge items
         print("   📝 All knowledge items:")

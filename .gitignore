@@ -75,5 +75,3 @@ htmlcov/
 
 # Jupyter Notebooks
 .ipynb_checkpoints
-
-app/knowledge/.cache/

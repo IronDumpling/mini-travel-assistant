@@ -61,7 +61,6 @@ class KnowledgeBase:
         self.rag_engine = get_rag_engine()
         self.data_loader = TravelDataLoader(knowledge_dir)
         self._initialized = False
-        self.has_document_changes = False  # 🔧 Track document changes for indexing decisions
         
         logger.info(f"Knowledge base initialized for directory: {self.knowledge_dir}")
     
@@ -80,11 +79,11 @@ class KnowledgeBase:
             await self._load_knowledge_data()
             
             # 3. 🔧 FORCE REBUILD RAG INDEX - 强制重新构建索引
-            # 移除原来的条件检查，直接强制重建索引以确保数据一致性
+            # 直接强制重建索引以确保数据一致性
             logger.info("🔄 FORCE REBUILDING RAG INDEX - 强制重新构建索引...")
             logger.info("  - This ensures all documents are properly indexed")
             logger.info("  - Previous index will be updated/replaced")
-            await self._build_index(force_rebuild=True)
+            await self._build_index()
             
             self._initialized = True
             logger.info(f"Knowledge base ready with {len(self.knowledge_items)} items")
@@ -169,18 +168,6 @@ class KnowledgeBase:
             logger.info(f"  - Data loader: {self.data_loader}")
             logger.info(f"  - Knowledge directory: {self.knowledge_dir}")
             
-            # 🔧 检测文档变化并决定是否需要强制重建
-            changes, new_version_info = self.data_loader.detect_changes()
-            self.has_document_changes = changes["has_changes"]
-            
-            if self.has_document_changes:
-                logger.info(f"📋 DOCUMENT CHANGES DETECTED - 将强制重建索引")
-                logger.info(f"  - Added files: {len(changes['files_added'])}")
-                logger.info(f"  - Modified files: {len(changes['files_modified'])}")
-                logger.info(f"  - Deleted files: {len(changes['files_deleted'])}")
-            else:
-                logger.info(f"✅ NO DOCUMENT CHANGES - 但仍将执行强制重建以确保一致性")
-            
             # Load from files using data loader
             knowledge_items = await self.data_loader.load_all_data()
             
@@ -218,7 +205,6 @@ class KnowledgeBase:
             logger.info(f"  - Total processed: {processed_count}")
             logger.info(f"  - Berlin items found: {berlin_count}")
             logger.info(f"  - Items in memory: {len(self.knowledge_items)}")
-            logger.info(f"  - Has document changes: {self.has_document_changes}")
             
             # Log appropriate message based on what was loaded
             if self.knowledge_items:
@@ -248,39 +234,36 @@ class KnowledgeBase:
             logger.error(f"  - Error type: {type(e).__name__}")
             # Don't fall back to hardcoded data - let the system handle empty knowledge gracefully
             logger.warning("Knowledge base will operate with empty knowledge set")
-            self.has_document_changes = False  # 加载失败时设为False
     
-    async def _build_index(self, force_rebuild: bool = False):
+    async def _build_index(self):
         """Build vector index for all knowledge items"""
         try:
             # 🔧 DEBUG: Log indexing start
             logger.info(f"🔧 STARTING KNOWLEDGE INDEX BUILDING...")
             logger.info(f"  - Knowledge items to index: {len(self.knowledge_items)}")
-            logger.info(f"  - Force rebuild: {force_rebuild}")
             
             if not self.knowledge_items:
                 logger.warning("No knowledge items to index")
                 return
             
             # 🔧 FORCE REBUILD: 清空现有索引
-            if force_rebuild:
-                logger.info(f"🗑️ CLEARING EXISTING INDEX (Force Rebuild)...")
-                try:
-                    # 获取当前所有文档ID
-                    current_stats = self.rag_engine.vector_store.get_stats()
-                    current_doc_count = current_stats.get("total_documents", 0)
-                    logger.info(f"  - Current documents in vector store: {current_doc_count}")
+            logger.info(f"🗑️ CLEARING EXISTING INDEX...")
+            try:
+                # 获取当前所有文档ID
+                current_stats = self.rag_engine.vector_store.get_stats()
+                current_doc_count = current_stats.get("total_documents", 0)
+                logger.info(f"  - Current documents in vector store: {current_doc_count}")
+                
+                if current_doc_count > 0:
+                    # 清空集合以强制重新索引
+                    await self._clear_travel_knowledge_index()
+                    logger.info(f"✅ CLEARED EXISTING INDEX")
+                else:
+                    logger.info(f"  - No existing documents to clear")
                     
-                    if current_doc_count > 0:
-                        # 清空集合以强制重新索引
-                        await self._clear_travel_knowledge_index()
-                        logger.info(f"✅ CLEARED EXISTING INDEX")
-                    else:
-                        logger.info(f"  - No existing documents to clear")
-                        
-                except Exception as e:
-                    logger.warning(f"⚠️ Failed to clear existing index: {e}")
-                    logger.info(f"  - Continuing with indexing (will update existing docs)")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to clear existing index: {e}")
+                logger.info(f"  - Continuing with indexing (will update existing docs)")
             
             # Convert knowledge items to documents
             documents = []

@@ -10,7 +10,6 @@ from pathlib import Path
 import json
 import yaml
 from datetime import datetime
-import hashlib
 import time
 from pydantic import BaseModel, ValidationError
 from app.core.logging_config import get_logger
@@ -42,126 +41,7 @@ class TravelDataLoader:
         # Supported file formats
         self.supported_formats = {'.json', '.yaml', '.yml'}
         
-        # 🔧 Version and change detection
-        self.cache_dir = self.knowledge_dir / ".cache"
-        self.cache_dir.mkdir(exist_ok=True)
-        self.version_file = self.cache_dir / "data_version.json"
-        self.last_known_version = self._load_version_info()
-        
         logger.info(f"Data loader initialized for directory: {self.knowledge_dir}")
-        logger.info(f"  - Cache directory: {self.cache_dir}")
-        logger.info(f"  - Last known version: {self.last_known_version.get('version_hash', 'None')[:8]}...")
-    
-    def _load_version_info(self) -> Dict[str, Any]:
-        """Load version information from cache"""
-        try:
-            if self.version_file.exists():
-                with open(self.version_file, 'r', encoding='utf-8') as f:
-                    version_info = json.load(f)
-                    logger.debug(f"📋 LOADED VERSION INFO: {version_info.get('version_hash', 'Unknown')[:8]}...")
-                    return version_info
-        except Exception as e:
-            logger.warning(f"Failed to load version info: {e}")
-        
-        return {
-            "version_hash": "",
-            "last_update": "",
-            "files_count": 0,
-            "files_info": {}
-        }
-    
-    def _save_version_info(self, version_info: Dict[str, Any]) -> None:
-        """Save version information to cache"""
-        try:
-            with open(self.version_file, 'w', encoding='utf-8') as f:
-                json.dump(version_info, f, indent=2, ensure_ascii=False)
-            logger.debug(f"💾 SAVED VERSION INFO: {version_info.get('version_hash', 'Unknown')[:8]}...")
-        except Exception as e:
-            logger.error(f"Failed to save version info: {e}")
-    
-    def detect_changes(self) -> Dict[str, Any]:
-        """检测文档目录的变化"""
-        logger.info(f"🔍 DETECTING CHANGES IN DOCUMENTS...")
-        
-        current_files_info = {}
-        current_version_hash = hashlib.md5()
-        
-        # 扫描所有支持的文件
-        for file_path in sorted(self.documents_dir.rglob("*")):
-            if file_path.is_file() and file_path.suffix.lower() in self.supported_formats:
-                try:
-                    stat = file_path.stat()
-                    file_info = {
-                        "size": stat.st_size,
-                        "mtime": stat.st_mtime,
-                        "path": str(file_path.relative_to(self.documents_dir))
-                    }
-                    
-                    # 计算文件内容hash
-                    with open(file_path, 'rb') as f:
-                        file_hash = hashlib.md5(f.read()).hexdigest()
-                        file_info["hash"] = file_hash
-                    
-                    current_files_info[str(file_path)] = file_info
-                    current_version_hash.update(file_hash.encode())
-                    
-                except Exception as e:
-                    logger.warning(f"Failed to process file {file_path}: {e}")
-        
-        current_version = current_version_hash.hexdigest()
-        
-        # 比较版本
-        old_version = self.last_known_version.get("version_hash", "")
-        old_files_info = self.last_known_version.get("files_info", {})
-        
-        changes = {
-            "has_changes": current_version != old_version,
-            "old_version": old_version,
-            "new_version": current_version,
-            "files_added": [],
-            "files_modified": [],
-            "files_deleted": [],
-            "total_files": len(current_files_info)
-        }
-        
-        # 检测具体变化
-        if changes["has_changes"]:
-            logger.info(f"📋 CHANGES DETECTED!")
-            logger.info(f"  - Old version: {old_version[:8]}...")
-            logger.info(f"  - New version: {current_version[:8]}...")
-            
-            # 找出新增和修改的文件
-            for file_path, file_info in current_files_info.items():
-                if file_path not in old_files_info:
-                    changes["files_added"].append(file_path)
-                    logger.info(f"  📄 ADDED: {file_info['path']}")
-                elif file_info["hash"] != old_files_info[file_path].get("hash", ""):
-                    changes["files_modified"].append(file_path)
-                    logger.info(f"  ✏️ MODIFIED: {file_info['path']}")
-            
-            # 找出删除的文件
-            for file_path in old_files_info:
-                if file_path not in current_files_info:
-                    changes["files_deleted"].append(file_path)
-                    logger.info(f"  🗑️ DELETED: {old_files_info[file_path]['path']}")
-            
-            logger.info(f"📊 CHANGE SUMMARY:")
-            logger.info(f"  - Added: {len(changes['files_added'])}")
-            logger.info(f"  - Modified: {len(changes['files_modified'])}")
-            logger.info(f"  - Deleted: {len(changes['files_deleted'])}")
-        else:
-            logger.info(f"✅ NO CHANGES DETECTED")
-            logger.info(f"  - Current version: {current_version[:8]}...")
-        
-        # 更新版本信息
-        new_version_info = {
-            "version_hash": current_version,
-            "last_update": datetime.now().isoformat(),
-            "files_count": len(current_files_info),
-            "files_info": current_files_info
-        }
-        
-        return changes, new_version_info
     
     async def load_all_data(self) -> List[Any]:
         """Load all travel knowledge data from the documents directory"""
@@ -173,12 +53,8 @@ class TravelDataLoader:
             logger.warning(f"Documents directory does not exist: {self.documents_dir}")
             return []
         
-        # 🔧 检测文档变化
-        changes, new_version_info = self.detect_changes()
-        
         # 🔧 DEBUG: Log directory structure scan
         logger.info(f"🔍 STARTING DOCUMENT SCAN: {self.documents_dir}")
-        logger.info(f"  - Force reload due to changes: {changes['has_changes']}")
         
         # Recursively find all supported files
         for file_path in self.documents_dir.rglob("*"):
@@ -232,13 +108,6 @@ class TravelDataLoader:
         # Calculate load time
         stats.load_time = time.time() - start_time
         
-        # 🔧 保存新的版本信息
-        if changes["has_changes"]:
-            logger.info(f"💾 SAVING NEW VERSION INFO...")
-            self._save_version_info(new_version_info)
-            self.last_known_version = new_version_info
-            logger.info(f"  - New version saved: {new_version_info['version_hash'][:8]}...")
-        
         # 🔧 DEBUG: Comprehensive loading summary
         logger.info(f"📊 DOCUMENT LOADING SUMMARY:")
         logger.info(f"  - Total files scanned: {stats.total_files}")
@@ -246,7 +115,6 @@ class TravelDataLoader:
         logger.info(f"  - Failed to load: {stats.failed_files}")
         logger.info(f"  - Total knowledge items: {stats.total_knowledge_items}")
         logger.info(f"  - Load time: {stats.load_time:.2f}s")
-        logger.info(f"  - Version changes: {changes['has_changes']}")
         
         # 🔧 DEBUG: Check for specific destinations
         destinations_found = set()
@@ -416,6 +284,7 @@ class TravelDataLoader:
     def _generate_id(self, data: Dict[str, Any], file_path: Path, item_index: int) -> str:
         """Generate a unique ID for knowledge item"""
         # Use file path and content to create consistent ID
+        import hashlib
         content_hash = hashlib.md5(
             f"{file_path.stem}_{item_index}_{data.get('title', '')}".encode('utf-8')
         ).hexdigest()[:8]
@@ -471,51 +340,12 @@ class TravelDataLoader:
         """Get list of supported file formats"""
         return list(self.supported_formats)
     
-    def calculate_data_version(self) -> str:
-        """Calculate version hash for all data files"""
-        hash_md5 = hashlib.md5()
-        
-        # Get all supported files and sort for consistent hashing
-        files = []
-        for file_path in self.documents_dir.rglob("*"):
-            if file_path.is_file() and file_path.suffix.lower() in self.supported_formats:
-                files.append(file_path)
-        
-        files.sort(key=lambda x: str(x))
-        
-        # Hash file contents
-        for file_path in files:
-            try:
-                with open(file_path, 'rb') as f:
-                    hash_md5.update(f.read())
-            except Exception as e:
-                logger.warning(f"Could not hash file {file_path}: {e}")
-                continue
-        
-        return hash_md5.hexdigest()
-    
-    def get_latest_modification_time(self) -> float:
-        """Get the latest modification time of all data files"""
-        latest_time = 0
-        
-        for file_path in self.documents_dir.rglob("*"):
-            if file_path.is_file() and file_path.suffix.lower() in self.supported_formats:
-                try:
-                    file_time = file_path.stat().st_mtime
-                    latest_time = max(latest_time, file_time)
-                except Exception as e:
-                    logger.warning(f"Could not get modification time for {file_path}: {e}")
-                    continue
-        
-        return latest_time
-    
     def get_data_stats(self) -> Dict[str, Any]:
         """Get statistics about the data directory"""
         stats = {
             "total_files": 0,
             "files_by_format": {},
-            "total_size": 0,
-            "latest_modification": 0
+            "total_size": 0
         }
         
         for file_path in self.documents_dir.rglob("*"):
@@ -529,10 +359,6 @@ class TravelDataLoader:
                 # Total size
                 try:
                     stats["total_size"] += file_path.stat().st_size
-                    stats["latest_modification"] = max(
-                        stats["latest_modification"], 
-                        file_path.stat().st_mtime
-                    )
                 except Exception:
                     continue
         

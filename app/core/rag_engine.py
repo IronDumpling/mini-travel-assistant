@@ -186,72 +186,23 @@ class ChromaVectorStore:
                     logger.info(f"  - First 5 dims: {embeddings[i][:5]}")
                     logger.info(f"  - Embedding magnitude: {sum(x*x for x in embeddings[i])**0.5:.4f}")
             
-            # Check for existing documents
-            try:
-                existing_docs = self.collection.get(ids=ids)
-                existing_ids = set(existing_docs['ids'] if existing_docs['ids'] else [])
-                logger.info(f"🔍 EXISTING DOCUMENTS CHECK: {len(existing_ids)} found")
-            except Exception:
-                existing_ids = set()
-                logger.info(f"🔍 NO EXISTING DOCUMENTS FOUND")
+            # Since we do complete rebuilds, we always clear first then add everything
+            logger.info(f"📊 ADDING ALL DOCUMENTS TO COLLECTION:")
+            logger.info(f"  - Total documents to add: {len(documents)}")
             
-            # Separate new and existing documents
-            new_docs = []
-            new_embeddings = []
-            new_metadatas = []
-            new_ids = []
+            # Add all documents directly
+            self.collection.add(
+                ids=ids,
+                documents=contents,
+                embeddings=embeddings,
+                metadatas=metadatas
+            )
+            logger.info(f"✅ ADDED {len(documents)} documents to collection")
             
-            update_docs = []
-            update_embeddings = []
-            update_metadatas = []
-            update_ids = []
-            
+            # 🔧 DEBUG: Log Berlin documents specifically
             for i, doc_id in enumerate(ids):
-                if doc_id in existing_ids:
-                    update_ids.append(doc_id)
-                    update_docs.append(contents[i])
-                    update_embeddings.append(embeddings[i])
-                    update_metadatas.append(metadatas[i])
-                else:
-                    new_ids.append(doc_id)
-                    new_docs.append(contents[i])
-                    new_embeddings.append(embeddings[i])
-                    new_metadatas.append(metadatas[i])
-            
-            # 🔧 DEBUG: Log document categorization
-            logger.info(f"📊 DOCUMENT CATEGORIZATION:")
-            logger.info(f"  - New documents: {len(new_docs)}")
-            logger.info(f"  - Documents to update: {len(update_docs)}")
-            
-            # Add new documents
-            if new_docs:
-                self.collection.add(
-                    ids=new_ids,
-                    documents=new_docs,
-                    embeddings=new_embeddings,
-                    metadatas=new_metadatas
-                )
-                logger.info(f"✅ ADDED {len(new_docs)} new documents to collection")
-                
-                # 🔧 DEBUG: Log new Berlin documents specifically
-                for i, doc_id in enumerate(new_ids):
-                    if 'berlin' in new_docs[i].lower():
-                        logger.info(f"🏛️ NEW BERLIN DOC ADDED: {doc_id}")
-            
-            # Update existing documents
-            if update_docs:
-                self.collection.update(
-                    ids=update_ids,
-                    documents=update_docs,
-                    embeddings=update_embeddings,
-                    metadatas=update_metadatas
-                )
-                logger.info(f"✅ UPDATED {len(update_docs)} existing documents")
-                
-                # 🔧 DEBUG: Log updated Berlin documents specifically
-                for i, doc_id in enumerate(update_ids):
-                    if 'berlin' in update_docs[i].lower():
-                        logger.info(f"🏛️ BERLIN DOC UPDATED: {doc_id}")
+                if 'berlin' in contents[i].lower():
+                    logger.info(f"🏛️ BERLIN DOC ADDED: {doc_id}")
             
             # 🔧 DEBUG: Log final collection stats
             final_count = self.collection.count()
@@ -481,7 +432,7 @@ class RAGEngine:
         filter_metadata: Optional[Dict[str, Any]] = None,
         doc_type: Optional[DocumentType] = None
     ) -> RetrievalResult:
-        """Retrieve relevant documents based on query with optional type filtering"""
+        """Retrieve relevant documents based on query with smart filtering for location queries"""
         try:
             # 🔧 DEBUG: Log retrieval operation start
             logger.info(f"🎯 RETRIEVAL OPERATION START:")
@@ -493,14 +444,12 @@ class RAGEngine:
             # Ensure embedding model is initialized
             await self._ensure_embedding_initialized()
             
-            # 🔧 DEBUG: Log query analysis
-            if 'berlin' in query.lower():
-                logger.info(f"🏛️ BERLIN QUERY DETECTED!")
+            # 🔧 SMART FILTERING: Detect location in query
+            detected_location = self._detect_query_location(query)
+            if detected_location:
+                logger.info(f"🌍 LOCATION QUERY DETECTED: {detected_location}")
             else:
-                logger.info(f"🌍 NON-BERLIN QUERY: Checking for other locations...")
-                for location in ['tokyo', 'japan', 'london', 'paris', 'rome']:
-                    if location in query.lower():
-                        logger.info(f"  - Found {location.upper()} in query")
+                logger.info(f"🔍 NON-LOCATION QUERY")
             
             # 1. Encode query to vector
             logger.info(f"🧠 ENCODING QUERY TO VECTOR...")
@@ -519,23 +468,36 @@ class RAGEngine:
                 filter_metadata["doc_type"] = doc_type.value
                 logger.info(f"🔧 ADDED DOC TYPE FILTER: {doc_type.value}")
             
-            # 3. Search for similar documents
+            # 3. Search for similar documents (get more candidates for filtering)
             logger.info(f"🔍 PERFORMING VECTOR SEARCH...")
+            extended_top_k = min(top_k * 2, 15)  # Get more candidates for smart filtering
             search_results = await self.vector_store.search(
                 query_embedding=query_embedding[0],
-                top_k=top_k,
+                top_k=extended_top_k,
                 filter_metadata=filter_metadata
             )
             
-            # 4. Process and rank results
+            # 4. Apply smart filtering for location queries
+            if detected_location:
+                filtered_results = self._apply_location_smart_filtering(
+                    search_results, detected_location, top_k, query
+                )
+            else:
+                # For non-location queries, use similarity threshold
+                filtered_results = self._apply_similarity_filtering(
+                    search_results, top_k, min_similarity=0.3
+                )
+            
+            # 5. Process and rank results
             documents = []
             scores = []
             
             # 🔧 DEBUG: Log result processing
             logger.info(f"📊 PROCESSING SEARCH RESULTS:")
             logger.info(f"  - Raw results count: {len(search_results)}")
+            logger.info(f"  - Filtered results count: {len(filtered_results)}")
             
-            for i, (doc, score) in enumerate(search_results):
+            for i, (doc, score) in enumerate(filtered_results):
                 documents.append(doc)
                 scores.append(score)
                 
@@ -555,9 +517,9 @@ class RAGEngine:
                     logger.info(f"    ✅ GOOD SIMILARITY SCORE: {score:.4f}")
                 
                 # 🔧 DEBUG: Content-query mismatch analysis
-                if 'berlin' in query.lower() and 'berlin' not in doc.content.lower():
+                if detected_location and detected_location.lower() not in doc.content.lower():
                     logger.warning(f"    🚨 QUERY-RESULT MISMATCH!")
-                    logger.warning(f"    - Query contains 'berlin' but result doesn't")
+                    logger.warning(f"    - Query location '{detected_location}' not in result")
                     logger.warning(f"    - Result location: {doc.metadata.get('location', 'Unknown')}")
                     logger.warning(f"    - Result title: {doc.metadata.get('title', 'Unknown')}")
             
@@ -574,14 +536,15 @@ class RAGEngine:
             logger.info(f"  - Documents retrieved: {len(documents)}")
             logger.info(f"  - Score range: {min(scores) if scores else 0:.4f} - {max(scores) if scores else 0:.4f}")
             
-            # 🔧 DEBUG: Final Berlin-specific analysis
-            if 'berlin' in query.lower():
-                berlin_results = sum(1 for doc in documents if 'berlin' in doc.content.lower())
-                logger.info(f"🏛️ BERLIN QUERY ANALYSIS:")
-                logger.info(f"  - Berlin results found: {berlin_results}/{len(documents)}")
-                if berlin_results == 0:
-                    logger.error(f"🚨 BERLIN QUERY RETURNED NO BERLIN CONTENT!")
-                    logger.error(f"  - This indicates a serious RAG retrieval issue")
+            # 🔧 DEBUG: Final location-specific analysis
+            if detected_location:
+                location_results = sum(1 for doc in documents 
+                                     if detected_location.lower() in doc.content.lower())
+                logger.info(f"🌍 LOCATION QUERY ANALYSIS:")
+                logger.info(f"  - {detected_location} results found: {location_results}/{len(documents)}")
+                if location_results == 0:
+                    logger.error(f"🚨 LOCATION QUERY RETURNED NO MATCHING CONTENT!")
+                    logger.error(f"  - This indicates a retrieval issue for {detected_location}")
             
             return result
             
@@ -797,6 +760,116 @@ Would you like me to search for more specific information or help you with trave
             context = "\n\n".join([f"=== Knowledge {i+1} ===\n{doc.content}" 
                                   for i, doc in enumerate(documents)])
             return context[:max_tokens * 4]  # Rough character approximation
+
+    def _detect_query_location(self, query: str) -> Optional[str]:
+        """Detect if query is asking about a specific location"""
+        query_lower = query.lower()
+        
+        # Known locations mapping
+        location_keywords = {
+            'berlin': 'Berlin',
+            'tokyo': 'Tokyo', 
+            'japan': 'Tokyo',
+            'london': 'London',
+            'paris': 'Paris',
+            'rome': 'Rome',
+            'amsterdam': 'Amsterdam',
+            'prague': 'Prague',
+            'vienna': 'Vienna',
+            'barcelona': 'Barcelona',
+            'budapest': 'Budapest',
+            'beijing': 'Beijing',
+            'shanghai': 'Shanghai',
+            'seoul': 'Seoul',
+            'singapore': 'Singapore',
+            'kyoto': 'Kyoto',
+            'china': 'China'
+        }
+        
+        for keyword, location in location_keywords.items():
+            if keyword in query_lower:
+                return location
+        
+        return None
+    
+    def _apply_location_smart_filtering(
+        self, 
+        search_results: List[Tuple], 
+        target_location: str,
+        requested_top_k: int,
+        query: str
+    ) -> List[Tuple]:
+        """Apply smart filtering for location-specific queries"""
+        
+        location_matched = []
+        high_quality_others = []
+        
+        logger.info(f"🎯 APPLYING LOCATION SMART FILTERING:")
+        logger.info(f"  - Target location: {target_location}")
+        logger.info(f"  - Requested top_k: {requested_top_k}")
+        
+        for doc, score in search_results:
+            doc_location = doc.metadata.get('location', '').lower()
+            doc_content = doc.content.lower()
+            target_lower = target_location.lower()
+            
+            # Check if document matches the target location
+            is_location_match = (target_lower in doc_location or 
+                               target_lower in doc_content)
+            
+            if is_location_match:
+                location_matched.append((doc, score))
+                logger.info(f"  ✅ Location match: {doc.id} (score: {score:.4f})")
+            elif score > 0.6:  # High quality non-location match
+                high_quality_others.append((doc, score))
+                logger.info(f"  📈 High quality non-match: {doc.id} (score: {score:.4f})")
+            else:
+                logger.info(f"  ❌ Filtered out: {doc.id} (score: {score:.4f})")
+        
+        # Smart decision on how many to return
+        if len(location_matched) >= 2:
+            # If we have 2+ good location matches, return mostly those
+            final_results = location_matched[:requested_top_k]
+            logger.info(f"  🎯 Using {len(final_results)} location-matched results")
+        elif len(location_matched) == 1:
+            # If only 1 location match, include some high-quality others
+            combined = location_matched + high_quality_others[:requested_top_k-1]
+            final_results = combined[:requested_top_k]
+            logger.info(f"  🎯 Using 1 location + {len(final_results)-1} quality results")
+        else:
+            # No location matches, use high-quality results but fewer
+            final_results = high_quality_others[:max(2, requested_top_k//2)]
+            logger.info(f"  ⚠️ No location matches, using {len(final_results)} quality results")
+        
+        logger.info(f"  📊 Smart filtering result: {len(final_results)} documents")
+        return final_results
+    
+    def _apply_similarity_filtering(
+        self, 
+        search_results: List[Tuple], 
+        requested_top_k: int,
+        min_similarity: float = 0.3
+    ) -> List[Tuple]:
+        """Apply similarity threshold filtering for non-location queries"""
+        
+        filtered_results = []
+        
+        logger.info(f"🎯 APPLYING SIMILARITY FILTERING:")
+        logger.info(f"  - Min similarity: {min_similarity}")
+        logger.info(f"  - Requested top_k: {requested_top_k}")
+        
+        for doc, score in search_results:
+            if score >= min_similarity:
+                filtered_results.append((doc, score))
+                logger.info(f"  ✅ Kept: {doc.id} (score: {score:.4f})")
+                
+                if len(filtered_results) >= requested_top_k:
+                    break
+            else:
+                logger.info(f"  ❌ Filtered: {doc.id} (score: {score:.4f})")
+        
+        logger.info(f"  📊 Similarity filtering result: {len(filtered_results)} documents")
+        return filtered_results
 
 
 # Global RAG engine instance
