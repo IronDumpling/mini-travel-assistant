@@ -72,7 +72,6 @@ class BaseAgent(ABC):
         self.name = name
         self.description = description
         self.status = AgentStatus.IDLE
-        self.conversation_history: List[AgentMessage] = []
         self.metadata: Dict[str, Any] = {}
         self.created_at = datetime.now(timezone.utc)
         self.last_activity = datetime.now(timezone.utc)
@@ -656,36 +655,6 @@ class BaseAgent(ABC):
         """Execute specific action (subclass must implement)"""
         pass
 
-    def add_message(self, message: AgentMessage):
-        """Add message to conversation history"""
-
-        # Skip adding if content is empty or None
-        if not message.content or not message.content.strip():
-            return
-
-        # Validate message has required fields
-        if not message.sender or not message.receiver:
-            return
-
-        self.conversation_history.append(message)
-        # Keep history within reasonable range
-        if len(self.conversation_history) > 100:
-            self.conversation_history = self.conversation_history[-100:]
-
-    def get_conversation_context(self, last_n: int = 10) -> List[AgentMessage]:
-        """Get recent conversation context"""
-        # Ensure last_n is positive
-        if last_n <= 0:
-            return []
-
-        # Ensure we have a conversation history
-        if not self.conversation_history:
-            return []
-
-        # Ensure we don't exceed the list length
-        actual_n = min(last_n, len(self.conversation_history))
-        return self.conversation_history[-actual_n:]
-
     def get_status(self) -> Dict[str, Any]:
         """Get agent status information"""
         return {
@@ -694,7 +663,6 @@ class BaseAgent(ABC):
             "status": self.status,
             "capabilities": self.capabilities,
             "tools": self.tools,
-            "conversation_length": len(self.conversation_history),
             "created_at": self.created_at,
             "last_activity": self.last_activity,
             "refinement_config": {
@@ -709,7 +677,6 @@ class BaseAgent(ABC):
     async def reset(self):
         """Reset agent status"""
         self.status = AgentStatus.IDLE
-        self.conversation_history.clear()
         self.metadata.clear()
         self.last_activity = datetime.now(timezone.utc)
 
@@ -819,12 +786,6 @@ class AgentManager:
                 confidence=0.0,
             )
 
-        # Add message to history (non-critical, continue if it fails)
-        try:
-            agent.add_message(message)
-        except Exception:
-            pass  # Silently continue - history is not critical
-
         # Process message with timeout
         try:
             response = await asyncio.wait_for(
@@ -846,18 +807,6 @@ class AgentManager:
                 content="I encountered an error while processing your message. Please try again.",
                 confidence=0.0,
             )
-
-        # Add response to history (non-critical)
-        try:
-            response_message = AgentMessage(
-                sender=agent.name,
-                receiver=message.sender,
-                content=response.content,
-                metadata={"response_to": message.id, "success": response.success},
-            )
-            agent.add_message(response_message)
-        except Exception:
-            pass  # Silently continue - history is not critical
 
         return response
 
