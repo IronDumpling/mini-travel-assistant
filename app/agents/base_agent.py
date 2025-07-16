@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from enum import Enum
 import uuid
 from app.core.logging_config import get_logger
+import asyncio
 
 logger = get_logger(__name__)
 
@@ -93,7 +94,9 @@ class BaseAgent(ABC):
         self.is_healthy: bool = True
 
         # Simple state management
-        self.state_timeout_seconds: int = 60  # Max time in active states
+        self.process_timeout_seconds: int = 80
+        self.refine_timeout_seconds: int = 80
+        self.assess_timeout_seconds: int = 20
 
     @abstractmethod
     async def process_message(self, message: AgentMessage) -> AgentResponse:
@@ -128,7 +131,7 @@ class BaseAgent(ABC):
                 try:
                     current_response = await asyncio.wait_for(
                         self.process_message(message),
-                        timeout=30.0,  # 30 second timeout
+                        timeout=self.process_timeout_seconds,
                     )
                 except asyncio.TimeoutError:
                     self.record_error(
@@ -173,7 +176,7 @@ class BaseAgent(ABC):
                             current_response,
                             refinement_history[-1] if refinement_history else None,
                         ),
-                        timeout=15.0,  # 15 second timeout for refinement
+                        timeout=self.refine_timeout_seconds,
                     )
                 except asyncio.TimeoutError:
                     self.record_error(
@@ -195,7 +198,7 @@ class BaseAgent(ABC):
             try:
                 quality_assessment = await asyncio.wait_for(
                     self._assess_response_quality(message, current_response, iteration),
-                    timeout=10.0,  # 10 second timeout for quality assessment
+                    timeout=self.assess_timeout_seconds,
                 )
             except asyncio.TimeoutError:
                 self.record_error(
@@ -782,6 +785,7 @@ class AgentManager:
         self.is_running = False
         self.error_count: int = 0
         self.last_error: Optional[str] = None
+        self.global_timeout_seconds: int = 300  # Timeout for agent message processing
 
     def register_agent(self, agent: BaseAgent):
         """Register agent"""
@@ -824,7 +828,7 @@ class AgentManager:
         # Process message with timeout
         try:
             response = await asyncio.wait_for(
-                agent.process_message(message), timeout=60.0
+                agent.process_message(message), timeout=self.global_timeout_seconds
             )
         except asyncio.TimeoutError:
             agent.record_error("Message processing timeout", {"message_id": message.id})
