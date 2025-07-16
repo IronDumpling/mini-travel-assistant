@@ -53,18 +53,10 @@ class TravelDataLoader:
             logger.warning(f"Documents directory does not exist: {self.documents_dir}")
             return []
         
-        # 🔧 DEBUG: Log directory structure scan
-        logger.info(f"🔍 STARTING DOCUMENT SCAN: {self.documents_dir}")
-        
         # Recursively find all supported files
         for file_path in self.documents_dir.rglob("*"):
             if file_path.is_file() and file_path.suffix.lower() in self.supported_formats:
                 stats.total_files += 1
-                
-                # 🔧 DEBUG: Log each file being processed
-                logger.info(f"📄 PROCESSING FILE: {file_path}")
-                logger.info(f"  - File size: {file_path.stat().st_size} bytes")
-                logger.info(f"  - File extension: {file_path.suffix}")
                 
                 try:
                     knowledge_items = await self._load_file(file_path)
@@ -72,59 +64,16 @@ class TravelDataLoader:
                     stats.successful_files += 1
                     stats.total_knowledge_items += len(knowledge_items)
                     
-                    # 🔧 DEBUG: Log successful loading details
-                    logger.info(f"✅ LOADED {len(knowledge_items)} items from {file_path.name}")
-                    for i, item in enumerate(knowledge_items):
-                        if hasattr(item, 'id') and hasattr(item, 'title'):
-                            logger.info(f"  - Item {i+1}: ID='{item.id}', Title='{item.title}'")
-                            if hasattr(item, 'location'):
-                                logger.info(f"    Location: {item.location}")
-                            if hasattr(item, 'category'):
-                                logger.info(f"    Category: {item.category}")
-                    
-                    # 🔧 DEBUG: Special attention to Berlin content
-                    for item in knowledge_items:
-                        if hasattr(item, 'location') and item.location and 'berlin' in item.location.lower():
-                            logger.info(f"🏛️ BERLIN CONTENT FOUND: {item.id}")
-                            logger.info(f"  - Title: {item.title}")
-                            logger.info(f"  - Content preview: {item.content[:200]}...")
-                        elif hasattr(item, 'title') and 'berlin' in item.title.lower():
-                            logger.info(f"🏛️ BERLIN CONTENT FOUND (by title): {item.id}")
-                            logger.info(f"  - Title: {item.title}")
-                        elif hasattr(item, 'content') and 'berlin' in item.content.lower():
-                            logger.info(f"🏛️ BERLIN CONTENT FOUND (in content): {item.id}")
-                            logger.info(f"  - Title: {item.title}")
+                    logger.info(f"Loaded {len(knowledge_items)} items from {file_path.name}")
                     
                 except Exception as e:
                     stats.failed_files += 1
                     error_msg = f"Failed to load {file_path}: {str(e)}"
                     stats.errors.append(error_msg)
-                    
-                    # 🔧 DEBUG: Log loading failures
-                    logger.error(f"❌ FAILED TO LOAD: {file_path}")
-                    logger.error(f"  - Error: {str(e)}")
-                    logger.error(f"  - Error type: {type(e).__name__}")
+                    logger.error(f"Failed to load {file_path}: {str(e)}")
         
         # Calculate load time
         stats.load_time = time.time() - start_time
-        
-        # 🔧 DEBUG: Comprehensive loading summary
-        logger.info(f"📊 DOCUMENT LOADING SUMMARY:")
-        logger.info(f"  - Total files scanned: {stats.total_files}")
-        logger.info(f"  - Successfully loaded: {stats.successful_files}")
-        logger.info(f"  - Failed to load: {stats.failed_files}")
-        logger.info(f"  - Total knowledge items: {stats.total_knowledge_items}")
-        logger.info(f"  - Load time: {stats.load_time:.2f}s")
-        
-        # 🔧 DEBUG: Check for specific destinations
-        destinations_found = set()
-        for item in all_knowledge:
-            if hasattr(item, 'location') and item.location:
-                destinations_found.add(item.location)
-        
-        logger.info(f"🌍 DESTINATIONS FOUND: {sorted(destinations_found)}")
-        if 'Berlin' not in destinations_found:
-            logger.warning(f"⚠️ BERLIN NOT FOUND in loaded destinations!")
         
         # Log summary
         logger.info(f"Data loading completed in {stats.load_time:.2f}s")
@@ -141,9 +90,6 @@ class TravelDataLoader:
     async def _load_file(self, file_path: Path) -> List[Any]:
         """Load knowledge from a single file"""
         try:
-            # 🔧 DEBUG: Log file reading attempt
-            logger.debug(f"📖 READING FILE: {file_path}")
-            
             with open(file_path, 'r', encoding='utf-8') as f:
                 # Parse based on file format
                 if file_path.suffix.lower() == '.json':
@@ -152,18 +98,6 @@ class TravelDataLoader:
                     data = yaml.safe_load(f)
                 else:
                     raise ValueError(f"Unsupported file format: {file_path.suffix}")
-            
-            # 🔧 DEBUG: Log parsed data structure
-            logger.debug(f"📋 PARSED DATA STRUCTURE:")
-            logger.debug(f"  - Data type: {type(data)}")
-            if isinstance(data, dict):
-                logger.debug(f"  - Dict keys: {list(data.keys())}")
-                if 'title' in data:
-                    logger.debug(f"  - Title: {data['title']}")
-                if 'location' in data:
-                    logger.debug(f"  - Location: {data['location']}")
-            elif isinstance(data, list):
-                logger.debug(f"  - List length: {len(data)}")
             
             # Process data structure
             return await self._process_data(data, file_path)
@@ -224,10 +158,6 @@ class TravelDataLoader:
     ) -> Optional[Any]:
         """Create a TravelKnowledge object from raw data"""
         try:
-            # 🔧 DEBUG: Log knowledge item creation
-            logger.debug(f"🏗️ CREATING KNOWLEDGE ITEM: {file_path}[{item_index}]")
-            logger.debug(f"  - Raw data keys: {list(data.keys())}")
-            
             # Validate required fields
             required_fields = ['id', 'title', 'content', 'category']
             missing_fields = [field for field in required_fields if field not in data]
@@ -236,17 +166,9 @@ class TravelDataLoader:
                 logger.warning(f"Missing required fields in {file_path}[{item_index}]: {missing_fields}")
                 raise ValueError(f"Missing required fields: {missing_fields}")
             
-            # 🔧 DEBUG: Log field values
-            logger.debug(f"  - ID: {data.get('id', 'MISSING')}")
-            logger.debug(f"  - Title: {data.get('title', 'MISSING')}")
-            logger.debug(f"  - Category: {data.get('category', 'MISSING')}")
-            logger.debug(f"  - Location: {data.get('location', 'MISSING')}")
-            logger.debug(f"  - Content length: {len(str(data.get('content', '')))}")
-            
             # Auto-generate ID if not provided or invalid
             if not data.get('id') or not isinstance(data['id'], str):
                 data['id'] = self._generate_id(data, file_path, item_index)
-                logger.debug(f"  - Generated ID: {data['id']}")
             
             # Set default values
             data.setdefault('language', 'zh')
@@ -261,13 +183,6 @@ class TravelDataLoader:
             # Create TravelKnowledge object
             from app.core.knowledge_base import TravelKnowledge
             knowledge = TravelKnowledge(**data)
-            
-            # 🔧 DEBUG: Log created knowledge object
-            logger.debug(f"✅ KNOWLEDGE ITEM CREATED: {knowledge.id}")
-            logger.debug(f"  - Final title: {knowledge.title}")
-            logger.debug(f"  - Final location: {knowledge.location}")
-            logger.debug(f"  - Final category: {knowledge.category}")
-            logger.debug(f"  - Tags: {knowledge.tags}")
             
             # Validate knowledge item
             await self._validate_knowledge_item(knowledge)

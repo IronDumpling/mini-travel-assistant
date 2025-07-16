@@ -184,33 +184,15 @@ class KnowledgeBase:
                 self.knowledge_items[knowledge.id] = knowledge
                 processed_count += 1
                 
-                # 🔧 DEBUG: Log each knowledge item
-                logger.debug(f"📖 PROCESSED KNOWLEDGE {processed_count}: {knowledge.id}")
-                logger.debug(f"  - Title: {knowledge.title}")
-                logger.debug(f"  - Location: {knowledge.location}")
-                logger.debug(f"  - Category: {knowledge.category}")
-                logger.debug(f"  - Content length: {len(knowledge.content)}")
-                logger.debug(f"  - Tags: {knowledge.tags}")
-                
-                # 🔧 DEBUG: Track Berlin content specifically
-                if (knowledge.location and 'berlin' in knowledge.location.lower()) or 'berlin' in knowledge.title.lower():
-                    berlin_count += 1
-                    logger.info(f"🏛️ BERLIN KNOWLEDGE LOADED: {knowledge.id}")
-                    logger.info(f"  - Title: {knowledge.title}")
-                    logger.info(f"  - Location: {knowledge.location}")
-                    logger.info(f"  - Content preview: {knowledge.content[:200]}...")
+                            # Log basic processing info
+            logger.debug(f"Processed knowledge item: {knowledge.id}")
+            processed_count += 1
             
-            # 🔧 DEBUG: Log final knowledge stats
-            logger.info(f"✅ KNOWLEDGE PROCESSING COMPLETE:")
-            logger.info(f"  - Total processed: {processed_count}")
-            logger.info(f"  - Berlin items found: {berlin_count}")
-            logger.info(f"  - Items in memory: {len(self.knowledge_items)}")
-            
-            # Log appropriate message based on what was loaded
+            # Log processing results
             if self.knowledge_items:
                 logger.info(f"Loaded {len(self.knowledge_items)} knowledge items from files")
                 
-                # 🔧 DEBUG: Log knowledge by category
+                # Log knowledge by category
                 category_stats = {}
                 location_stats = {}
                 for knowledge in self.knowledge_items.values():
@@ -218,12 +200,8 @@ class KnowledgeBase:
                     if knowledge.location:
                         location_stats[knowledge.location] = location_stats.get(knowledge.location, 0) + 1
                 
-                logger.info(f"📊 KNOWLEDGE BREAKDOWN:")
-                logger.info(f"  - By category: {dict(sorted(category_stats.items()))}")
-                logger.info(f"  - By location: {dict(sorted(location_stats.items()))}")
-                
-                if 'Berlin' not in location_stats:
-                    logger.warning(f"⚠️ NO BERLIN KNOWLEDGE FOUND IN PROCESSED ITEMS!")
+                logger.info(f"Knowledge breakdown by category: {dict(sorted(category_stats.items()))}")
+                logger.info(f"Knowledge breakdown by location: {dict(sorted(location_stats.items()))}")
                 
             else:
                 logger.warning("No knowledge files found in the documents directory")
@@ -344,19 +322,11 @@ class KnowledgeBase:
     async def add_knowledge(self, knowledge: TravelKnowledge) -> bool:
         """Add new knowledge item"""
         try:
-            # 🔧 DEBUG: Log knowledge addition
-            logger.info(f"➕ ADDING NEW KNOWLEDGE ITEM: {knowledge.id}")
-            logger.info(f"  - Title: {knowledge.title}")
-            logger.info(f"  - Location: {knowledge.location}")
-            logger.info(f"  - Category: {knowledge.category}")
-            logger.info(f"  - Content length: {len(knowledge.content)}")
-            
             if len(knowledge.content.strip()) < 10:
                 raise ValueError("Content too short")
             
             # Add to memory
             self.knowledge_items[knowledge.id] = knowledge
-            logger.debug(f"  - Added to memory: {knowledge.id}")
             
             # Create document and index
             doc = Document(
@@ -369,23 +339,18 @@ class KnowledgeBase:
                     "language": knowledge.language,
                     "title": knowledge.title
                 },
-                doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Add proper document type
+                doc_type=DocumentType.TRAVEL_KNOWLEDGE
             )
             
-            # 🔧 DEBUG: Log document creation for indexing
-            logger.debug(f"  - Document created for indexing: {doc.id}")
-            logger.debug(f"  - Document metadata: {doc.metadata}")
-            
             # Index in RAG engine
-            logger.debug(f"  - Indexing in RAG engine...")
             success = await self.rag_engine.index_documents([doc])
             
             if success:
-                logger.info(f"✅ Added knowledge item: {knowledge.id}")
+                logger.info(f"Added knowledge item: {knowledge.id}")
                 return True
             else:
                 del self.knowledge_items[knowledge.id]
-                logger.error(f"❌ Failed to index knowledge item: {knowledge.id}")
+                logger.error(f"Failed to index knowledge item: {knowledge.id}")
                 return False
                 
         except Exception as e:
@@ -464,66 +429,24 @@ class KnowledgeBase:
     ) -> List[Dict[str, Any]]:
         """Search knowledge using RAG engine with semantic search"""
         try:
-            # 🔧 DEBUG: Log search operation start
-            logger.info(f"🔍 KNOWLEDGE SEARCH OPERATION:")
-            logger.info(f"  - Query: '{query}'")
-            logger.info(f"  - Category filter: {category}")
-            logger.info(f"  - Location filter: {location}")
-            logger.info(f"  - Top K: {top_k}")
-            logger.info(f"  - Min score: {min_score}")
-            logger.info(f"  - Available knowledge items: {len(self.knowledge_items)}")
-            
-            # 🔧 DEBUG: Check for Berlin in query
-            if 'berlin' in query.lower():
-                logger.info(f"🏛️ BERLIN SEARCH QUERY DETECTED!")
-                # Check if we have Berlin knowledge
-                berlin_knowledge = [k for k in self.knowledge_items.values() 
-                                  if k.location and 'berlin' in k.location.lower()]
-                logger.info(f"  - Berlin knowledge items available: {len(berlin_knowledge)}")
-                for bk in berlin_knowledge:
-                    logger.info(f"    - {bk.id}: {bk.title}")
-            
             # Build filter metadata
             filter_metadata = {}
             if category:
                 filter_metadata["category"] = category
-                logger.info(f"  - Added category filter: {category}")
             if location:
                 filter_metadata["location"] = location
-                logger.info(f"  - Added location filter: {location}")
             
-            # 🔧 DEBUG: Log RAG engine call
-            logger.info(f"🧠 CALLING RAG ENGINE RETRIEVE...")
-            logger.info(f"  - Filter metadata: {filter_metadata}")
-            logger.info(f"  - Doc type filter: {DocumentType.TRAVEL_KNOWLEDGE}")
+            logger.debug(f"Knowledge search: query='{query[:50]}...', top_k={top_k}, filters={filter_metadata}")
             
             # Use RAG engine for semantic search with travel knowledge filter
             result = await self.rag_engine.retrieve(
                 query=query,
                 top_k=top_k * 2,  # Get more candidates for filtering
                 filter_metadata=filter_metadata,
-                doc_type=DocumentType.TRAVEL_KNOWLEDGE  # 🔧 Filter for travel knowledge only
+                doc_type=DocumentType.TRAVEL_KNOWLEDGE
             )
             
-            # 🔧 DEBUG: Log RAG engine results
-            logger.info(f"📊 RAG ENGINE RESULTS:")
-            logger.info(f"  - Documents returned: {len(result.documents)}")
-            logger.info(f"  - Scores: {result.scores}")
-            logger.info(f"  - Query: {result.query}")
-            logger.info(f"  - Total results: {result.total_results}")
-            
-            for i, (doc, score) in enumerate(zip(result.documents, result.scores)):
-                logger.info(f"  📄 RAG RESULT {i+1}:")
-                logger.info(f"    - Score: {score:.4f}")
-                logger.info(f"    - Document ID: {doc.id}")
-                logger.info(f"    - Metadata: {doc.metadata}")
-                logger.info(f"    - Content preview: {doc.content[:100]}...")
-                
-                # 🔧 DEBUG: Check for Berlin content mismatch
-                if 'berlin' in query.lower() and 'berlin' not in doc.content.lower():
-                    logger.warning(f"    🚨 BERLIN QUERY MISMATCH!")
-                    logger.warning(f"    - Query has 'berlin' but result doesn't")
-                    logger.warning(f"    - Result location: {doc.metadata.get('location', 'Unknown')}")
+            logger.debug(f"RAG engine returned {len(result.documents)} documents with scores: {result.scores}")
             
             # Process and filter results
             knowledge_results = []
@@ -547,28 +470,6 @@ class KnowledgeBase:
             # Sort by relevance score and limit results
             knowledge_results.sort(key=lambda x: x["relevance_score"], reverse=True)
             knowledge_results = knowledge_results[:top_k]
-            
-            # 🔧 DEBUG: Log final search results
-            logger.info(f"✅ KNOWLEDGE SEARCH COMPLETE:")
-            logger.info(f"  - Final results: {len(knowledge_results)}")
-            logger.info(f"  - Query: '{query}'")
-            
-            for i, result in enumerate(knowledge_results):
-                knowledge = result["knowledge"]
-                score = result["relevance_score"]
-                logger.info(f"  📖 FINAL RESULT {i+1}:")
-                logger.info(f"    - Knowledge ID: {knowledge.id}")
-                logger.info(f"    - Title: {knowledge.title}")
-                logger.info(f"    - Location: {knowledge.location}")
-                logger.info(f"    - Score: {score:.4f}")
-                
-                # 🔧 DEBUG: Final Berlin analysis
-                if 'berlin' in query.lower():
-                    if knowledge.location and 'berlin' in knowledge.location.lower():
-                        logger.info(f"    ✅ CORRECT BERLIN RESULT!")
-                    else:
-                        logger.error(f"    🚨 INCORRECT RESULT FOR BERLIN QUERY!")
-                        logger.error(f"    - Expected Berlin but got: {knowledge.location}")
             
             logger.info(f"Found {len(knowledge_results)} relevant knowledge items for query: '{query}'")
             return knowledge_results
@@ -604,9 +505,6 @@ class KnowledgeBase:
     
     def get_knowledge_stats(self) -> Dict[str, Any]:
         """Get knowledge base statistics"""
-        # 🔧 DEBUG: Log stats generation
-        logger.debug(f"📊 GENERATING KNOWLEDGE BASE STATS...")
-        
         stats = {
             "total_knowledge_items": len(self.knowledge_items),
             "total_categories": len(self.categories),
@@ -621,16 +519,6 @@ class KnowledgeBase:
         for knowledge in self.knowledge_items.values():
             stats["items_by_category"][knowledge.category] = stats["items_by_category"].get(knowledge.category, 0) + 1
             stats["items_by_language"][knowledge.language] = stats["items_by_language"].get(knowledge.language, 0) + 1
-        
-        # 🔧 DEBUG: Log Berlin content in stats
-        berlin_items = [k for k in self.knowledge_items.values() 
-                       if k.location and 'berlin' in k.location.lower()]
-        if berlin_items:
-            logger.debug(f"📊 BERLIN CONTENT IN STATS: {len(berlin_items)} items")
-            for item in berlin_items:
-                logger.debug(f"  - {item.id}: {item.title}")
-        else:
-            logger.warning(f"📊 NO BERLIN CONTENT FOUND IN STATS!")
         
         return stats
 
