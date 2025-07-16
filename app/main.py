@@ -34,7 +34,7 @@ def setup_environment_if_needed():
         "LLM_TEMPERATURE": "0.7",
         "LLM_MAX_TOKENS": "4000",
         "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
-        "CHROMA_DB_PATH": "./data/charoma_db",
+        "CHROMA_DB_PATH": "./data/chroma_db",
         "FORCE_REBUILD_INDEX": "true",
         "INDEX_BATCH_SIZE": "100"
     }
