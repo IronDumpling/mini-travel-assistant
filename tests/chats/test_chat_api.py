@@ -319,7 +319,12 @@ TEST_SCENARIOS = [
         "name": "winter_ski_trip",
         "message": "Plan a 5-day ski trip to the Swiss Alps for 4 people in February",
         "expected_keywords": ["ski", "swiss alps", "winter", "february", "5 days", "4 people"]
-    }
+    },
+    {
+        "name": "German_7_days_trip",
+        "message": "Plan a 7-day trip to Berlin and Munich for 2 people with a budget of $7000 in this summer",
+        "expected_keywords": ["berlin", "munich", "summer", "$7000", "7 days", "2 people"]
+    },
 ]
 
 

@@ -89,14 +89,14 @@ class TravelAgent(BaseAgent):
         ]
     
     def get_quality_dimensions(self) -> Dict[str, float]:
-        """Get travel-specific quality assessment dimensions"""
+        """Enhanced travel-specific quality assessment dimensions with information fusion"""
         return {
-            "relevance": 0.25,          # How relevant is the response to travel request
-            "completeness": 0.20,       # How complete is the travel information
-            "accuracy": 0.20,           # How accurate is the travel information
-            "actionability": 0.15,      # How actionable are the travel recommendations
-            "personalization": 0.10,    # How well personalized to user preferences
-            "feasibility": 0.10         # How feasible/realistic is the travel plan
+            "relevance": 0.20,              # How relevant to user's travel request
+            "information_fusion": 0.25,     # How well knowledge + tools are integrated
+            "completeness": 0.20,           # How complete the travel information is
+            "accuracy": 0.15,               # How accurate the information is
+            "actionability": 0.15,          # How actionable the recommendations are
+            "personalization": 0.05         # How well personalized to user preferences
         }
     
     async def _assess_dimension(
@@ -105,8 +105,11 @@ class TravelAgent(BaseAgent):
         original_message: AgentMessage, 
         response: AgentResponse
     ) -> float:
-        """Assess travel-specific quality dimensions"""
-        if dimension == "personalization":
+        """Enhanced dimension assessment including information fusion"""
+        
+        if dimension == "information_fusion":
+            return await self._assess_information_fusion(original_message, response)
+        elif dimension == "personalization":
             return await self._assess_personalization(original_message, response)
         elif dimension == "feasibility":
             return await self._assess_feasibility(original_message, response)
@@ -170,6 +173,51 @@ class TravelAgent(BaseAgent):
         
         return min(score, 1.0)
     
+    async def _assess_information_fusion(self, original_message: AgentMessage, response: AgentResponse) -> float:
+        """Assess how well knowledge context and tool results are integrated"""
+        
+        metadata = response.metadata
+        
+        # Check if both knowledge and tools were used
+        knowledge_context = metadata.get("knowledge_context", {})
+        has_knowledge = len(knowledge_context.get("relevant_docs", [])) > 0
+        has_tools = len(metadata.get("tools_used", [])) > 0
+        
+        base_score = 0.4  # Base score for any response
+        
+        # Score based on information source utilization
+        if has_knowledge and has_tools:
+            base_score += 0.3  # Both sources used effectively
+        elif has_knowledge or has_tools:
+            base_score += 0.1  # One source used
+        
+        # Check response quality indicators
+        response_content = response.content.lower()
+        
+        # Look for evidence of information integration
+        integration_indicators = [
+            "based on", "according to", "current", "available", "recommendations",
+            "options", "information shows", "data indicates"
+        ]
+        integration_mentions = sum(1 for indicator in integration_indicators 
+                                 if indicator in response_content)
+        if integration_mentions >= 2:
+            base_score += 0.1  # Good integration language
+        
+        # Check for comprehensive response
+        if len(response.content) > 400:
+            base_score += 0.1  # Comprehensive response suggests good fusion
+        
+        # Check for actionable follow-up
+        if response.next_steps and len(response.next_steps) > 0:
+            base_score += 0.1  # Actionable follow-up indicates good integration
+        
+        # Check if fusion strategy was applied
+        if metadata.get("information_fusion_applied", False):
+            base_score += 0.1  # Explicit fusion process applied
+        
+        return min(base_score, 1.0)
+    
     async def _generate_improvement_suggestions(
         self, 
         dimension: str, 
@@ -181,6 +229,15 @@ class TravelAgent(BaseAgent):
         suggestions = await super()._generate_improvement_suggestions(
             dimension, original_message, response, current_score
         )
+        
+        if dimension == "information_fusion" and current_score < 0.6:
+            suggestions.extend([
+                "Better integrate static knowledge context with dynamic tool results",
+                "Ensure both authoritative background and current data are presented",
+                "Use knowledge context for comprehensive details and tools for actionable data",
+                "Blend information sources seamlessly without explicitly mentioning sources",
+                "Let user intent guide which information to emphasize"
+            ])
         
         if dimension == "personalization" and current_score < 0.6:
             suggestions.extend([
@@ -404,14 +461,14 @@ class TravelAgent(BaseAgent):
             )
     
     async def _analyze_user_intent(self, user_message: str) -> Dict[str, Any]:
-        """Enhanced LLM-powered intent analysis with structured output"""
+        """Enhanced intent analysis with information fusion strategy"""
         
-        logger.info(f"--- Intent Analysis Details ---")
+        logger.info(f"--- Enhanced Intent Analysis ---")
         logger.info(f"Input message: '{user_message}'")
         
-        # Step 1: Get LLM intent analysis using prompt manager
-        logger.info("Step 1: Getting LLM intent analysis...")
-        llm_analysis = await self._get_llm_intent_analysis(user_message)
+        # Step 1: Get LLM intent analysis using enhanced prompt
+        logger.info("Step 1: Getting enhanced LLM intent analysis...")
+        llm_analysis = await self._get_enhanced_llm_intent_analysis(user_message)
         logger.info(f"LLM analysis result: {llm_analysis}")
         
         # Step 2: Use structured response for deep analysis
@@ -419,22 +476,22 @@ class TravelAgent(BaseAgent):
         structured_intent = await self._parse_structured_intent(llm_analysis, user_message)
         logger.info(f"Structured intent result: {structured_intent}")
         
-        # Step 3: Enhance and validate analysis results
-        logger.info("Step 3: Enhancing intent analysis...")
-        enhanced_intent = await self._enhance_intent_analysis(structured_intent, user_message)
-        logger.info(f"Enhanced intent result: {enhanced_intent}")
-        logger.info(f"--- Intent Analysis Complete ---")
+        # Step 3: Add information fusion strategy (NEW)
+        logger.info("Step 3: Adding information fusion strategy...")
+        enhanced_intent = await self._add_information_fusion_strategy(structured_intent, user_message)
+        logger.info(f"Enhanced intent with fusion strategy: {enhanced_intent}")
+        logger.info(f"--- Enhanced Intent Analysis Complete ---")
         
         return enhanced_intent
 
-    async def _get_llm_intent_analysis(self, user_message: str) -> Dict[str, Any]:
-        """Get initial intent analysis through LLM service"""
+    async def _get_enhanced_llm_intent_analysis(self, user_message: str) -> Dict[str, Any]:
+        """Get enhanced LLM intent analysis using updated prompt manager"""
         
         from app.core.prompt_manager import prompt_manager, PromptType
         
-        logger.info(f"Getting LLM intent analysis for: '{user_message}'")
+        logger.info(f"Getting enhanced LLM intent analysis for: '{user_message}'")
         
-        # Build structured prompt using prompt manager
+        # Build enhanced prompt using updated prompt manager
         analysis_prompt = prompt_manager.get_prompt(
             PromptType.INTENT_ANALYSIS,
             user_message=user_message
@@ -445,7 +502,7 @@ class TravelAgent(BaseAgent):
         try:
             if self.llm_service:
                 logger.info("LLM service is available, attempting structured completion...")
-                # Use real LLM service with structured output
+                # Use real LLM service with structured output including fusion strategy
                 schema = prompt_manager.get_schema(PromptType.INTENT_ANALYSIS)
                 logger.info(f"Intent analysis schema: {schema}")
                 
@@ -467,7 +524,7 @@ class TravelAgent(BaseAgent):
                 return await self._enhanced_fallback_intent_analysis(user_message)
                 
         except Exception as e:
-            logger.error(f"LLM intent analysis failed: {e}")
+            logger.error(f"Enhanced LLM intent analysis failed: {e}")
             logger.error(f"Error type: {type(e)}")
             import traceback
             logger.error(f"LLM intent analysis traceback: {traceback.format_exc()}")
@@ -489,39 +546,107 @@ class TravelAgent(BaseAgent):
                 logger.warning(f"Missing required field {field} in LLM analysis")
                 return await self._enhanced_fallback_intent_analysis(user_message)
         
-        return llm_analysis
-
-    async def _enhance_intent_analysis(self, structured_intent: Dict[str, Any], user_message: str) -> Dict[str, Any]:
-        """Enhance and validate intent analysis results"""
-        
-        # Add additional extracted entities
-        structured_intent["extracted_entities"] = self._extract_entities(user_message)
-        structured_intent["linguistic_features"] = self._analyze_linguistic_features(user_message)
-        
         # Convert to legacy format for backward compatibility
         legacy_format = {
-            "type": structured_intent["intent_type"],
-            "destination": structured_intent["destination"]["primary"],
+            "type": llm_analysis["intent_type"],
+            "destination": llm_analysis["destination"]["primary"],
             "time_info": {
-                "duration_days": structured_intent["travel_details"].get("duration", 0)
+                "duration_days": llm_analysis["travel_details"].get("duration", 0)
             },
             "budget_info": {
-                "budget_mentioned": structured_intent["travel_details"]["budget"].get("mentioned", False)
+                "budget_mentioned": llm_analysis["travel_details"]["budget"].get("mentioned", False)
             },
-            "urgency": structured_intent["urgency"],
+            "urgency": llm_analysis["urgency"],
             "extracted_info": {
-                "destination": structured_intent["destination"]["primary"],
-                "time_info": structured_intent["travel_details"],
-                "budget_info": structured_intent["travel_details"]["budget"]
+                "destination": llm_analysis["destination"]["primary"],
+                "time_info": llm_analysis["travel_details"],
+                "budget_info": llm_analysis["travel_details"]["budget"]
             },
             # Add new structured fields
-            "structured_analysis": structured_intent
+            "structured_analysis": llm_analysis,
+            "information_fusion_strategy": llm_analysis.get("information_fusion_strategy", {})
         }
         
         return legacy_format
 
+    async def _add_information_fusion_strategy(self, structured_intent: Dict[str, Any], user_message: str) -> Dict[str, Any]:
+        """Add information fusion strategy to existing intent structure"""
+        
+        # Keep all existing fields
+        enhanced_intent = structured_intent.copy()
+        
+        # Add information fusion strategy if not already present from LLM
+        if "information_fusion_strategy" not in enhanced_intent:
+            enhanced_intent["information_fusion_strategy"] = {
+                "knowledge_priority": self._determine_knowledge_priority(structured_intent),
+                "tool_priority": self._determine_tool_priority(structured_intent),
+                "integration_approach": self._determine_integration_approach(structured_intent),
+                "response_focus": self._determine_response_focus(structured_intent)
+            }
+            logger.info(f"Added fallback information fusion strategy: {enhanced_intent['information_fusion_strategy']}")
+        else:
+            logger.info(f"Information fusion strategy already present from LLM: {enhanced_intent['information_fusion_strategy']}")
+        
+        return enhanced_intent
+
+    def _determine_knowledge_priority(self, intent: Dict[str, Any]) -> str:
+        """Determine knowledge context priority based on intent"""
+        intent_type = intent.get("intent_type", "query")
+        destination = intent.get("destination", {}).get("primary", "")
+        
+        if intent_type == "query" and destination:
+            return "very_high"  # Information queries need comprehensive knowledge
+        elif intent_type == "planning" and destination:
+            return "high"  # Planning needs detailed destination information
+        elif intent_type == "recommendation":
+            return "high"  # Recommendations benefit from rich context
+        else:
+            return "medium"
+
+    def _determine_tool_priority(self, intent: Dict[str, Any]) -> str:
+        """Determine tool results priority based on intent"""
+        intent_type = intent.get("intent_type", "query")
+        
+        if intent_type in ["planning", "booking"]:
+            return "high"  # Need current prices and availability
+        elif intent_type == "recommendation":
+            return "medium"  # Tools provide current options
+        elif intent_type == "modification":
+            return "high"  # Need current data for changes
+        else:
+            return "low"  # Information queries rely more on knowledge
+
+    def _determine_integration_approach(self, intent: Dict[str, Any]) -> str:
+        """Determine how to integrate information sources"""
+        intent_type = intent.get("intent_type", "query")
+        
+        if intent_type == "query":
+            return "knowledge_first"  # Knowledge context leads, tools support
+        elif intent_type == "planning":
+            return "balanced"  # Equal weight to knowledge and tools
+        elif intent_type == "recommendation":
+            return "tools_first"  # Current options lead, knowledge provides context
+        elif intent_type in ["booking", "modification"]:
+            return "tools_first"  # Current data is critical
+        else:
+            return "balanced"
+
+    def _determine_response_focus(self, intent: Dict[str, Any]) -> str:
+        """Determine primary response focus"""
+        intent_type = intent.get("intent_type", "query")
+        
+        focus_map = {
+            "planning": "comprehensive_plan",
+            "query": "detailed_information", 
+            "recommendation": "curated_options",
+            "booking": "actionable_steps",
+            "modification": "specific_changes"
+        }
+        
+        return focus_map.get(intent_type, "helpful_information")
+
     async def _enhanced_fallback_intent_analysis(self, user_message: str) -> Dict[str, Any]:
-        """Enhanced fallback intent analysis with better keyword matching"""
+        """Enhanced fallback intent analysis with information fusion strategy"""
         
         logger.info(f"=== Enhanced Fallback Intent Analysis ===")
         logger.info(f"Processing message: '{user_message}'")
@@ -565,15 +690,16 @@ class TravelAgent(BaseAgent):
             logger.info(f"Detected duration: {time_info['duration_days']} days")
         
         # Enhanced budget detection
-        budget_info = {"budget_mentioned": False}
+        budget_info = {"mentioned": False}
         if any(word in user_message_lower for word in ["budget", "cost", "price", "money", "spend", "expensive", "cheap"]):
-            budget_info["budget_mentioned"] = True
+            budget_info["mentioned"] = True
             logger.info("Budget mentioned in message")
             
             # Try to extract budget amount
             budget_match = re.search(r'[\$€£¥]?(\d+(?:,\d{3})*(?:\.\d{2})?)', user_message)
             if budget_match:
                 budget_info["amount"] = float(budget_match.group(1).replace(',', ''))
+                budget_info["currency"] = "USD"
                 logger.info(f"Detected budget amount: {budget_info['amount']}")
         
         # Enhanced sentiment analysis
@@ -596,8 +722,8 @@ class TravelAgent(BaseAgent):
         
         logger.info(f"Detected urgency: {urgency}")
         
-        # Create structured fallback response
-        structured_analysis = {
+        # Create enhanced structured response with information fusion strategy
+        enhanced_analysis = {
             "intent_type": intent_type,
             "destination": {
                 "primary": destination,
@@ -609,9 +735,9 @@ class TravelAgent(BaseAgent):
                 "duration": time_info.get("duration_days", 0),
                 "travelers": 1,
                 "budget": {
-                    "mentioned": budget_info["budget_mentioned"],
+                    "mentioned": budget_info["mentioned"],
                     "amount": budget_info.get("amount", 0),
-                    "currency": "USD",
+                    "currency": budget_info.get("currency", "USD"),
                     "level": "mid-range"
                 },
                 "dates": {
@@ -630,10 +756,16 @@ class TravelAgent(BaseAgent):
             "urgency": urgency,
             "missing_info": ["specific_dates", "exact_budget", "preferences"],
             "key_requirements": [],
+            "information_fusion_strategy": {
+                "knowledge_priority": self._determine_knowledge_priority({"intent_type": intent_type, "destination": {"primary": destination}}),
+                "tool_priority": self._determine_tool_priority({"intent_type": intent_type}),
+                "integration_approach": self._determine_integration_approach({"intent_type": intent_type}),
+                "response_focus": self._determine_response_focus({"intent_type": intent_type})
+            },
             "confidence_score": 0.6
         }
         
-        logger.info(f"Created structured analysis: {structured_analysis}")
+        logger.info(f"Created enhanced structured analysis: {enhanced_analysis}")
         
         # Legacy format for backward compatibility
         legacy_result = {
@@ -647,14 +779,15 @@ class TravelAgent(BaseAgent):
                 "time_info": time_info,
                 "budget_info": budget_info
             },
-            "structured_analysis": structured_analysis
+            "structured_analysis": enhanced_analysis,
+            "information_fusion_strategy": enhanced_analysis["information_fusion_strategy"]
         }
         
-        logger.info(f"Returning legacy format result: {legacy_result}")
+        logger.info(f"Returning enhanced legacy format result")
         logger.info(f"=== Enhanced Fallback Intent Analysis Complete ===")
         
         return legacy_result
-
+    
     def _extract_entities(self, user_message: str) -> Dict[str, Any]:
         """Extract additional entities from user message"""
         entities = {
@@ -1709,191 +1842,318 @@ class TravelAgent(BaseAgent):
         return results
     
     async def _generate_response(self, execution_result: Dict[str, Any], intent: Dict[str, Any]) -> str:
-        """Generate response content using prompt manager"""
+        """Generate response content using intelligent information fusion"""
         
-        logger.info(f"=== RESPONSE GENERATION START ===")
+        logger.info(f"=== INTELLIGENT RESPONSE GENERATION START ===")
         logger.info(f"Execution result success: {execution_result.get('success', False)}")
         logger.info(f"Execution result keys: {list(execution_result.keys())}")
         
         from app.core.prompt_manager import prompt_manager, PromptType
         
         try:
-            # Get knowledge context from execution result
+            # Extract information sources
             knowledge_context = execution_result.get("knowledge_context", {})
-            logger.info(f"Knowledge context keys: {list(knowledge_context.keys())}")
+            tool_results = execution_result.get("results", {})
+            user_message = execution_result.get("original_message", "")
             
-            relevant_docs = knowledge_context.get("relevant_docs", [])
-            logger.info(f"Number of relevant docs for response: {len(relevant_docs)}")
-            
-            for i, doc in enumerate(relevant_docs):
-                logger.info(f"Response relevant doc {i+1}: ID={doc.get('id', 'unknown')}, content_length={len(doc.get('content', ''))}")
-            
-            structured_analysis = intent.get("structured_analysis", {})
-            logger.info(f"Structured analysis keys: {list(structured_analysis.keys())}")
+            logger.info(f"Information Sources Summary:")
+            logger.info(f"  - Knowledge docs: {len(knowledge_context.get('relevant_docs', []))}")
+            logger.info(f"  - Tool results: {list(tool_results.keys())}")
+            logger.info(f"  - Intent type: {intent.get('type', 'unknown')}")
             
             if execution_result["success"]:
-                # Try to use LLM with prompt manager for response generation
+                # Try intelligent information fusion using LLM
                 if self.llm_service:
-                    logger.info("Attempting LLM-based response generation...")
+                    logger.info("Attempting LLM-based information fusion...")
                     try:
-                        # Build structured context for LLM
-                        user_message = execution_result.get("original_message", "")
-                        tool_results = execution_result.get("results", {})
+                        # Format information for fusion prompt
+                        formatted_knowledge = self._format_knowledge_for_fusion(
+                            knowledge_context.get("relevant_docs", [])
+                        )
+                        formatted_tools = self._format_tools_for_fusion(tool_results)
+                        formatted_intent = self._format_intent_for_fusion(intent)
                         
-                        logger.info(f"User message for LLM: '{user_message}'")
-                        logger.info(f"Tool results keys: {list(tool_results.keys())}")
-                        
-                        # Format tool results for LLM
-                        formatted_tool_results = {}
-                        for tool_name, result in tool_results.items():
-                            if tool_name in ["flight_search", "hotel_search", "attraction_search"]:
-                                formatted_tool_results[tool_name] = result
-                        
-                        logger.info(f"Formatted tool results: {formatted_tool_results}")
-                        
-                        # Generate response using prompt manager
-                        response_prompt = prompt_manager.get_prompt(
-                            PromptType.RESPONSE_GENERATION,
+                        # Use information fusion template from prompt manager
+                        fusion_prompt = prompt_manager.get_prompt(
+                            PromptType.INFORMATION_FUSION,
                             user_message=user_message,
-                            intent_analysis=structured_analysis,
-                            tool_results=formatted_tool_results,
-                            knowledge_context=knowledge_context.get("context", "")
+                            knowledge_context=formatted_knowledge,
+                            tool_results=formatted_tools,
+                            intent_analysis=formatted_intent
                         )
                         
-                        logger.info(f"Generated prompt for LLM (first 500 chars): {response_prompt[:500]}...")
+                        logger.info(f"Generated fusion prompt (first 300 chars): {fusion_prompt[:300]}...")
                         
-                        llm_response = await self.llm_service.chat_completion([
-                            {"role": "user", "content": response_prompt}
-                        ])
+                        # Generate response using LLM
+                        fusion_response = await self.llm_service.chat_completion([
+                            {"role": "user", "content": fusion_prompt}
+                        ], temperature=0.4, max_tokens=1500)
                         
-                        if llm_response and llm_response.content:
-                            logger.info(f"LLM response received, length: {len(llm_response.content)}")
-                            logger.info(f"LLM response preview: {llm_response.content[:300]}...")
-                            logger.info(f"=== RESPONSE GENERATION END (LLM) ===")
-                            return llm_response.content
+                        if fusion_response and fusion_response.content:
+                            logger.info(f"✅ LLM information fusion completed")
+                            logger.info(f"Response length: {len(fusion_response.content)}")
+                            logger.info(f"=== INTELLIGENT RESPONSE GENERATION END (LLM Fusion) ===")
+                            return fusion_response.content
                         else:
-                            logger.warning("LLM response was empty or invalid")
-                        
+                            logger.warning("LLM fusion returned empty response, using fallback")
+                            
                     except Exception as e:
-                        logger.error(f"LLM response generation failed: {e}")
-                        logger.error(f"Falling back to template-based response")
-                        # Fall back to template-based response
-                else:
-                    logger.info("No LLM service available, using template-based response")
+                        logger.error(f"LLM information fusion failed: {e}")
+                        logger.info("Falling back to enhanced template fusion")
                 
-                # Template-based response generation (fallback)
-                logger.info("Using template-based response generation...")
-                response_parts = []
+                # Fallback to enhanced template-based response generation
+                logger.info("Using enhanced template-based response generation...")
                 
-                # Handle both new and legacy intent formats
-                intent_type = intent.get("type") or intent.get("intent_type", "query")
-                logger.info(f"Intent type for response: {intent_type}")
+                # Try enhanced response generation template
+                try:
+                    formatted_knowledge = self._format_knowledge_for_fusion(
+                        knowledge_context.get("relevant_docs", [])
+                    )
+                    formatted_tools = self._format_tools_for_fusion(tool_results)
+                    formatted_intent = self._format_intent_for_fusion(intent)
+                    
+                    # Use enhanced response generation template
+                    response_prompt = prompt_manager.get_prompt(
+                        PromptType.RESPONSE_GENERATION,
+                        user_message=user_message,
+                        intent_analysis=formatted_intent,
+                        tool_results=formatted_tools,
+                        knowledge_context=formatted_knowledge
+                    )
+                    
+                    if self.llm_service:
+                        enhanced_response = await self.llm_service.chat_completion([
+                            {"role": "user", "content": response_prompt}
+                        ], temperature=0.4, max_tokens=1200)
+                        
+                        if enhanced_response and enhanced_response.content:
+                            logger.info(f"✅ Enhanced template response completed")
+                            logger.info(f"=== INTELLIGENT RESPONSE GENERATION END (Enhanced Template) ===")
+                            return enhanced_response.content
+                            
+                except Exception as e:
+                    logger.error(f"Enhanced template response failed: {e}")
                 
-                if intent_type == "planning":
-                    response_parts.append("🎯 **Travel Planning Assistant**")
-                    response_parts.append(f"Based on your request for {intent.get('destination', 'your destination')}, here's what I found:")
-                    
-                    # Add knowledge-based information
-                    if relevant_docs:
-                        logger.info(f"Adding {len(relevant_docs)} knowledge docs to response")
-                        response_parts.append("\n📚 **Travel Information:**")
-                        for i, doc in enumerate(relevant_docs[:2]):  # Limit to top 2 results
-                            doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
-                            content = doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "")
-                            response_parts.append(f"**{doc_title}**\n{content}")
-                            logger.info(f"Added knowledge doc {i+1}: {doc_title}")
-                    else:
-                        logger.warning("No relevant docs found for planning response")
-                    
-                    # Add tool results
-                    tool_results = execution_result.get("results", {})
-                    logger.info(f"Adding tool results to response: {list(tool_results.keys())}")
-                    
-                    if "flight_search" in tool_results and "flights" in tool_results["flight_search"]:
-                        response_parts.append("\n✈️ **Flight Options:**")
-                        for flight in tool_results["flight_search"]["flights"][:2]:
-                            response_parts.append(f"- {flight['airline']}: {flight['price']} ({flight['duration']})")
-                    
-                    if "hotel_search" in tool_results and "hotels" in tool_results["hotel_search"]:
-                        response_parts.append("\n🏨 **Hotel Options:**")
-                        for hotel in tool_results["hotel_search"]["hotels"][:2]:
-                            response_parts.append(f"- {hotel['name']}: {hotel['price']} (Rating: {hotel['rating']})")
-                    
-                    if "attraction_search" in tool_results and "attractions" in tool_results["attraction_search"]:
-                        response_parts.append("\n🎭 **Attractions:**")
-                        for attraction in tool_results["attraction_search"]["attractions"][:2]:
-                            response_parts.append(f"- {attraction['name']}: {attraction['description']} (Rating: {attraction['rating']})")
-                    
-                    # Add next steps
-                    response_parts.append("\n\n🎯 **Next Steps:**")
-                    response_parts.append("- Let me know your travel dates and I can provide more specific recommendations")
-                    response_parts.append("- I can help you compare prices and make bookings")
-                    response_parts.append("- Ask me about specific aspects like dining, transportation, or activities")
-                    
-                elif intent_type == "recommendation":
-                    response_parts.append("💡 **Travel Recommendations**")
-                    response_parts.append(f"Here are my recommendations for {intent.get('destination', 'your destination')}:")
-                    
-                    # Add knowledge-based recommendations
-                    if relevant_docs:
-                        logger.info(f"Adding {len(relevant_docs)} knowledge docs to recommendation response")
-                        for i, doc in enumerate(relevant_docs[:3]):
-                            doc_title = doc.get("metadata", {}).get("title", f"Recommendation {i+1}")
-                            content = doc.get("content", "")[:150] + "..." if len(doc.get("content", "")) > 150 else doc.get("content", "")
-                            response_parts.append(f"\n**{doc_title}**\n{content}")
-                            logger.info(f"Added recommendation doc {i+1}: {doc_title}")
-                    else:
-                        logger.warning("No relevant docs found for recommendation response")
-                    
-                    response_parts.append("\n\n🔍 **Would you like me to:**")
-                    response_parts.append("- Provide more detailed information about any of these recommendations?")
-                    response_parts.append("- Help you plan a complete itinerary?")
-                    response_parts.append("- Search for specific activities or attractions?")
-                    
-                elif intent_type == "query":
-                    response_parts.append("❓ **Travel Information**")
-                    
-                    if relevant_docs:
-                        logger.info(f"Adding {len(relevant_docs)} knowledge docs to query response")
-                        response_parts.append("Based on my knowledge, here's what I found:")
-                        for i, doc in enumerate(relevant_docs[:2]):
-                            doc_title = doc.get("metadata", {}).get("title", f"Information {i+1}")
-                            content = doc.get("content", "")
-                            response_parts.append(f"\n**{doc_title}**\n{content}")
-                            logger.info(f"Added query doc {i+1}: {doc_title}")
-                    else:
-                        logger.warning("No relevant docs found for query response")
-                        response_parts.append("I'd be happy to help you with travel information. Could you provide more specific details about what you're looking for?")
-                    
-                    response_parts.append("\n\n💬 **Follow-up Questions:**")
-                    response_parts.append("- Are you looking for information about a specific destination?")
-                    response_parts.append("- Would you like me to help you plan a trip?")
-                    response_parts.append("- Do you have any specific travel dates in mind?")
-                
-                final_response = "\n".join(response_parts)
-                logger.info(f"Template-based response generated, length: {len(final_response)}")
-                logger.info(f"Template response preview: {final_response[:300]}...")
-                logger.info(f"=== RESPONSE GENERATION END (Template) ===")
-                return final_response
+                # Final fallback to structured template fusion
+                return self._structured_template_fusion(user_message, intent, knowledge_context, tool_results)
             
             else:
+                # Handle error cases
                 error_msg = execution_result.get("error", "Unknown error")
                 intent_type = intent.get("type") or intent.get("intent_type", "travel")
                 error_response = f"I encountered an issue while processing your {intent_type} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
                 
                 logger.info(f"Error response generated: {error_response}")
-                logger.info(f"=== RESPONSE GENERATION END (Error) ===")
+                logger.info(f"=== INTELLIGENT RESPONSE GENERATION END (Error) ===")
                 return error_response
                 
         except Exception as e:
-            logger.error(f"Error in response generation: {e}")
+            logger.error(f"Error in intelligent response generation: {e}")
             import traceback
             logger.error(f"Response generation traceback: {traceback.format_exc()}")
             
-            error_response = f"I'm having trouble generating a response right now: {str(e)}. Please try asking me something else about your travel plans."
-            logger.info(f"Exception response generated: {error_response}")
-            logger.info(f"=== RESPONSE GENERATION END (Exception) ===")
-            return error_response
+            # Emergency fallback
+            return self._emergency_fallback_response(execution_result.get("original_message", ""), intent)
+    
+    def _format_knowledge_for_fusion(self, relevant_docs: List[Dict]) -> str:
+        """Format knowledge context for information fusion"""
+        if not relevant_docs:
+            return "No specific knowledge context available."
+        
+        knowledge_parts = []
+        for i, doc in enumerate(relevant_docs[:3]):  # Top 3 most relevant
+            title = doc.get("metadata", {}).get("title", f"Knowledge {i+1}")
+            content = doc.get("content", "")
+            location = doc.get("metadata", {}).get("location", "")
+            
+            formatted_doc = f"**{title}**"
+            if location:
+                formatted_doc += f" (Location: {location})"
+            formatted_doc += f"\n{content[:400]}..." if len(content) > 400 else f"\n{content}"
+            
+            knowledge_parts.append(formatted_doc)
+        
+        return "\n\n".join(knowledge_parts)
+    
+    def _format_tools_for_fusion(self, tool_results: Dict) -> str:
+        """Format tool results for information fusion"""
+        if not tool_results:
+            return "No dynamic tool results available."
+        
+        tool_parts = []
+        for tool_name, result in tool_results.items():
+            if isinstance(result, dict):
+                if tool_name == "attraction_search" and "attractions" in result:
+                    attractions = result["attractions"][:3]  # Top 3
+                    tool_parts.append(f"**Current Attractions ({len(attractions)} found)**:")
+                    for attr in attractions:
+                        name = attr.get('name', 'Unknown')
+                        desc = attr.get('description', 'No description')[:100]
+                        rating = attr.get('rating', 'No rating')
+                        tool_parts.append(f"- {name} (Rating: {rating}): {desc}")
+                
+                elif tool_name == "hotel_search" and "hotels" in result:
+                    hotels = result["hotels"][:3]  # Top 3  
+                    tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
+                    for hotel in hotels:
+                        name = hotel.get('name', 'Unknown')
+                        price = hotel.get('price', 'Price unavailable')
+                        rating = hotel.get('rating', 'No rating')
+                        tool_parts.append(f"- {name} (Rating: {rating}): {price}")
+                
+                elif tool_name == "flight_search" and "flights" in result:
+                    flights = result["flights"][:3]  # Top 3
+                    tool_parts.append(f"**Current Flights ({len(flights)} found)**:")
+                    for flight in flights:
+                        airline = flight.get('airline', 'Unknown')
+                        price = flight.get('price', 'Price unavailable')
+                        duration = flight.get('duration', 'Duration unavailable')
+                        tool_parts.append(f"- {airline}: {price} ({duration})")
+                
+                elif "message" in result:
+                    tool_parts.append(f"**{tool_name.replace('_', ' ').title()}**: {result['message']}")
+        
+        return "\n".join(tool_parts) if tool_parts else "Tool results available but not formatted."
+    
+    def _format_intent_for_fusion(self, intent: Dict[str, Any]) -> str:
+        """Format intent analysis for information fusion"""
+        intent_type = intent.get("type") or intent.get("intent_type", "query")
+        destination = intent.get("destination", "unknown")
+        
+        # Extract structured analysis if available
+        structured_analysis = intent.get("structured_analysis", {})
+        fusion_strategy = intent.get("information_fusion_strategy", {})
+        
+        formatted_intent = f"**Intent Type**: {intent_type}\n"
+        formatted_intent += f"**Destination**: {destination}\n"
+        formatted_intent += f"**Urgency**: {intent.get('urgency', 'medium')}\n"
+        
+        if fusion_strategy:
+            formatted_intent += f"**Fusion Strategy**:\n"
+            formatted_intent += f"- Knowledge Priority: {fusion_strategy.get('knowledge_priority', 'medium')}\n"
+            formatted_intent += f"- Tool Priority: {fusion_strategy.get('tool_priority', 'medium')}\n"
+            formatted_intent += f"- Integration Approach: {fusion_strategy.get('integration_approach', 'balanced')}\n"
+            formatted_intent += f"- Response Focus: {fusion_strategy.get('response_focus', 'helpful_information')}\n"
+        
+        # Add key requirements if available
+        key_requirements = structured_analysis.get("key_requirements", []) or intent.get("extracted_info", {}).get("key_requirements", [])
+        if key_requirements:
+            formatted_intent += f"**Key Requirements**: {', '.join(key_requirements)}\n"
+        
+        return formatted_intent
+    
+    def _structured_template_fusion(
+        self, 
+        user_message: str, 
+        intent: Dict[str, Any], 
+        knowledge_context: Dict[str, Any], 
+        tool_results: Dict[str, Any]
+    ) -> str:
+        """Structured template-based information fusion fallback"""
+        
+        response_parts = []
+        intent_type = intent.get("type") or intent.get("intent_type", "query")
+        relevant_docs = knowledge_context.get("relevant_docs", [])
+        
+        # Header based on intent and fusion strategy
+        fusion_strategy = intent.get("information_fusion_strategy", {})
+        response_focus = fusion_strategy.get("response_focus", "helpful_information")
+        
+        if response_focus == "comprehensive_plan":
+            response_parts.append("🎯 **Comprehensive Travel Planning**")
+        elif response_focus == "detailed_information":
+            response_parts.append("📍 **Detailed Travel Information**")
+        elif response_focus == "curated_options":
+            response_parts.append("💡 **Curated Travel Recommendations**")
+        elif response_focus == "actionable_steps":
+            response_parts.append("📋 **Actionable Travel Steps**")
+        else:
+            response_parts.append("✈️ **Travel Assistance**")
+        
+        # Integrate information based on fusion strategy
+        integration_approach = fusion_strategy.get("integration_approach", "balanced")
+        knowledge_priority = fusion_strategy.get("knowledge_priority", "medium")
+        tool_priority = fusion_strategy.get("tool_priority", "medium")
+        
+        if integration_approach == "knowledge_first" or knowledge_priority in ["high", "very_high"]:
+            # Lead with knowledge context
+            if relevant_docs:
+                response_parts.append("Based on comprehensive travel knowledge:")
+                for i, doc in enumerate(relevant_docs[:2]):
+                    title = doc.get("metadata", {}).get("title", f"Information {i+1}")
+                    content = doc.get("content", "")
+                    response_parts.append(f"\n**{title}**")
+                    response_parts.append(content[:300] + "..." if len(content) > 300 else content)
+            
+            # Add tool results as supporting information
+            if tool_results and tool_priority != "low":
+                response_parts.append("\n\n🔍 **Current Options & Recommendations**:")
+                formatted_tools = self._format_tools_for_fusion(tool_results)
+                response_parts.append(formatted_tools)
+        
+        elif integration_approach == "tools_first" or tool_priority in ["high", "very_high"]:
+            # Lead with tool results
+            if tool_results:
+                response_parts.append("Based on current available options:")
+                formatted_tools = self._format_tools_for_fusion(tool_results)
+                response_parts.append(formatted_tools)
+            
+            # Add knowledge context as background
+            if relevant_docs and knowledge_priority != "low":
+                response_parts.append("\n\n📚 **Additional Information**:")
+                for i, doc in enumerate(relevant_docs[:2]):
+                    title = doc.get("metadata", {}).get("title", f"Background {i+1}")
+                    content = doc.get("content", "")
+                    response_parts.append(f"\n**{title}**: {content[:200]}..." if len(content) > 200 else content)
+        
+        else:
+            # Balanced integration
+            if relevant_docs:
+                response_parts.append("Based on comprehensive analysis:")
+                
+                # Interleave knowledge and tools
+                for i, doc in enumerate(relevant_docs[:2]):
+                    title = doc.get("metadata", {}).get("title", f"Information {i+1}")
+                    content = doc.get("content", "")
+                    response_parts.append(f"\n**{title}**")
+                    response_parts.append(content[:250] + "..." if len(content) > 250 else content)
+                
+                if tool_results:
+                    response_parts.append("\n\n🔍 **Current Recommendations**:")
+                    formatted_tools = self._format_tools_for_fusion(tool_results)
+                    response_parts.append(formatted_tools)
+        
+        # Smart next steps based on intent and fusion strategy
+        response_parts.append("\n\n🎯 **Next Steps**:")
+        if response_focus == "comprehensive_plan":
+            response_parts.append("• Review the recommendations and let me know your preferences")
+            response_parts.append("• I can help you create a detailed day-by-day itinerary")
+            response_parts.append("• Would you like assistance with bookings or additional information?")
+        elif response_focus == "actionable_steps":
+            response_parts.append("• Use the provided information to make informed decisions")
+            response_parts.append("• Contact me if you need help with the booking process")
+            response_parts.append("• Let me know if you need additional details about any option")
+        else:
+            response_parts.append("• Let me know if you need more specific information")
+            response_parts.append("• I can help you plan a complete trip if you're interested")
+            response_parts.append("• Feel free to ask about any aspect of your travel planning")
+        
+        final_response = "\n".join(response_parts)
+        logger.info(f"Structured template fusion completed, length: {len(final_response)}")
+        return final_response
+    
+    def _emergency_fallback_response(self, user_message: str, intent: Dict[str, Any]) -> str:
+        """Emergency fallback response when all other methods fail"""
+        intent_type = intent.get("type") or intent.get("intent_type", "travel")
+        
+        return f"""I understand you're looking for {intent_type} assistance. While I'm experiencing some technical difficulties with my advanced processing systems, I'm still here to help you with your travel planning needs.
+
+Could you please provide me with:
+• Your destination or area of interest
+• What specific information you're looking for
+• Any particular preferences or requirements
+
+This will help me provide you with the most relevant travel guidance possible."""
     
     async def _execute_action(self, action: str, parameters: Dict[str, Any]) -> Any:
         """Execute specific action using the complete new framework (required abstract method implementation)"""
