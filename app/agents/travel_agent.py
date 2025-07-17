@@ -23,6 +23,7 @@ from app.tools.tool_executor import get_tool_executor
 from app.core.llm_service import get_llm_service
 from app.core.rag_engine import get_rag_engine
 from app.core.logging_config import get_logger
+from app.core.prompt_manager import prompt_manager, PromptType
 
 logger = get_logger(__name__)
 
@@ -323,8 +324,6 @@ class TravelAgent(BaseAgent):
 
         # Try to use LLM for travel-specific response refinement
         try:
-            from app.core.prompt_manager import prompt_manager, PromptType
-
             if self.llm_service:
                 # Use prompt manager for LLM-based travel response refinement
                 refinement_prompt = prompt_manager.get_prompt(
@@ -482,12 +481,6 @@ class TravelAgent(BaseAgent):
                 "original_message": message.content,
             }
             result = await self._execute_action_plan(action_plan, execution_context)
-            # Add original message to context for knowledge retrieval
-            execution_context = {
-                **message.metadata,
-                "original_message": message.content,
-            }
-            result = await self._execute_action_plan(action_plan, execution_context)
 
             # 5. Generate response
             response_content = await self._generate_response(result, intent)
@@ -510,7 +503,7 @@ class TravelAgent(BaseAgent):
         except Exception as e:
             self.status = AgentStatus.ERROR
             return AgentResponse(
-                success=False, content=f"处理消息时发生错误: {str(e)}", confidence=0.0
+                success=False, content=f"An error occurred while processing the message: {str(e)}", confidence=0.0
             )
 
     async def _analyze_user_intent(self, user_message: str) -> Dict[str, Any]:
@@ -535,8 +528,6 @@ class TravelAgent(BaseAgent):
         self, user_message: str
     ) -> Dict[str, Any]:
         """Get enhanced LLM intent analysis using updated prompt manager"""
-
-        from app.core.prompt_manager import prompt_manager, PromptType
 
         # Build enhanced prompt using updated prompt manager
         analysis_prompt = prompt_manager.get_prompt(
@@ -1083,8 +1074,6 @@ class TravelAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Use LLM to intelligently select tools based on structured analysis"""
 
-        from app.core.prompt_manager import prompt_manager, PromptType
-
         try:
             # Build tool selection prompt
             tool_selection_prompt = prompt_manager.get_prompt(
@@ -1353,8 +1342,6 @@ class TravelAgent(BaseAgent):
         # Use LLM for sophisticated requirement analysis if available
         if self.llm_service:
             try:
-                from app.core.prompt_manager import prompt_manager, PromptType
-
                 # Use prompt manager for requirement extraction
                 requirement_prompt = prompt_manager.get_prompt(
                     PromptType.REQUIREMENT_EXTRACTION,
@@ -1916,6 +1903,13 @@ class TravelAgent(BaseAgent):
         intent_type = intent.get("type") or intent.get("intent_type", "query")
 
         if intent_type == "planning":
+            plan["actions"] = [
+                "retrieve_knowledge",
+                "search_flights",
+                "search_hotels", 
+                "search_attractions",
+                "generate_plan"
+            ]
             plan["tools_to_use"] = [
                 "flight_search",
                 "hotel_search",
@@ -1927,25 +1921,6 @@ class TravelAgent(BaseAgent):
                 "Suggest booking timeline",
             ]
         elif intent_type == "recommendation":
-            plan["tools_to_use"] = ["attraction_search"]
-            plan["next_steps"] = [
-                "Provide personalized recommendations",
-                "Include practical tips",
-                "Suggest related activities",
-            ]
-        elif intent_type == "query":
-            plan["tools_to_use"] = []
-            plan["next_steps"] = [
-                "Provide detailed answer",
-                "Offer additional information",
-                "Ask follow-up questions",
-            ]
-            plan["next_steps"] = [
-                "Provide detailed travel itinerary",
-                "Include budget estimates",
-                "Suggest booking timeline",
-            ]
-        elif intent["type"] == "recommendation":
             plan["actions"] = [
                 "retrieve_knowledge",
                 "search_attractions",
@@ -1957,7 +1932,7 @@ class TravelAgent(BaseAgent):
                 "Include practical tips",
                 "Suggest related activities",
             ]
-        elif intent["type"] == "query":
+        elif intent_type == "query":
             plan["actions"] = ["retrieve_knowledge", "answer_question"]
             plan["tools_to_use"] = []
             plan["next_steps"] = [
@@ -2217,8 +2192,6 @@ class TravelAgent(BaseAgent):
             f"Execution result success: {execution_result.get('success', False)}"
         )
         logger.info(f"Execution result keys: {list(execution_result.keys())}")
-
-        from app.core.prompt_manager import prompt_manager, PromptType
 
         try:
             # Extract information sources
