@@ -181,41 +181,69 @@ class ChromaVectorStore:
                 )
                 logger.info(f"Added {len(new_documents)} new documents to collection")
             
-            # Process existing documents (update)
+            # Process existing documents (update) with atomic backup-restore pattern
             if existing_documents:
-                # Delete existing documents first
                 existing_ids_to_update = [doc.id for doc in existing_documents]
-                self.collection.delete(ids=existing_ids_to_update)
+                backup_data = None
                 
-                # Re-add updated documents
-                ids = [doc.id for doc in existing_documents]
-                contents = [doc.content for doc in existing_documents]
-                
-                # Convert list values in metadata to strings for ChromaDB compatibility
-                metadatas = []
-                for doc in existing_documents:
-                    processed_metadata = {}
-                    for key, value in doc.metadata.items():
-                        if isinstance(value, list):
-                            # Convert list to comma-separated string
-                            processed_metadata[key] = ", ".join(str(v) for v in value)
-                        elif value is not None:
-                            processed_metadata[key] = str(value)
-                    # Add document type to metadata
-                    processed_metadata["doc_type"] = doc.doc_type.value
-                    metadatas.append(processed_metadata)
-                
-                # Generate embeddings using provided embedding model
-                embeddings = await embedding_model.encode(contents)
-                
-                # Add updated documents
-                self.collection.add(
-                    ids=ids,
-                    documents=contents,
-                    embeddings=embeddings,
-                    metadatas=metadatas
-                )
-                logger.info(f"Updated {len(existing_documents)} existing documents in collection")
+                try:
+                    # Step 1: Backup existing documents before deletion
+                    backup_result = self.collection.get(
+                        ids=existing_ids_to_update,
+                        include=['documents', 'metadatas', 'embeddings']
+                    )
+                    backup_data = backup_result
+                    
+                    # Step 2: Prepare new document data BEFORE deletion
+                    ids = [doc.id for doc in existing_documents]
+                    contents = [doc.content for doc in existing_documents]
+                    
+                    # Convert list values in metadata to strings for ChromaDB compatibility
+                    metadatas = []
+                    for doc in existing_documents:
+                        processed_metadata = {}
+                        for key, value in doc.metadata.items():
+                            if isinstance(value, list):
+                                # Convert list to comma-separated string
+                                processed_metadata[key] = ", ".join(str(v) for v in value)
+                            elif value is not None:
+                                processed_metadata[key] = str(value)
+                        # Add document type to metadata
+                        processed_metadata["doc_type"] = doc.doc_type.value
+                        metadatas.append(processed_metadata)
+                    
+                    # Step 3: Generate embeddings BEFORE deletion (most likely to fail)
+                    embeddings = await embedding_model.encode(contents)
+                    
+                    # Step 4: Now safely delete and re-add (both are fast operations)
+                    self.collection.delete(ids=existing_ids_to_update)
+                    
+                    try:
+                        self.collection.add(
+                            ids=ids,
+                            documents=contents,
+                            embeddings=embeddings,
+                            metadatas=metadatas
+                        )
+                        logger.info(f"Updated {len(existing_documents)} existing documents in collection")
+                        
+                    except Exception as add_error:
+                        # Step 5: If re-addition fails, restore from backup
+                        logger.error(f"Re-addition failed, restoring from backup: {add_error}")
+                        if backup_data and backup_data.get('ids'):
+                            self.collection.add(
+                                ids=backup_data['ids'],
+                                documents=backup_data['documents'],
+                                embeddings=backup_data['embeddings'],
+                                metadatas=backup_data['metadatas']
+                            )
+                            logger.info(f"Successfully restored {len(backup_data['ids'])} documents from backup")
+                        raise  # Re-raise the original error after restoration
+                        
+                except Exception as prep_error:
+                    # If backup or preparation fails, don't delete anything
+                    logger.error(f"Document update preparation failed, skipping updates: {prep_error}")
+                    raise
             
             return True
             
