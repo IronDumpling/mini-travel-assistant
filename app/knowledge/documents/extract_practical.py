@@ -30,7 +30,7 @@ HEADERS = {
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "none",
-    "Cache-Control": "max-age=0"
+    "Cache-Control": "max-age=0",
 }
 
 # Practical information configurations
@@ -44,10 +44,25 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "japan",
         "keywords": [
-            'visa', 'passport', 'immigration', 'entry', 'requirements', 'tourist',
-            'business', 'work', 'student', 'transit', 'waiver', 'exemption',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension'
-        ]
+            "visa",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "exemption",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+        ],
     },
     "usa_visa": {
         "url": "https://en.wikivoyage.org/wiki/United_States_of_America#Get_in",
@@ -58,11 +73,28 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "usa",
         "keywords": [
-            'visa', 'esta', 'passport', 'immigration', 'entry', 'requirements',
-            'tourist', 'business', 'work', 'student', 'transit', 'waiver',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration'
-        ]
+            "visa",
+            "esta",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+        ],
     },
     "schengen_visa": {
         "url": "https://en.wikivoyage.org/wiki/Schengen_visa",
@@ -73,11 +105,30 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "schengen",
         "keywords": [
-            'schengen', 'visa', 'europe', 'passport', 'immigration', 'entry',
-            'requirements', 'tourist', 'business', 'work', 'student', 'transit',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration', 'schengen', 'area'
-        ]
+            "schengen",
+            "visa",
+            "europe",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+            "schengen",
+            "area",
+        ],
     },
     "uk_visa": {
         "url": "https://en.wikivoyage.org/wiki/United_Kingdom#Get_in",
@@ -88,11 +139,29 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "uk",
         "keywords": [
-            'visa', 'passport', 'immigration', 'entry', 'requirements', 'tourist',
-            'business', 'work', 'student', 'transit', 'waiver', 'exemption',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration', 'brexit'
-        ]
+            "visa",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "exemption",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+            "brexit",
+        ],
     },
     "australia_visa": {
         "url": "https://en.wikivoyage.org/wiki/Australia#Get_in",
@@ -103,11 +172,29 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "australia",
         "keywords": [
-            'visa', 'eta', 'passport', 'immigration', 'entry', 'requirements',
-            'tourist', 'business', 'work', 'student', 'transit', 'waiver',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration', 'quarantine'
-        ]
+            "visa",
+            "eta",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+            "quarantine",
+        ],
     },
     "canada_visa": {
         "url": "https://en.wikivoyage.org/wiki/Canada#Get_in",
@@ -118,11 +205,28 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "canada",
         "keywords": [
-            'visa', 'eta', 'passport', 'immigration', 'entry', 'requirements',
-            'tourist', 'business', 'work', 'student', 'transit', 'waiver',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration'
-        ]
+            "visa",
+            "eta",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+        ],
     },
     "china_visa": {
         "url": "https://en.wikivoyage.org/wiki/China#Get_in",
@@ -133,11 +237,28 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "china",
         "keywords": [
-            'visa', 'passport', 'immigration', 'entry', 'requirements', 'tourist',
-            'business', 'work', 'student', 'transit', 'waiver', 'exemption',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration'
-        ]
+            "visa",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "exemption",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+        ],
     },
     "india_visa": {
         "url": "https://en.wikivoyage.org/wiki/India#Get_in",
@@ -148,11 +269,28 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "india",
         "keywords": [
-            'visa', 'evisa', 'passport', 'immigration', 'entry', 'requirements',
-            'tourist', 'business', 'work', 'student', 'transit', 'waiver',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration'
-        ]
+            "visa",
+            "evisa",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+        ],
     },
     "brazil_visa": {
         "url": "https://en.wikivoyage.org/wiki/Brazil#Get_in",
@@ -163,11 +301,28 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "brazil",
         "keywords": [
-            'visa', 'passport', 'immigration', 'entry', 'requirements', 'tourist',
-            'business', 'work', 'student', 'transit', 'waiver', 'exemption',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration'
-        ]
+            "visa",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "exemption",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+        ],
     },
     "south_africa_visa": {
         "url": "https://en.wikivoyage.org/wiki/South_Africa#Get_in",
@@ -178,12 +333,29 @@ PRACTICAL_CONFIGS = {
         "info_type": "visa",
         "country": "south_africa",
         "keywords": [
-            'visa', 'passport', 'immigration', 'entry', 'requirements', 'tourist',
-            'business', 'work', 'student', 'transit', 'waiver', 'exemption',
-            'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-            'border', 'customs', 'declaration'
-        ]
-    }
+            "visa",
+            "passport",
+            "immigration",
+            "entry",
+            "requirements",
+            "tourist",
+            "business",
+            "work",
+            "student",
+            "transit",
+            "waiver",
+            "exemption",
+            "application",
+            "documents",
+            "fee",
+            "duration",
+            "validity",
+            "extension",
+            "border",
+            "customs",
+            "declaration",
+        ],
+    },
 }
 
 
@@ -197,42 +369,46 @@ def get_session():
 def scrape_practical_info(practical_name: str):
     """Scrape practical travel information from various sources"""
     session = get_session()
-    
+
     if practical_name.lower() not in PRACTICAL_CONFIGS:
-        logger.error(f"Practical info '{practical_name}' not configured. Available: {list(PRACTICAL_CONFIGS.keys())}")
+        logger.error(
+            f"Practical info '{practical_name}' not configured. Available: {list(PRACTICAL_CONFIGS.keys())}"
+        )
         return []
-    
+
     config = PRACTICAL_CONFIGS[practical_name.lower()]
     url = config["url"]
-    
+
     try:
         # Add a random delay to avoid being flagged as a bot
         time.sleep(random.uniform(1, 3))
-        
+
         response = session.get(url, timeout=30)
         response.raise_for_status()
-        
+
         soup = BeautifulSoup(response.text, "html.parser")
         practical_info = []
-        
+
         # For WikiVoyage pages, look for specific practical information sections
         if "wikivoyage" in config["source_url"].lower():
             practical_info = scrape_wikivoyage_practical(soup, config)
         else:
             # Fallback to general link extraction
             practical_info = scrape_general_links(soup, config)
-        
+
         # Remove duplicates based on name
         unique_info = []
         seen_names = set()
         for info in practical_info:
-            if info['name'] not in seen_names:
+            if info["name"] not in seen_names:
                 unique_info.append(info)
-                seen_names.add(info['name'])
-        
-        logger.info(f"Extracted {len(unique_info)} practical items from {config['source']}")
+                seen_names.add(info["name"])
+
+        logger.info(
+            f"Extracted {len(unique_info)} practical items from {config['source']}"
+        )
         return unique_info
-        
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Request failed: {e}")
         return []
@@ -244,180 +420,262 @@ def scrape_practical_info(practical_name: str):
 def scrape_wikivoyage_practical(soup, config):
     """Extract specific practical information from WikiVoyage pages"""
     practical_info = []
-    
+
     # Look for practical information sections in WikiVoyage
     practical_sections = [
-        'Get in', 'Visa', 'Passport', 'Immigration', 'Entry requirements',
-        'Customs', 'Health', 'Vaccinations', 'Insurance', 'Documents',
-        'Requirements', 'Application', 'Fees', 'Duration', 'Validity'
+        "Get in",
+        "Visa",
+        "Passport",
+        "Immigration",
+        "Entry requirements",
+        "Customs",
+        "Health",
+        "Vaccinations",
+        "Insurance",
+        "Documents",
+        "Requirements",
+        "Application",
+        "Fees",
+        "Duration",
+        "Validity",
     ]
-    
+
     for section in practical_sections:
         # Find section headers
-        headers = soup.find_all(['h2', 'h3', 'h4'])
+        headers = soup.find_all(["h2", "h3", "h4"])
         for header in headers:
             if header.get_text(strip=True).startswith(section):
                 # Look for lists and links in this section
-                next_elements = header.find_next_siblings(['ul', 'ol', 'p'], limit=10)
+                next_elements = header.find_next_siblings(["ul", "ol", "p"], limit=10)
                 for element in next_elements:
-                    if element.name in ['ul', 'ol']:
+                    if element.name in ["ul", "ol"]:
                         # Extract from lists
-                        list_items = element.find_all('li')
+                        list_items = element.find_all("li")
                         for item in list_items:
-                            links = item.find_all('a')
+                            links = item.find_all("a")
                             for link in links:
                                 name = link.get_text(strip=True)
-                                href = link.get('href')
+                                href = link.get("href")
                                 if name and href and len(name) > 3:
                                     # Check if it's a specific practical item
                                     if is_specific_practical(name, config):
                                         full_url = urljoin(config["source_url"], href)
-                                        practical_info.append({
-                                            "name": name,
-                                            "url": full_url
-                                        })
-                    elif element.name == 'p':
+                                        practical_info.append(
+                                            {"name": name, "url": full_url}
+                                        )
+                    elif element.name == "p":
                         # Extract from paragraphs
-                        links = element.find_all('a')
+                        links = element.find_all("a")
                         for link in links:
                             name = link.get_text(strip=True)
-                            href = link.get('href')
+                            href = link.get("href")
                             if name and href and len(name) > 3:
                                 if is_specific_practical(name, config):
                                     full_url = urljoin(config["source_url"], href)
-                                    practical_info.append({
-                                        "name": name,
-                                        "url": full_url
-                                    })
-    
+                                    practical_info.append(
+                                        {"name": name, "url": full_url}
+                                    )
+
     # Also look for specific practical keywords in the page
-    all_links = soup.find_all('a')
+    all_links = soup.find_all("a")
     for link in all_links:
         try:
             name = link.get_text(strip=True)
-            href = link.get('href')
-            
+            href = link.get("href")
+
             if href and name and isinstance(href, str) and len(name) > 3:
                 # Check if this looks like a specific practical item
                 if is_specific_practical(name, config):
                     # Construct full URL
-                    if href.startswith('/'):
+                    if href.startswith("/"):
                         full_url = urljoin(config["source_url"], href)
-                    elif href.startswith('http'):
+                    elif href.startswith("http"):
                         full_url = href
                     else:
-                        full_url = urljoin(config["source_url"], '/' + href)
-                    
+                        full_url = urljoin(config["source_url"], "/" + href)
+
                     # Avoid duplicates and navigation links
-                    if name not in [info['name'] for info in practical_info]:
-                        practical_info.append({
-                            "name": name,
-                            "url": full_url
-                        })
-                        
+                    if name not in [info["name"] for info in practical_info]:
+                        practical_info.append({"name": name, "url": full_url})
+
         except (AttributeError, TypeError) as e:
             continue
-    
+
     return practical_info
 
 
 def is_specific_practical(name, config):
     """Check if a name represents a specific practical item rather than a category"""
     name_lower = name.lower()
-    
+
     # Skip generic categories and navigation
     generic_terms = [
-        'home', 'back', 'next', 'previous', 'top', 'menu', 'search', 
-        'contact', 'about', 'privacy', 'terms', 'edit', 'history',
-        'practical', 'information', 'travel', 'guide', 'help', 'support'
+        "home",
+        "back",
+        "next",
+        "previous",
+        "top",
+        "menu",
+        "search",
+        "contact",
+        "about",
+        "privacy",
+        "terms",
+        "edit",
+        "history",
+        "practical",
+        "information",
+        "travel",
+        "guide",
+        "help",
+        "support",
     ]
-    
+
     if any(term in name_lower for term in generic_terms):
         return False
-    
+
     # Check if it contains specific practical keywords
     practical_keywords = [
-        'visa', 'passport', 'immigration', 'entry', 'requirements', 'tourist',
-        'business', 'work', 'student', 'transit', 'waiver', 'exemption',
-        'application', 'documents', 'fee', 'duration', 'validity', 'extension',
-        'border', 'customs', 'declaration', 'health', 'vaccination', 'insurance'
+        "visa",
+        "passport",
+        "immigration",
+        "entry",
+        "requirements",
+        "tourist",
+        "business",
+        "work",
+        "student",
+        "transit",
+        "waiver",
+        "exemption",
+        "application",
+        "documents",
+        "fee",
+        "duration",
+        "validity",
+        "extension",
+        "border",
+        "customs",
+        "declaration",
+        "health",
+        "vaccination",
+        "insurance",
     ]
-    
+
     # Check if it matches destination-specific keywords
     if any(keyword in name_lower for keyword in config["keywords"]):
         return True
-    
+
     # Check if it contains practical keywords
     if any(keyword in name_lower for keyword in practical_keywords):
         return True
-    
+
     # Check if it looks like a proper noun (capitalized words)
     words = name.split()
     if len(words) >= 2:
         capitalized_words = [word for word in words if word[0].isupper()]
         if len(capitalized_words) >= 2:
             return True
-    
+
     return False
 
 
 def scrape_general_links(soup, config):
     """Fallback method for general link extraction"""
     practical_info = []
-    all_links = soup.find_all('a')
-    
+    all_links = soup.find_all("a")
+
     for link in all_links:
         try:
             name = link.get_text(strip=True)
-            href = link.get('href')
-            
+            href = link.get("href")
+
             if href and name and isinstance(href, str) and len(name) > 3:
                 # Check if this looks like a practical link
                 href_lower = href.lower()
                 name_lower = name.lower()
-                
+
                 # Filter for likely practical links based on destination
-                is_practical = (
-                    any(keyword in href_lower for keyword in config["keywords"]) or
-                    any(keyword in name_lower for keyword in ['visa', 'passport', 'immigration', 'entry', 'requirements', 'tourist', 'business', 'work', 'student', 'transit', 'waiver', 'exemption', 'application', 'documents', 'fee', 'duration', 'validity', 'extension', 'border', 'customs', 'declaration', 'health', 'vaccination', 'insurance'])
+                is_practical = any(
+                    keyword in href_lower for keyword in config["keywords"]
+                ) or any(
+                    keyword in name_lower
+                    for keyword in [
+                        "visa",
+                        "passport",
+                        "immigration",
+                        "entry",
+                        "requirements",
+                        "tourist",
+                        "business",
+                        "work",
+                        "student",
+                        "transit",
+                        "waiver",
+                        "exemption",
+                        "application",
+                        "documents",
+                        "fee",
+                        "duration",
+                        "validity",
+                        "extension",
+                        "border",
+                        "customs",
+                        "declaration",
+                        "health",
+                        "vaccination",
+                        "insurance",
+                    ]
                 )
-                
+
                 # Avoid navigation and non-practical links
-                is_navigation = any(skip in name_lower for skip in ['home', 'back', 'next', 'previous', 'top', 'menu', 'search', 'contact', 'about', 'privacy', 'terms'])
-                
+                is_navigation = any(
+                    skip in name_lower
+                    for skip in [
+                        "home",
+                        "back",
+                        "next",
+                        "previous",
+                        "top",
+                        "menu",
+                        "search",
+                        "contact",
+                        "about",
+                        "privacy",
+                        "terms",
+                    ]
+                )
+
                 if is_practical and not is_navigation:
                     # Construct full URL
-                    if href.startswith('/'):
+                    if href.startswith("/"):
                         full_url = urljoin(config["source_url"], href)
-                    elif href.startswith('http'):
+                    elif href.startswith("http"):
                         full_url = href
                     else:
-                        full_url = urljoin(config["source_url"], '/' + href)
-                    
+                        full_url = urljoin(config["source_url"], "/" + href)
+
                     # Avoid duplicates
-                    if name not in [info['name'] for info in practical_info]:
-                        practical_info.append({
-                            "name": name,
-                            "url": full_url
-                        })
-                        
+                    if name not in [info["name"] for info in practical_info]:
+                        practical_info.append({"name": name, "url": full_url})
+
         except (AttributeError, TypeError) as e:
             continue
-    
+
     return practical_info
 
 
-def create_practical_data(practical_info: List[Dict[str, str]], 
-                         practical_name: str,
-                         config: Dict[str, Any]) -> Dict[str, Any]:
+def create_practical_data(
+    practical_info: List[Dict[str, str]], practical_name: str, config: Dict[str, Any]
+) -> Dict[str, Any]:
     """Create a standardized practical data structure"""
-    
+
     # Create practical-specific content
     if config["info_type"] == "visa":
         content = create_visa_content(practical_info, practical_name, config)
     else:
         content = create_generic_practical_content(practical_info, practical_name)
-    
+
     return {
         "id": f"{practical_name.lower().replace(' ', '_').replace(',', '')}_complete_guide",
         "title": f"{practical_name.replace('_', ' ').title()} Complete Travel Guide",
@@ -426,44 +684,65 @@ def create_practical_data(practical_info: List[Dict[str, str]],
         "subcategory": config["info_type"],
         "location": config["country"],
         "tags": [
-            practical_name.replace('_', ' ').lower(),
+            practical_name.replace("_", " ").lower(),
             "Practical",
             config["info_type"].title(),
-            config["country"].title()
+            config["country"].title(),
         ],
         "language": "en",
         "source": {
             "id": config["source_id"],
             "name": config["source"],
             "url": config["source_url"],
-            "reliability_score": 0.9
+            "reliability_score": 0.9,
         },
-        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
 
-def create_visa_content(practical_info: List[Dict[str, str]], practical_name: str, config: Dict[str, Any]) -> str:
+def create_visa_content(
+    practical_info: List[Dict[str, str]], practical_name: str, config: Dict[str, Any]
+) -> str:
     """Create content specifically for visa information"""
-    country_name = config["country"].replace('_', ' ').title()
-    
-    content = f"""{practical_name.replace('_', ' ').title()} is essential information for travelers planning to visit {country_name}. This comprehensive guide covers everything you need to know about visa requirements, application processes, and entry procedures.\n\n## Overview\n{country_name} has specific visa requirements for different nationalities and purposes of visit. Understanding these requirements is crucial for a smooth travel experience.\n\n## Key Entry Requirements and Information\n\n### Important Requirements and Procedures\n"""
-    
+    country_name = config["country"].replace("_", " ").title()
+
+    content = f"""{practical_name.replace("_", " ").title()} is essential information for travelers planning to visit {country_name}. This comprehensive guide covers everything you need to know about visa requirements, application processes, and entry procedures.\n\n## Overview\n{country_name} has specific visa requirements for different nationalities and purposes of visit. Understanding these requirements is crucial for a smooth travel experience.\n\n## Key Entry Requirements and Information\n\n### Important Requirements and Procedures\n"""
+
     # Add practical information with more specific descriptions
     for i, info in enumerate(practical_info[:20], 1):  # Top 20 items
         # Create more specific descriptions based on the scraped content
-        if any(keyword in info['name'].lower() for keyword in ['visa', 'entry', 'requirements', 'immigration']):
+        if any(
+            keyword in info["name"].lower()
+            for keyword in ["visa", "entry", "requirements", "immigration"]
+        ):
             content += f"- **{info['name']}**: Essential entry requirement and visa information\n"
-        elif any(keyword in info['name'].lower() for keyword in ['customs', 'quarantine', 'health']):
+        elif any(
+            keyword in info["name"].lower()
+            for keyword in ["customs", "quarantine", "health"]
+        ):
             content += f"- **{info['name']}**: Important customs, health, and quarantine procedures\n"
-        elif any(keyword in info['name'].lower() for keyword in ['work', 'employment', 'business']):
-            content += f"- **{info['name']}**: Work visa and employment-related requirements\n"
-        elif any(keyword in info['name'].lower() for keyword in ['student', 'study', 'education']):
-            content += f"- **{info['name']}**: Student visa and educational requirements\n"
-        elif any(keyword in info['name'].lower() for keyword in ['vaccination', 'medical', 'health']):
+        elif any(
+            keyword in info["name"].lower()
+            for keyword in ["work", "employment", "business"]
+        ):
+            content += (
+                f"- **{info['name']}**: Work visa and employment-related requirements\n"
+            )
+        elif any(
+            keyword in info["name"].lower()
+            for keyword in ["student", "study", "education"]
+        ):
+            content += (
+                f"- **{info['name']}**: Student visa and educational requirements\n"
+            )
+        elif any(
+            keyword in info["name"].lower()
+            for keyword in ["vaccination", "medical", "health"]
+        ):
             content += f"- **{info['name']}**: Health and medical requirements\n"
         else:
             content += f"- **{info['name']}**: Important travel and entry information\n"
-    
+
     # Add country-specific information based on the country
     content += f"""
     
@@ -471,7 +750,7 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
 
 ### Special Requirements and Considerations
 """
-    
+
     # Add country-specific content based on the country
     if config["country"] == "usa":
         content += """- **ESTA (Electronic System for Travel Authorization)**: Required for visa waiver program countries
@@ -517,13 +796,13 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
 - **Tourist Visas**: For leisure travel\n"""
     else:
         content += f"- **Standard Requirements**: Follow standard visa application procedures for {country_name}\n"
-    
+
     content += f"""
 ## Visa Application Process for {country_name}
 
 ### Required Documents
 """
-    
+
     # Add country-specific document requirements
     if config["country"] == "usa":
         content += """- **Passport**: Valid for at least 6 months beyond intended stay
@@ -590,7 +869,7 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
     content += f"""
 ### Application Steps
 """
-    
+
     # Add country-specific application steps
     if config["country"] == "usa":
         content += """- **Complete DS-160**: Fill out online application form
@@ -629,7 +908,7 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
     content += f"""
 ## Visa Types Available for {country_name}
 """
-    
+
     # Add country-specific visa types
     if config["country"] == "usa":
         content += """
@@ -737,7 +1016,7 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
 
 ### Passport Validity
 """
-    
+
     # Add country-specific passport requirements
     if config["country"] == "usa":
         content += """- **Minimum Validity**: 6 months beyond intended stay
@@ -765,7 +1044,7 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
     content += f"""
 ### Health Requirements
 """
-    
+
     # Add country-specific health requirements
     if config["country"] == "usa":
         content += """- **COVID-19 Requirements**: Current vaccination requirements
@@ -794,7 +1073,7 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
     content += f"""
 ### Financial Requirements
 """
-    
+
     # Add country-specific financial requirements
     if config["country"] == "usa":
         content += """- **Bank Statements**: 3-6 months of statements
@@ -823,7 +1102,7 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
     content += f"""
 ## Application Fees for {country_name}
 """
-    
+
     # Add country-specific fees
     if config["country"] == "usa":
         content += """
@@ -884,7 +1163,7 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
     content += f"""
 ## Processing Times for {country_name}
 """
-    
+
     # Add country-specific processing times
     if config["country"] == "usa":
         content += """
@@ -1020,19 +1299,21 @@ def create_visa_content(practical_info: List[Dict[str, str]], practical_name: st
 - **Local Embassy**: In-country assistance
 - **Tourist Police**: Local law enforcement
 
-{practical_name.replace('_', ' ').title()} provides essential information for travelers visiting {country_name}. Proper preparation and understanding of requirements will ensure a smooth and successful travel experience."""
-    
+{practical_name.replace("_", " ").title()} provides essential information for travelers visiting {country_name}. Proper preparation and understanding of requirements will ensure a smooth and successful travel experience."""
+
     return content
 
 
-def create_generic_practical_content(practical_info: List[Dict[str, str]], practical_name: str) -> str:
+def create_generic_practical_content(
+    practical_info: List[Dict[str, str]], practical_name: str
+) -> str:
     """Create generic practical content"""
-    content = f"""{practical_name.replace('_', ' ').title()} is essential practical information for travelers. This comprehensive guide covers important travel requirements, procedures, and tips for a successful journey.\n\n## Overview\n{practical_name.replace('_', ' ').title()} provides crucial information that travelers need to know before and during their trip. Understanding these requirements is essential for a smooth travel experience.\n\n## Key Information\n\n### Important Requirements\n"""
-    
+    content = f"""{practical_name.replace("_", " ").title()} is essential practical information for travelers. This comprehensive guide covers important travel requirements, procedures, and tips for a successful journey.\n\n## Overview\n{practical_name.replace("_", " ").title()} provides crucial information that travelers need to know before and during their trip. Understanding these requirements is essential for a smooth travel experience.\n\n## Key Information\n\n### Important Requirements\n"""
+
     # Add practical information
     for i, info in enumerate(practical_info[:10], 1):  # Top 10 items
         content += f"- **{info['name']}**: Important practical information\n"
-    
+
     content += f"""
 ## Essential Requirements
 
@@ -1146,8 +1427,8 @@ def create_generic_practical_content(practical_info: List[Dict[str, str]], pract
 - **Transportation**: Local transport information
 - **Accommodation**: Lodging assistance
 
-{practical_name.replace('_', ' ').title()} provides essential information for successful travel. Proper preparation and understanding of requirements will ensure a smooth and enjoyable journey."""
-    
+{practical_name.replace("_", " ").title()} provides essential information for successful travel. Proper preparation and understanding of requirements will ensure a smooth and enjoyable journey."""
+
     return content
 
 
@@ -1172,25 +1453,27 @@ def main():
         print("Usage: python extract_practical.py <practical_name>")
         print("Available practical information:", list(PRACTICAL_CONFIGS.keys()))
         return
-    
+
     practical_name = sys.argv[1]
     print(f"Starting {practical_name} practical information extraction...")
-    
+
     # Extract practical information
     practical_info = scrape_practical_info(practical_name)
-    
+
     if not practical_info:
         print(f"Failed to extract practical information for {practical_name}")
         return
-    
+
     # Create and save data
     config = PRACTICAL_CONFIGS[practical_name.lower()]
     data = create_practical_data(practical_info, practical_name, config)
     filename = f"{practical_name.lower().replace(' ', '_').replace(',', '')}.json"
     save_practical_data(data, filename, config["info_type"])
-    
-    print(f"Extraction complete! Found {len(practical_info)} practical items for {practical_name}.")
+
+    print(
+        f"Extraction complete! Found {len(practical_info)} practical items for {practical_name}."
+    )
 
 
 if __name__ == "__main__":
-    main() 
+    main()
