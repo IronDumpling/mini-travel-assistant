@@ -190,8 +190,7 @@ class KnowledgeBase:
                 processed_count += 1
 
                 # Log basic processing info
-            logger.debug(f"Processed knowledge item: {knowledge.id}")
-            processed_count += 1
+                logger.debug(f"Processed knowledge item: {knowledge.id}")
 
             # Log processing results
             if self.knowledge_items:

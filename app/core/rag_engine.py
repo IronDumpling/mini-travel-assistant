@@ -129,35 +129,93 @@ class ChromaVectorStore:
             if not documents:
                 return True
             
-            # Prepare data for batch insertion
-            ids = [doc.id for doc in documents]
-            contents = [doc.content for doc in documents]
+            # Check for existing documents and separate new vs existing
+            existing_ids = set()
+            try:
+                # Get all existing document IDs in the collection
+                existing_result = self.collection.get(include=[])
+                if existing_result and existing_result.get('ids'):
+                    existing_ids = set(existing_result['ids'])
+            except Exception as e:
+                logger.warning(f"Could not check existing documents: {e}")
+                # Continue with update/upsert approach
             
-            # Convert list values in metadata to strings for ChromaDB compatibility
-            metadatas = []
+            # Separate documents into new and existing
+            new_documents = []
+            existing_documents = []
+            
             for doc in documents:
-                processed_metadata = {}
-                for key, value in doc.metadata.items():
-                    if isinstance(value, list):
-                        # Convert list to comma-separated string
-                        processed_metadata[key] = ", ".join(str(v) for v in value)
-                    elif value is not None:
-                        processed_metadata[key] = str(value)
-                # Add document type to metadata
-                processed_metadata["doc_type"] = doc.doc_type.value
-                metadatas.append(processed_metadata)
+                if doc.id in existing_ids:
+                    existing_documents.append(doc)
+                else:
+                    new_documents.append(doc)
             
-            # Generate embeddings using provided embedding model
-            embeddings = await embedding_model.encode(contents)
+            # Process new documents
+            if new_documents:
+                ids = [doc.id for doc in new_documents]
+                contents = [doc.content for doc in new_documents]
+                
+                # Convert list values in metadata to strings for ChromaDB compatibility
+                metadatas = []
+                for doc in new_documents:
+                    processed_metadata = {}
+                    for key, value in doc.metadata.items():
+                        if isinstance(value, list):
+                            # Convert list to comma-separated string
+                            processed_metadata[key] = ", ".join(str(v) for v in value)
+                        elif value is not None:
+                            processed_metadata[key] = str(value)
+                    # Add document type to metadata
+                    processed_metadata["doc_type"] = doc.doc_type.value
+                    metadatas.append(processed_metadata)
+                
+                # Generate embeddings using provided embedding model
+                embeddings = await embedding_model.encode(contents)
+                
+                # Add new documents
+                self.collection.add(
+                    ids=ids,
+                    documents=contents,
+                    embeddings=embeddings,
+                    metadatas=metadatas
+                )
+                logger.info(f"Added {len(new_documents)} new documents to collection")
             
-            # Add all documents directly
-            self.collection.add(
-                ids=ids,
-                documents=contents,
-                embeddings=embeddings,
-                metadatas=metadatas
-            )
-            logger.info(f"Added {len(documents)} documents to collection")
+            # Process existing documents (update)
+            if existing_documents:
+                # Delete existing documents first
+                existing_ids_to_update = [doc.id for doc in existing_documents]
+                self.collection.delete(ids=existing_ids_to_update)
+                
+                # Re-add updated documents
+                ids = [doc.id for doc in existing_documents]
+                contents = [doc.content for doc in existing_documents]
+                
+                # Convert list values in metadata to strings for ChromaDB compatibility
+                metadatas = []
+                for doc in existing_documents:
+                    processed_metadata = {}
+                    for key, value in doc.metadata.items():
+                        if isinstance(value, list):
+                            # Convert list to comma-separated string
+                            processed_metadata[key] = ", ".join(str(v) for v in value)
+                        elif value is not None:
+                            processed_metadata[key] = str(value)
+                    # Add document type to metadata
+                    processed_metadata["doc_type"] = doc.doc_type.value
+                    metadatas.append(processed_metadata)
+                
+                # Generate embeddings using provided embedding model
+                embeddings = await embedding_model.encode(contents)
+                
+                # Add updated documents
+                self.collection.add(
+                    ids=ids,
+                    documents=contents,
+                    embeddings=embeddings,
+                    metadatas=metadatas
+                )
+                logger.info(f"Updated {len(existing_documents)} existing documents in collection")
             
             return True
             

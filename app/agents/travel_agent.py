@@ -482,12 +482,6 @@ class TravelAgent(BaseAgent):
                 "original_message": message.content,
             }
             result = await self._execute_action_plan(action_plan, execution_context)
-            # Add original message to context for knowledge retrieval
-            execution_context = {
-                **message.metadata,
-                "original_message": message.content,
-            }
-            result = await self._execute_action_plan(action_plan, execution_context)
 
             # 5. Generate response
             response_content = await self._generate_response(result, intent)
@@ -1916,6 +1910,13 @@ class TravelAgent(BaseAgent):
         intent_type = intent.get("type") or intent.get("intent_type", "query")
 
         if intent_type == "planning":
+            plan["actions"] = [
+                "retrieve_knowledge",
+                "search_flights",
+                "search_hotels", 
+                "search_attractions",
+                "generate_plan"
+            ]
             plan["tools_to_use"] = [
                 "flight_search",
                 "hotel_search",
@@ -1927,25 +1928,6 @@ class TravelAgent(BaseAgent):
                 "Suggest booking timeline",
             ]
         elif intent_type == "recommendation":
-            plan["tools_to_use"] = ["attraction_search"]
-            plan["next_steps"] = [
-                "Provide personalized recommendations",
-                "Include practical tips",
-                "Suggest related activities",
-            ]
-        elif intent_type == "query":
-            plan["tools_to_use"] = []
-            plan["next_steps"] = [
-                "Provide detailed answer",
-                "Offer additional information",
-                "Ask follow-up questions",
-            ]
-            plan["next_steps"] = [
-                "Provide detailed travel itinerary",
-                "Include budget estimates",
-                "Suggest booking timeline",
-            ]
-        elif intent["type"] == "recommendation":
             plan["actions"] = [
                 "retrieve_knowledge",
                 "search_attractions",
@@ -1957,7 +1939,7 @@ class TravelAgent(BaseAgent):
                 "Include practical tips",
                 "Suggest related activities",
             ]
-        elif intent["type"] == "query":
+        elif intent_type == "query":
             plan["actions"] = ["retrieve_knowledge", "answer_question"]
             plan["tools_to_use"] = []
             plan["next_steps"] = [
