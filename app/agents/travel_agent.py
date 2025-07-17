@@ -23,6 +23,7 @@ from app.tools.tool_executor import get_tool_executor
 from app.core.llm_service import get_llm_service
 from app.core.rag_engine import get_rag_engine
 from app.core.logging_config import get_logger
+from app.core.prompt_manager import prompt_manager, PromptType
 
 logger = get_logger(__name__)
 
@@ -323,8 +324,6 @@ class TravelAgent(BaseAgent):
 
         # Try to use LLM for travel-specific response refinement
         try:
-            from app.core.prompt_manager import prompt_manager, PromptType
-
             if self.llm_service:
                 # Use prompt manager for LLM-based travel response refinement
                 refinement_prompt = prompt_manager.get_prompt(
@@ -504,7 +503,7 @@ class TravelAgent(BaseAgent):
         except Exception as e:
             self.status = AgentStatus.ERROR
             return AgentResponse(
-                success=False, content=f"处理消息时发生错误: {str(e)}", confidence=0.0
+                success=False, content=f"An error occurred while processing the message: {str(e)}", confidence=0.0
             )
 
     async def _analyze_user_intent(self, user_message: str) -> Dict[str, Any]:
@@ -529,8 +528,6 @@ class TravelAgent(BaseAgent):
         self, user_message: str
     ) -> Dict[str, Any]:
         """Get enhanced LLM intent analysis using updated prompt manager"""
-
-        from app.core.prompt_manager import prompt_manager, PromptType
 
         # Build enhanced prompt using updated prompt manager
         analysis_prompt = prompt_manager.get_prompt(
@@ -1077,8 +1074,6 @@ class TravelAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Use LLM to intelligently select tools based on structured analysis"""
 
-        from app.core.prompt_manager import prompt_manager, PromptType
-
         try:
             # Build tool selection prompt
             tool_selection_prompt = prompt_manager.get_prompt(
@@ -1347,8 +1342,6 @@ class TravelAgent(BaseAgent):
         # Use LLM for sophisticated requirement analysis if available
         if self.llm_service:
             try:
-                from app.core.prompt_manager import prompt_manager, PromptType
-
                 # Use prompt manager for requirement extraction
                 requirement_prompt = prompt_manager.get_prompt(
                     PromptType.REQUIREMENT_EXTRACTION,
@@ -2199,8 +2192,6 @@ class TravelAgent(BaseAgent):
             f"Execution result success: {execution_result.get('success', False)}"
         )
         logger.info(f"Execution result keys: {list(execution_result.keys())}")
-
-        from app.core.prompt_manager import prompt_manager, PromptType
 
         try:
             # Extract information sources

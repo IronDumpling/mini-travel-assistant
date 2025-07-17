@@ -706,18 +706,6 @@ class PromptManager:
         """Get corresponding JSON schema"""
         return self.schemas.get(prompt_type.value, {})
 
-    def validate_response(
-        self, prompt_type: PromptType, response: Dict[str, Any]
-    ) -> bool:
-        """Validate LLM response against expected schema"""
-        schema = self.get_schema(prompt_type)
-        if not schema:
-            return True
-
-        # Basic validation - can be enhanced with jsonschema library
-        required_fields = schema.get("required", [])
-        return all(field in response for field in required_fields)
-
     def get_available_prompts(self) -> List[str]:
         """Get list of available prompt types"""
         return list(self.templates.keys())

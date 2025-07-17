@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from enum import Enum
 import uuid
 from app.core.logging_config import get_logger
+from app.core.prompt_manager import prompt_manager, PromptType
 import asyncio
 
 logger = get_logger(__name__)
@@ -350,7 +351,6 @@ class BaseAgent(ABC):
         # Try to use LLM for quality assessment
         try:
             from app.core.llm_service import get_llm_service
-            from app.core.prompt_manager import prompt_manager, PromptType
 
             llm_service = get_llm_service()
 
@@ -460,7 +460,6 @@ class BaseAgent(ABC):
         # Try to use LLM for improvement suggestions
         try:
             from app.core.llm_service import get_llm_service
-            from app.core.prompt_manager import prompt_manager, PromptType
 
             llm_service = get_llm_service()
 
@@ -536,7 +535,6 @@ class BaseAgent(ABC):
         # Try to use LLM for response refinement
         try:
             from app.core.llm_service import get_llm_service
-            from app.core.prompt_manager import prompt_manager, PromptType
 
             llm_service = get_llm_service()
 
