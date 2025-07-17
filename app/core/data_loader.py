@@ -9,16 +9,15 @@ from typing import List, Dict, Optional, Any
 from pathlib import Path
 import json
 import yaml
-import logging
 from datetime import datetime
-import hashlib
 import time
 from pydantic import BaseModel, ValidationError
+from app.core.logging_config import get_logger
 
 # Import will be done locally to avoid circular imports
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DataLoadStats(BaseModel):
@@ -58,17 +57,20 @@ class TravelDataLoader:
         for file_path in self.documents_dir.rglob("*"):
             if file_path.is_file() and file_path.suffix.lower() in self.supported_formats:
                 stats.total_files += 1
+                
                 try:
                     knowledge_items = await self._load_file(file_path)
                     all_knowledge.extend(knowledge_items)
                     stats.successful_files += 1
                     stats.total_knowledge_items += len(knowledge_items)
-                    logger.debug(f"Loaded {len(knowledge_items)} items from {file_path}")
+                    
+                    logger.info(f"Loaded {len(knowledge_items)} items from {file_path.name}")
+                    
                 except Exception as e:
                     stats.failed_files += 1
                     error_msg = f"Failed to load {file_path}: {str(e)}"
                     stats.errors.append(error_msg)
-                    logger.error(error_msg)
+                    logger.error(f"Failed to load {file_path}: {str(e)}")
         
         # Calculate load time
         stats.load_time = time.time() - start_time
@@ -101,10 +103,13 @@ class TravelDataLoader:
             return await self._process_data(data, file_path)
             
         except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing error in {file_path}: {e}")
             raise ValueError(f"Invalid JSON format: {e}")
         except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error in {file_path}: {e}")
             raise ValueError(f"Invalid YAML format: {e}")
         except Exception as e:
+            logger.error(f"File reading error in {file_path}: {e}")
             raise ValueError(f"File loading error: {e}")
     
     async def _process_data(self, data: Any, file_path: Path) -> List[Any]:
@@ -158,6 +163,7 @@ class TravelDataLoader:
             missing_fields = [field for field in required_fields if field not in data]
             
             if missing_fields:
+                logger.warning(f"Missing required fields in {file_path}[{item_index}]: {missing_fields}")
                 raise ValueError(f"Missing required fields: {missing_fields}")
             
             # Auto-generate ID if not provided or invalid
@@ -184,15 +190,16 @@ class TravelDataLoader:
             return knowledge
             
         except ValidationError as e:
-            logger.error(f"Validation error for item in {file_path}: {e}")
+            logger.error(f"Validation error for item in {file_path}[{item_index}]: {e}")
             return None
         except Exception as e:
-            logger.error(f"Error creating knowledge item from {file_path}: {e}")
+            logger.error(f"Error creating knowledge item from {file_path}[{item_index}]: {e}")
             return None
     
     def _generate_id(self, data: Dict[str, Any], file_path: Path, item_index: int) -> str:
         """Generate a unique ID for knowledge item"""
         # Use file path and content to create consistent ID
+        import hashlib
         content_hash = hashlib.md5(
             f"{file_path.stem}_{item_index}_{data.get('title', '')}".encode('utf-8')
         ).hexdigest()[:8]
@@ -248,51 +255,12 @@ class TravelDataLoader:
         """Get list of supported file formats"""
         return list(self.supported_formats)
     
-    def calculate_data_version(self) -> str:
-        """Calculate version hash for all data files"""
-        hash_md5 = hashlib.md5()
-        
-        # Get all supported files and sort for consistent hashing
-        files = []
-        for file_path in self.documents_dir.rglob("*"):
-            if file_path.is_file() and file_path.suffix.lower() in self.supported_formats:
-                files.append(file_path)
-        
-        files.sort(key=lambda x: str(x))
-        
-        # Hash file contents
-        for file_path in files:
-            try:
-                with open(file_path, 'rb') as f:
-                    hash_md5.update(f.read())
-            except Exception as e:
-                logger.warning(f"Could not hash file {file_path}: {e}")
-                continue
-        
-        return hash_md5.hexdigest()
-    
-    def get_latest_modification_time(self) -> float:
-        """Get the latest modification time of all data files"""
-        latest_time = 0
-        
-        for file_path in self.documents_dir.rglob("*"):
-            if file_path.is_file() and file_path.suffix.lower() in self.supported_formats:
-                try:
-                    file_time = file_path.stat().st_mtime
-                    latest_time = max(latest_time, file_time)
-                except Exception as e:
-                    logger.warning(f"Could not get modification time for {file_path}: {e}")
-                    continue
-        
-        return latest_time
-    
     def get_data_stats(self) -> Dict[str, Any]:
         """Get statistics about the data directory"""
         stats = {
             "total_files": 0,
             "files_by_format": {},
-            "total_size": 0,
-            "latest_modification": 0
+            "total_size": 0
         }
         
         for file_path in self.documents_dir.rglob("*"):
@@ -306,10 +274,6 @@ class TravelDataLoader:
                 # Total size
                 try:
                     stats["total_size"] += file_path.stat().st_size
-                    stats["latest_modification"] = max(
-                        stats["latest_modification"], 
-                        file_path.stat().st_mtime
-                    )
                 except Exception:
                     continue
         

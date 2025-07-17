@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 # Use centralized logging
 from loguru import logger
 

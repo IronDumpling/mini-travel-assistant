@@ -5,24 +5,28 @@ Prompt Manager - Centralized prompt template management system
 from typing import Dict, List, Any, Optional
 from enum import Enum
 
+
 class PromptType(Enum):
     """Prompt type enumeration"""
+
     INTENT_ANALYSIS = "intent_analysis"
     REQUIREMENT_EXTRACTION = "requirement_extraction"
     TOOL_SELECTION = "tool_selection"
     RESPONSE_GENERATION = "response_generation"
+    INFORMATION_FUSION = "information_fusion"
     QUALITY_ASSESSMENT = "quality_assessment"
     RESPONSE_REFINEMENT = "response_refinement"
     RAG_GENERATION = "rag_generation"
     FUNCTION_CALLING = "function_calling"
 
+
 class PromptManager:
     """Centralized prompt template manager"""
-    
+
     def __init__(self):
         self.templates = self._initialize_templates()
         self.schemas = self._initialize_schemas()
-    
+
     def _initialize_templates(self) -> Dict[str, str]:
         """Initialize all prompt templates"""
         return {
@@ -30,27 +34,42 @@ class PromptManager:
             PromptType.REQUIREMENT_EXTRACTION.value: self._get_requirement_extraction_template(),
             PromptType.TOOL_SELECTION.value: self._get_tool_selection_template(),
             PromptType.RESPONSE_GENERATION.value: self._get_response_generation_template(),
+            PromptType.INFORMATION_FUSION.value: self._get_information_fusion_template(),
             PromptType.QUALITY_ASSESSMENT.value: self._get_quality_assessment_template(),
             PromptType.RESPONSE_REFINEMENT.value: self._get_response_refinement_template(),
             PromptType.RAG_GENERATION.value: self._get_rag_generation_template(),
-            PromptType.FUNCTION_CALLING.value: self._get_function_calling_template()
+            PromptType.FUNCTION_CALLING.value: self._get_function_calling_template(),
         }
-    
+
     def _initialize_schemas(self) -> Dict[str, Dict[str, Any]]:
         """Initialize JSON schemas for structured outputs"""
         return {
             PromptType.INTENT_ANALYSIS.value: {
                 "type": "object",
                 "properties": {
-                    "intent_type": {"type": "string", "enum": ["planning", "query", "recommendation", "modification", "booking", "complaint"]},
+                    "intent_type": {
+                        "type": "string",
+                        "enum": [
+                            "planning",
+                            "query",
+                            "recommendation",
+                            "modification",
+                            "booking",
+                            "complaint",
+                        ],
+                    },
                     "destination": {
                         "type": "object",
                         "properties": {
                             "primary": {"type": "string"},
                             "secondary": {"type": "array", "items": {"type": "string"}},
                             "region": {"type": "string"},
-                            "confidence": {"type": "number", "minimum": 0, "maximum": 1}
-                        }
+                            "confidence": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                        },
                     },
                     "travel_details": {
                         "type": "object",
@@ -63,64 +82,137 @@ class PromptManager:
                                     "mentioned": {"type": "boolean"},
                                     "amount": {"type": "number"},
                                     "currency": {"type": "string"},
-                                    "level": {"type": "string", "enum": ["budget", "mid-range", "luxury"]}
-                                }
+                                    "level": {
+                                        "type": "string",
+                                        "enum": ["budget", "mid-range", "luxury"],
+                                    },
+                                },
                             },
                             "dates": {
                                 "type": "object",
                                 "properties": {
                                     "departure": {"type": "string"},
                                     "return": {"type": "string"},
-                                    "flexibility": {"type": "string", "enum": ["fixed", "flexible", "unknown"]}
-                                }
-                            }
-                        }
+                                    "flexibility": {
+                                        "type": "string",
+                                        "enum": ["fixed", "flexible", "unknown"],
+                                    },
+                                },
+                            },
+                        },
                     },
                     "preferences": {
                         "type": "object",
                         "properties": {
-                            "travel_style": {"type": "string", "enum": ["luxury", "mid-range", "budget", "backpacking", "business", "family"]},
+                            "travel_style": {
+                                "type": "string",
+                                "enum": [
+                                    "luxury",
+                                    "mid-range",
+                                    "budget",
+                                    "backpacking",
+                                    "business",
+                                    "family",
+                                ],
+                            },
                             "interests": {"type": "array", "items": {"type": "string"}},
                             "accommodation_type": {"type": "string"},
-                            "transport_preference": {"type": "string"}
-                        }
+                            "transport_preference": {"type": "string"},
+                        },
                     },
-                    "sentiment": {"type": "string", "enum": ["positive", "neutral", "negative", "excited", "worried"]},
-                    "urgency": {"type": "string", "enum": ["low", "medium", "high", "urgent"]},
+                    "sentiment": {
+                        "type": "string",
+                        "enum": [
+                            "positive",
+                            "neutral",
+                            "negative",
+                            "excited",
+                            "worried",
+                        ],
+                    },
+                    "urgency": {
+                        "type": "string",
+                        "enum": ["low", "medium", "high", "urgent"],
+                    },
                     "missing_info": {"type": "array", "items": {"type": "string"}},
                     "key_requirements": {"type": "array", "items": {"type": "string"}},
-                    "confidence_score": {"type": "number", "minimum": 0, "maximum": 1}
+                    "information_fusion_strategy": {
+                        "type": "object",
+                        "properties": {
+                            "knowledge_priority": {
+                                "type": "string",
+                                "enum": ["very_high", "high", "medium", "low"],
+                            },
+                            "tool_priority": {
+                                "type": "string",
+                                "enum": ["very_high", "high", "medium", "low"],
+                            },
+                            "integration_approach": {
+                                "type": "string",
+                                "enum": ["knowledge_first", "tools_first", "balanced"],
+                            },
+                            "response_focus": {
+                                "type": "string",
+                                "enum": [
+                                    "comprehensive_plan",
+                                    "detailed_information",
+                                    "curated_options",
+                                    "actionable_steps",
+                                    "specific_changes",
+                                ],
+                            },
+                        },
+                    },
+                    "confidence_score": {"type": "number", "minimum": 0, "maximum": 1},
                 },
-                "required": ["intent_type", "destination", "sentiment", "urgency", "confidence_score"]
+                "required": [
+                    "intent_type",
+                    "destination",
+                    "sentiment",
+                    "urgency",
+                    "information_fusion_strategy",
+                    "confidence_score",
+                ],
             },
-            
             PromptType.REQUIREMENT_EXTRACTION.value: {
                 "type": "object",
                 "properties": {
-                    "budget_sensitivity": {"type": "string", "enum": ["high", "medium", "low"]},
-                    "time_sensitivity": {"type": "string", "enum": ["urgent", "normal", "flexible"]},
+                    "budget_sensitivity": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                    },
+                    "time_sensitivity": {
+                        "type": "string",
+                        "enum": ["urgent", "normal", "flexible"],
+                    },
                     "travel_style": {"type": "string"},
                     "geographic_scope": {"type": "string"},
                     "tool_necessity_scores": {"type": "object"},
                     "preferences": {"type": "object"},
                     "constraints": {"type": "array", "items": {"type": "string"}},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
                 },
-                "required": ["budget_sensitivity", "time_sensitivity", "confidence"]
+                "required": ["budget_sensitivity", "time_sensitivity", "confidence"],
             },
-            
             PromptType.TOOL_SELECTION.value: {
                 "type": "object",
                 "properties": {
                     "selected_tools": {"type": "array", "items": {"type": "string"}},
                     "tool_priority": {"type": "object"},
-                    "execution_strategy": {"type": "string", "enum": ["sequential", "parallel", "conditional"]},
+                    "execution_strategy": {
+                        "type": "string",
+                        "enum": ["sequential", "parallel", "conditional"],
+                    },
                     "reasoning": {"type": "string"},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
                 },
-                "required": ["selected_tools", "execution_strategy", "reasoning", "confidence"]
+                "required": [
+                    "selected_tools",
+                    "execution_strategy",
+                    "reasoning",
+                    "confidence",
+                ],
             },
-            
             PromptType.QUALITY_ASSESSMENT.value: {
                 "type": "object",
                 "properties": {
@@ -129,36 +221,68 @@ class PromptManager:
                         "type": "object",
                         "properties": {
                             "relevance": {"type": "number", "minimum": 0, "maximum": 1},
-                            "completeness": {"type": "number", "minimum": 0, "maximum": 1},
+                            "completeness": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
                             "accuracy": {"type": "number", "minimum": 0, "maximum": 1},
-                            "practicality": {"type": "number", "minimum": 0, "maximum": 1},
-                            "personalization": {"type": "number", "minimum": 0, "maximum": 1},
-                            "feasibility": {"type": "number", "minimum": 0, "maximum": 1}
-                        }
+                            "practicality": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                            "personalization": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                            "feasibility": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                        },
                     },
-                    "improvement_suggestions": {"type": "array", "items": {"type": "string"}},
+                    "improvement_suggestions": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
                     "missing_elements": {"type": "array", "items": {"type": "string"}},
                     "strengths": {"type": "array", "items": {"type": "string"}},
                     "meets_threshold": {"type": "boolean"},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
                 },
-                "required": ["overall_score", "dimension_scores", "meets_threshold"]
+                "required": ["overall_score", "dimension_scores", "meets_threshold"],
             },
-            
             PromptType.RESPONSE_REFINEMENT.value: {
                 "type": "object",
                 "properties": {
                     "refined_content": {"type": "string"},
                     "refined_actions": {"type": "array", "items": {"type": "string"}},
-                    "refined_next_steps": {"type": "array", "items": {"type": "string"}},
-                    "confidence_boost": {"type": "number", "minimum": 0, "maximum": 0.5},
-                    "applied_improvements": {"type": "array", "items": {"type": "string"}},
-                    "refinement_notes": {"type": "string"}
+                    "refined_next_steps": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "confidence_boost": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.5,
+                    },
+                    "applied_improvements": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "refinement_notes": {"type": "string"},
                 },
-                "required": ["refined_content", "refined_actions", "refined_next_steps"]
-            }
+                "required": [
+                    "refined_content",
+                    "refined_actions",
+                    "refined_next_steps",
+                ],
+            },
         }
-    
+
     def _get_intent_analysis_template(self) -> str:
         """Intent analysis prompt template"""
         return """
@@ -207,6 +331,12 @@ class PromptManager:
            - Request urgency level
            - Missing critical information
            - Core requirements summary
+
+        6. Information Fusion Strategy:
+           - What static knowledge would be most valuable for this request?
+           - What dynamic/real-time data is essential?
+           - How should information sources be prioritized?
+           - What is the optimal response structure and focus?
         </analysis_dimensions>
 
         <output_requirements>
@@ -248,10 +378,16 @@ class PromptManager:
             "urgency": "...",
             "missing_info": [...],
             "key_requirements": [...],
+            "information_fusion_strategy": {{
+                "knowledge_priority": "high|medium|low",
+                "tool_priority": "high|medium|low", 
+                "integration_approach": "knowledge_first|tools_first|balanced",
+                "response_focus": "comprehensive_plan|detailed_information|curated_options|actionable_steps|specific_changes"
+            }},
             "confidence_score": 0.0-1.0
         }}
         """
-    
+
     def _get_requirement_extraction_template(self) -> str:
         """Requirement extraction prompt template"""
         return """
@@ -297,7 +433,7 @@ class PromptManager:
 
         Provide detailed requirement analysis in JSON format matching the schema.
         """
-    
+
     def _get_tool_selection_template(self) -> str:
         """Tool selection prompt template"""
         return """
@@ -353,16 +489,16 @@ class PromptManager:
             "confidence": 0.0-1.0
         }}
         """
-    
-    def _get_response_generation_template(self) -> str:
-        """Response generation prompt template"""
-        return """
-        You are a professional travel consultant generating comprehensive travel responses.
 
-        <context>
-        Generate a helpful, informative response based on the travel analysis and tool results.
-        Maintain a professional yet friendly tone appropriate for travel planning.
-        </context>
+    def _get_response_generation_template(self) -> str:
+        """Enhanced response generation prompt template with information fusion support"""
+        return """
+        You are a professional travel consultant generating comprehensive travel responses with intelligent information integration.
+
+        <role_definition>
+        Act as an expert travel planner who seamlessly combines authoritative knowledge with current data
+        to provide comprehensive, actionable travel guidance.
+        </role_definition>
 
         <input_data>
         User Message: "{user_message}"
@@ -371,18 +507,87 @@ class PromptManager:
         Knowledge Context: {knowledge_context}
         </input_data>
 
-        <response_guidelines>
-        1. Address the user's specific intent and needs
-        2. Incorporate tool results naturally into the response
-        3. Provide actionable recommendations
-        4. Include relevant context from knowledge base
-        5. Maintain helpful and professional tone
-        6. Structure information clearly with appropriate formatting
-        </response_guidelines>
+        <information_integration_guidelines>
+        1. KNOWLEDGE CONTEXT (Static Authority):
+           - Use for comprehensive destination details and background information
+           - Leverage for cultural insights, historical context, and detailed descriptions
+           - Provides authoritative foundation for recommendations
 
-        Generate a comprehensive travel planning response.
+        2. TOOL RESULTS (Dynamic Currency):
+           - Use for current prices, availability, and real-time data
+           - Prioritize for actionable booking information and current options
+           - Ensures recommendations are current and practical
+
+        3. INTENT ANALYSIS (Smart Guidance):
+           - Let user intent guide information prioritization and response structure
+           - Address explicit needs directly and anticipate implicit requirements
+           - Shape the response focus and level of detail
+        </information_integration_guidelines>
+
+        <response_requirements>
+        1. Address the user's specific intent and needs directly
+        2. Seamlessly integrate static knowledge with dynamic tool results
+        3. Provide actionable recommendations based on current data
+        4. Include rich contextual details from authoritative sources
+        5. Maintain professional yet friendly tone appropriate for travel planning
+        6. Structure information clearly with logical flow and appropriate formatting
+        7. Ensure all information is accurate, consistent, and helpful
+        </response_requirements>
+
+        Generate a comprehensive, well-integrated travel planning response.
         """
-    
+
+    def _get_information_fusion_template(self) -> str:
+        """Information fusion prompt template for intelligent multi-source integration"""
+        return """
+        You are an expert travel consultant creating comprehensive responses by intelligently fusing multiple information sources.
+        
+        <information_sources>
+        Static Knowledge Context (Authoritative Details):
+        {knowledge_context}
+        
+        Dynamic Tool Results (Current Data):
+        {tool_results}
+        
+        User Intent Analysis (Smart Understanding):
+        {intent_analysis}
+        </information_sources>
+        
+        <fusion_strategy>
+        INTELLIGENT INTEGRATION PRINCIPLES:
+        
+        1. INFORMATION HIERARCHY:
+           - Use KNOWLEDGE CONTEXT for comprehensive details and background information
+           - Use TOOL RESULTS for specific current recommendations and actionable data
+           - Let INTENT ANALYSIS guide which information to emphasize
+        
+        2. CONFLICT RESOLUTION:
+           - Tool results take precedence for current data (prices, availability)
+           - Knowledge context takes precedence for cultural/historical information
+           - Always favor more specific over general information
+        
+        3. NATURAL INTEGRATION:
+           - Blend sources seamlessly without explicitly mentioning "sources"
+           - Provide comprehensive yet digestible information
+           - Ensure accuracy and consistency across all information
+        </fusion_strategy>
+        
+        <user_request>
+        {user_message}
+        </user_request>
+        
+        <output_requirements>
+        Create a well-structured, comprehensive travel response that:
+        - Directly addresses the user's request
+        - Intelligently combines static knowledge with dynamic data
+        - Provides actionable recommendations based on current information
+        - Includes rich details from authoritative sources where relevant
+        - Maintains professional yet friendly tone
+        </output_requirements>
+        
+        Generate the intelligently fused response:
+        """
+
     def _get_quality_assessment_template(self) -> str:
         """Quality assessment prompt template"""
         return """
@@ -419,7 +624,7 @@ class PromptManager:
 
         Provide detailed analysis in JSON format matching the schema.
         """
-    
+
     def _get_response_refinement_template(self) -> str:
         """Response refinement prompt template"""
         return """
@@ -444,7 +649,7 @@ class PromptManager:
 
         Generate an improved version of the travel response.
         """
-    
+
     def _get_rag_generation_template(self) -> str:
         """RAG generation prompt template"""
         return """
@@ -465,7 +670,7 @@ class PromptManager:
 
         Please provide an accurate and helpful answer:
         """
-    
+
     def _get_function_calling_template(self) -> str:
         """Function calling prompt template"""
         return """
@@ -488,32 +693,23 @@ class PromptManager:
 
         Please analyze the message and call the appropriate functions.
         """
-    
+
     def get_prompt(self, prompt_type: PromptType, **kwargs) -> str:
         """Get and render prompt template"""
         template = self.templates.get(prompt_type.value)
         if not template:
             raise ValueError(f"Prompt template for {prompt_type.value} not found")
-        
+
         return template.format(**kwargs)
-    
+
     def get_schema(self, prompt_type: PromptType) -> Dict[str, Any]:
         """Get corresponding JSON schema"""
         return self.schemas.get(prompt_type.value, {})
-    
-    def validate_response(self, prompt_type: PromptType, response: Dict[str, Any]) -> bool:
-        """Validate LLM response against expected schema"""
-        schema = self.get_schema(prompt_type)
-        if not schema:
-            return True
-        
-        # Basic validation - can be enhanced with jsonschema library
-        required_fields = schema.get("required", [])
-        return all(field in response for field in required_fields)
-    
+
     def get_available_prompts(self) -> List[str]:
         """Get list of available prompt types"""
         return list(self.templates.keys())
 
+
 # Create global instance
-prompt_manager = PromptManager() 
+prompt_manager = PromptManager()
