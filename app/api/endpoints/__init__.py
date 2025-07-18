@@ -15,6 +15,7 @@ from .sessions import router as sessions_router
 from .chat import router as chat_router
 from .plans import router as plans_router
 from .agent import router as agent_router
+# from .tools import router as tools_router  # Uncomment when tools endpoint is added
 
 __all__ = [
     "system_router",

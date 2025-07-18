@@ -697,6 +697,7 @@ class TravelAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Enhanced fallback intent analysis with information fusion strategy"""
 
+        import re
         user_message_lower = user_message.lower()
 
         # Enhanced intent type detection
@@ -750,6 +751,26 @@ class TravelAgent(BaseAgent):
             if dest in user_message_lower:
                 destination = dest.title()
                 break
+
+        # Enhanced origin detection
+        origin = "Unknown"
+        # Look for "from [origin] to [destination]" pattern
+        from_to_pattern = re.search(r"from\s+(\w+)\s+to\s+(\w+)", user_message_lower)
+        if from_to_pattern:
+            potential_origin = from_to_pattern.group(1)
+            potential_dest = from_to_pattern.group(2)
+            # Check if both are in our destinations list
+            if potential_origin in destinations:
+                origin = potential_origin.title()
+            if potential_dest in destinations:
+                destination = potential_dest.title()
+        else:
+            # Look for "from [origin]" pattern
+            from_pattern = re.search(r"from\s+(\w+)", user_message_lower)
+            if from_pattern:
+                potential_origin = from_pattern.group(1)
+                if potential_origin in destinations:
+                    origin = potential_origin.title()
 
         # Enhanced time extraction
         time_info = {}
@@ -816,6 +837,12 @@ class TravelAgent(BaseAgent):
         # Create enhanced structured response with information fusion strategy
         enhanced_analysis = {
             "intent_type": intent_type,
+            "origin": {
+                "primary": origin,
+                "secondary": [],
+                "region": "Unknown",
+                "confidence": 0.6,
+            },
             "destination": {
                 "primary": destination,
                 "secondary": [],
@@ -870,11 +897,13 @@ class TravelAgent(BaseAgent):
         # Legacy format for backward compatibility
         legacy_result = {
             "type": intent_type,
+            "origin": origin,
             "destination": destination,
             "time_info": time_info,
             "budget_info": budget_info,
             "urgency": urgency,
             "extracted_info": {
+                "origin": origin,
                 "destination": destination,
                 "time_info": time_info,
                 "budget_info": budget_info,
@@ -1154,10 +1183,32 @@ class TravelAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Extract tool parameters from structured intent analysis"""
 
+        # City to IATA code mapping
+        city_to_iata = {
+            "paris": "PAR",
+            "beijing": "PEK",
+            "london": "LHR",
+            "new york": "JFK",
+            "tokyo": "NRT",
+            "shanghai": "PVG",
+            "rome": "FCO",
+            "barcelona": "BCN",
+            "amsterdam": "AMS",
+            "vienna": "VIE",
+            "prague": "PRG",
+            "budapest": "BUD",
+            "berlin": "BER",
+            "kyoto": "UKY",
+            "osaka": "KIX",
+        }
+
         tool_parameters = {}
 
         # Extract common parameters
         destination = structured_analysis.get("destination", {}).get(
+            "primary", "Unknown"
+        )
+        origin = structured_analysis.get("origin", {}).get(
             "primary", "Unknown"
         )
         travel_details = structured_analysis.get("travel_details", {})
@@ -1184,8 +1235,13 @@ class TravelAgent(BaseAgent):
                     "travelers": travel_details.get("travelers", 1),
                 }
             elif tool == "flight_search":
+                # Convert city names to IATA codes
+                origin_iata = city_to_iata.get(origin.lower(), origin)
+                destination_iata = city_to_iata.get(destination.lower(), destination)
+                
                 tool_parameters[tool] = {
-                    "destination": destination,
+                    "origin": origin_iata,
+                    "destination": destination_iata,
                     "limit": 5,
                     "travelers": travel_details.get("travelers", 1),
                     "budget_level": travel_details.get("budget", {}).get(
