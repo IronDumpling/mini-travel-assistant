@@ -11,6 +11,7 @@ TODO: Implement the following features
 
 from typing import Dict, List, Any, Optional
 import time
+from datetime import datetime
 from app.agents.base_agent import (
     BaseAgent,
     AgentMessage,
@@ -46,14 +47,14 @@ class TravelAgent(BaseAgent):
         logger.info("Initializing RAG engine...")
         self.rag_engine = get_rag_engine()
         logger.info(f"RAG engine initialized: {self.rag_engine}")
-        logger.info(f"RAG engine vector store: {self.rag_engine.vector_store}")
 
-        # Check RAG engine stats
-        try:
-            rag_stats = self.rag_engine.vector_store.get_stats()
-            logger.info(f"RAG engine vector store stats: {rag_stats}")
-        except Exception as e:
-            logger.error(f"Failed to get RAG engine stats: {e}")
+        # 🚀 移除耗时的stats查询 - 这在每次创建agent时都会执行数据库查询
+        # 这个信息在启动时已经显示过了，不需要每次都查询
+        # try:
+        #     rag_stats = self.rag_engine.vector_store.get_stats()
+        #     logger.info(f"RAG engine vector store stats: {rag_stats}")
+        # except Exception as e:
+        #     logger.error(f"Failed to get RAG engine stats: {e}")
 
         logger.info("Initializing tool executor...")
         self.tool_executor = get_tool_executor()
@@ -461,8 +462,17 @@ class TravelAgent(BaseAgent):
         try:
             self.status = AgentStatus.THINKING
 
-            # 1. Understand user intent
-            intent = await self._analyze_user_intent(message.content)
+            # 🆕 0. Process conversation history and maintain agent state
+            conversation_history = message.metadata.get("conversation_history", [])
+            session_id = message.metadata.get("session_id")
+            
+            # Update agent's memory with conversation context
+            if conversation_history:
+                logger.info(f"📖 Processing conversation history: {len(conversation_history)} messages")
+                self._update_agent_memory_from_history(conversation_history, session_id)
+            
+            # 1. Understand user intent (now with conversation context)
+            intent = await self._analyze_user_intent(message.content, conversation_history)
 
             # 2. Retrieve relevant knowledge with structured intent
             structured_analysis = intent.get("structured_analysis", {})
@@ -506,11 +516,68 @@ class TravelAgent(BaseAgent):
                 success=False, content=f"An error occurred while processing the message: {str(e)}", confidence=0.0
             )
 
-    async def _analyze_user_intent(self, user_message: str) -> Dict[str, Any]:
-        """Enhanced intent analysis with information fusion strategy"""
+    def _update_agent_memory_from_history(self, conversation_history: List[Dict], session_id: str):
+        """Update agent's memory and preferences from conversation history"""
+        logger.debug(f"Updating agent memory from {len(conversation_history)} conversation entries")
+        
+        # Update current planning context with session info
+        if not self.current_planning_context:
+            self.current_planning_context = {}
+        
+        self.current_planning_context.update({
+            "session_id": session_id,
+            "conversation_history": conversation_history,
+            "last_updated": datetime.now().isoformat(),
+        })
+        
+        # Extract user preferences from conversation history
+        for entry in conversation_history:
+            user_msg = entry.get("user", "").lower()
+            assistant_msg = entry.get("assistant", "").lower()
+            
+            # Extract travel preferences
+            if any(word in user_msg for word in ["prefer", "like", "love", "enjoy"]):
+                if "budget" in user_msg or "cheap" in user_msg:
+                    self.user_preferences_history["budget_conscious"] = True
+                if "luxury" in user_msg or "expensive" in user_msg:
+                    self.user_preferences_history["budget_conscious"] = False
+                if "adventure" in user_msg:
+                    self.user_preferences_history.setdefault("interests", []).append("adventure")
+                if "culture" in user_msg or "museum" in user_msg:
+                    self.user_preferences_history.setdefault("interests", []).append("culture")
+                if "food" in user_msg or "restaurant" in user_msg:
+                    self.user_preferences_history.setdefault("interests", []).append("food")
+            
+            # Extract mentioned destinations for context
+            destinations = ["tokyo", "kyoto", "paris", "london", "new york", "beijing", "shanghai", "rome", "barcelona"]
+            for dest in destinations:
+                if dest in user_msg:
+                    self.user_preferences_history.setdefault("visited_destinations", []).append(dest)
+        
+        # Remove duplicates from interests and destinations
+        if "interests" in self.user_preferences_history:
+            self.user_preferences_history["interests"] = list(set(self.user_preferences_history["interests"]))
+        if "visited_destinations" in self.user_preferences_history:
+            self.user_preferences_history["visited_destinations"] = list(set(self.user_preferences_history["visited_destinations"]))
+        
+        logger.debug(f"Updated user preferences: {self.user_preferences_history}")
 
-        # Step 1: Get LLM intent analysis using enhanced prompt
-        llm_analysis = await self._get_enhanced_llm_intent_analysis(user_message)
+    async def _analyze_user_intent(self, user_message: str, conversation_history: List[Dict] = None) -> Dict[str, Any]:
+        """Enhanced intent analysis with information fusion strategy and conversation context"""
+
+        # Step 0: Prepare conversation context for intent analysis
+        conversation_context = ""
+        if conversation_history:
+            recent_context = conversation_history[-3:]  # Use last 3 exchanges for context
+            context_parts = []
+            for entry in recent_context:
+                context_parts.append(f"User: {entry.get('user', '')}")
+                context_parts.append(f"Assistant: {entry.get('assistant', '')}")
+            conversation_context = "\n".join(context_parts)
+            logger.debug(f"Using conversation context for intent analysis: {len(conversation_context)} chars")
+
+        # Step 1: Get LLM intent analysis using enhanced prompt (with conversation context)
+        llm_analysis = await self._get_enhanced_llm_intent_analysis(user_message, conversation_context)
 
         # Step 2: Use structured response for deep analysis
         structured_intent = await self._parse_structured_intent(
@@ -522,17 +589,37 @@ class TravelAgent(BaseAgent):
             structured_intent, user_message
         )
 
+        # Step 4: Enhance with agent's learned preferences
+        if self.user_preferences_history:
+            enhanced_intent["learned_preferences"] = self.user_preferences_history.copy()
+            logger.debug(f"Added learned preferences to intent: {enhanced_intent['learned_preferences']}")
+
         return enhanced_intent
 
     async def _get_enhanced_llm_intent_analysis(
-        self, user_message: str
+        self, user_message: str, conversation_context: str = ""
     ) -> Dict[str, Any]:
-        """Get enhanced LLM intent analysis using updated prompt manager"""
+        """Get enhanced LLM intent analysis using updated prompt manager with conversation context"""
 
-        # Build enhanced prompt using updated prompt manager
-        analysis_prompt = prompt_manager.get_prompt(
-            PromptType.INTENT_ANALYSIS, user_message=user_message
-        )
+        # Build enhanced prompt with conversation context
+        if conversation_context:
+            # Create a context-aware prompt
+            context_aware_message = f"""
+Previous conversation context:
+{conversation_context}
+
+Current user message: {user_message}
+
+Please analyze the current message considering the conversation history for better context understanding.
+"""
+            analysis_prompt = prompt_manager.get_prompt(
+                PromptType.INTENT_ANALYSIS, user_message=context_aware_message
+            )
+        else:
+            # Standard prompt without context
+            analysis_prompt = prompt_manager.get_prompt(
+                PromptType.INTENT_ANALYSIS, user_message=user_message
+            )
 
         try:
             if self.llm_service:
@@ -3017,8 +3104,21 @@ This will help me provide you with the most relevant travel guidance possible.""
         self.max_refine_iterations = max_iterations
 
 
-# Register Travel Agent
-from app.agents.base_agent import agent_manager
+# Global travel agent instance (singleton pattern)
+_travel_agent: Optional[TravelAgent] = None
 
-travel_agent = TravelAgent()
-agent_manager.register_agent(travel_agent)
+def get_travel_agent() -> TravelAgent:
+    """Get travel agent instance (singleton pattern)"""
+    global _travel_agent
+    if _travel_agent is None:
+        _travel_agent = TravelAgent()
+        logger.info("✅ Created singleton Travel Agent instance")
+        
+        # Register with agent manager
+        from app.agents.base_agent import agent_manager
+        agent_manager.register_agent(_travel_agent)
+        
+    return _travel_agent
+
+# Initialize the singleton instance on module import
+travel_agent = get_travel_agent()

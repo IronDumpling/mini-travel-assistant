@@ -6,10 +6,14 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from typing import List, Optional
 from pydantic import BaseModel
-from app.agents.travel_agent import TravelAgent
+from app.agents.travel_agent import get_travel_agent
 from app.agents.base_agent import AgentMessage
 from app.memory.session_manager import get_session_manager
+from app.memory.conversation_memory import get_conversation_memory
+from app.core.logging_config import get_logger
 from datetime import datetime
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -47,25 +51,90 @@ async def chat_with_agent(message: ChatMessage):
             )
             message.session_id = session_id
 
-        # Create travel agent
-        agent = TravelAgent()
-        agent.configure_refinement(enabled=message.enable_refinement)
+        # ✅ 使用单例Agent，避免全局配置污染
+        agent = get_travel_agent()
         
-        # Create agent message
+        # 🆕 获取session历史并传给agent (使用RAG增强的对话记忆)
+        session = session_manager.get_current_session()
+        conversation_memory = get_conversation_memory()
+        conversation_history = []
+        
+        if session and session.messages:
+            # 首先尝试使用RAG搜索获取相关对话上下文
+            try:
+                relevant_turns = await conversation_memory.get_relevant_context(
+                    session_id=message.session_id,
+                    query=message.message,
+                    max_turns=5
+                )
+                
+                if relevant_turns:
+                    # 使用RAG找到的相关对话
+                    for turn in relevant_turns:
+                        conversation_history.append({
+                            "user": turn.user_message,
+                            "assistant": turn.agent_response,
+                            "timestamp": turn.timestamp.isoformat(),
+                            "importance": turn.importance_score,
+                            "intent": turn.intent
+                        })
+                    logger.info(f"使用RAG搜索找到 {len(relevant_turns)} 条相关对话")
+                else:
+                    # 如果RAG没有找到相关内容，回退到最近的对话
+                    recent_messages = session.messages[-3:]  # 最近3条
+                    for msg in recent_messages:
+                        conversation_history.append({
+                            "user": msg.user_message,
+                            "assistant": msg.agent_response,
+                            "timestamp": msg.timestamp.isoformat()
+                        })
+                    logger.info(f"RAG未找到相关内容，使用最近 {len(recent_messages)} 条对话")
+                        
+            except Exception as e:
+                logger.warning(f"RAG搜索失败，使用最近对话: {e}")
+                # 回退到简单的最近对话
+                recent_messages = session.messages[-3:]  # 最近3条
+                for msg in recent_messages:
+                    conversation_history.append({
+                        "user": msg.user_message,
+                        "assistant": msg.agent_response,
+                        "timestamp": msg.timestamp.isoformat()
+                    })
+        
+        # Create agent message with conversation history
         agent_message = AgentMessage(
             sender="user",
             receiver="travel_agent",
             content=message.message,
-            metadata={"session_id": message.session_id}
+            metadata={
+                "session_id": message.session_id,
+                "conversation_history": conversation_history  # 🆕 传递历史
+            }
         )
         
-        # Process with self-refinement
-        if message.enable_refinement:
-            response = await agent.plan_travel(agent_message)
-        else:
-            response = await agent.process_message(agent_message)
+        # Temporary configuration processing - avoid global configuration pollution
+        original_refine_enabled = agent.refine_enabled
         
-        # Store conversation in session
+        try:
+            # If user's refinement setting is different from current agent setting, temporarily adjust
+            if message.enable_refinement != original_refine_enabled:
+                logger.info(f"Temporarily adjust refinement setting: {original_refine_enabled} -> {message.enable_refinement}")
+                agent.configure_refinement(enabled=message.enable_refinement)
+            
+            # Process with self-refinement based on user preference
+            if message.enable_refinement:
+                response = await agent.plan_travel(agent_message)
+            else:
+                response = await agent.process_message(agent_message)
+                
+        finally:
+            # 🔄 Restore original configuration to avoid affecting other API calls
+            if message.enable_refinement != original_refine_enabled:
+                logger.info(f"Restore original refinement setting: {message.enable_refinement} -> {original_refine_enabled}")
+                agent.configure_refinement(enabled=original_refine_enabled)
+        
+        # 📝 Store conversation in both systems
+        # 1. Store in session manager (basic storage)
         session_manager.add_message(
             user_message=message.message,
             agent_response=response.content,
@@ -75,6 +144,28 @@ async def chat_with_agent(message: ChatMessage):
                 "refinement_used": message.enable_refinement
             }
         )
+        
+        # 2. Store in conversation memory (RAG enhanced analysis and indexing)
+        try:
+            enhanced_metadata = {
+                "confidence": response.confidence,
+                "actions_taken": response.actions_taken,
+                "refinement_used": message.enable_refinement,
+                "intent": response.metadata.get("intent", {}).get("type"),
+                "sentiment": "positive" if response.confidence > 0.7 else "neutral"
+            }
+            
+            await conversation_memory.add_turn(
+                session_id=message.session_id,
+                user_message=message.message,
+                agent_response=response.content,
+                metadata=enhanced_metadata
+            )
+            logger.debug(f"Conversation stored in RAG-enhanced conversation memory system")
+            
+        except Exception as e:
+            logger.error(f"Failed to store in conversation memory system: {e}")
+            # 不影响主流程，只记录错误
         
         # Prepare response
         chat_response = ChatResponse(
@@ -92,7 +183,9 @@ async def chat_with_agent(message: ChatMessage):
                 "final_iteration": response.metadata["refinement_iteration"],
                 "final_quality_score": response.metadata["quality_score"],
                 "refinement_status": response.metadata["refinement_status"],
-                "quality_dimensions": agent.get_quality_dimensions()
+                "quality_dimensions": agent.get_quality_dimensions(),
+                "user_requested_refinement": message.enable_refinement,
+                "configuration_isolation": True  # 标记配置隔离已应用
             }
         
         return chat_response
