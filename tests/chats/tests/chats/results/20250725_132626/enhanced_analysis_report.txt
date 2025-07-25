@@ -1,0 +1,60 @@
+================================================================================
+ENHANCED CHAT API TEST ANALYSIS REPORT
+================================================================================
+Generated: 2025-07-25 14:35:13
+Results Directory: tests\chats\results\20250725_132626
+Test Run ID: 20250725_132626
+
+📊 OVERALL SUMMARY
+----------------------------------------
+Single-Session Tests: 9
+Multi-Session Tests: 35 queries across 5 sessions
+Total Tests: 44
+
+🔄 TEST TYPE COMPARISON
+----------------------------------------
+Single-Session Tests:
+  Success Rate: 100.0%
+  Avg Response Time: 96.15s
+  Avg Confidence: 0.85
+  Avg Refinement Loops: 0.0
+
+Multi-Session Tests:
+  Success Rate: 100.0%
+  Avg Response Time: 92.14s
+  Avg Confidence: 0.85
+  Avg Refinement Loops: 0.0
+  Avg Queries per Session: 7.0
+
+Performance Differences (Multi-Session vs Single-Session):
+  Success Rate: +0.0%
+  Response Time: -4.01s
+  Confidence: +0.00
+  Refinement Loops: +0.0
+
+🔧 REFINEMENT LOOP ANALYSIS
+----------------------------------------
+Average Loops per Test: 0.0
+Loop Range: 0 - 0
+
+📈 SESSION PROGRESSION ANALYSIS
+----------------------------------------
+Sessions with Improving Confidence: 0/5
+Sessions with Improving Response Time: 2/5
+
+Sample Session 1 (67752467...):
+  Queries: 7
+  Success Rate: 100.0%
+  Avg Confidence: 0.85
+
+Sample Session 2 (a8b65b6e...):
+  Queries: 7
+  Success Rate: 100.0%
+  Avg Confidence: 0.85
+
+Sample Session 3 (699b0a42...):
+  Queries: 7
+  Success Rate: 100.0%
+  Avg Confidence: 0.85
+
+================================================================================

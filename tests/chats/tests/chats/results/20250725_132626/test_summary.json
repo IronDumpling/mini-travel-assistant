@@ -1,0 +1,21 @@
+{
+  "test_run_id": "20250725_132626",
+  "timestamp": "2025-07-25T14:35:13.565946",
+  "single_session_tests": {
+    "total": 9,
+    "successful": 9,
+    "with_refinement": 0,
+    "total_refinement_loops": 0
+  },
+  "multi_session_tests": {
+    "total_suites": 5,
+    "total_queries": 35,
+    "successful_queries": 35,
+    "total_refinement_loops": 0
+  },
+  "files": {
+    "single_session": "single_session_tests.json",
+    "multi_session": "multi_session_tests.json",
+    "summary": "test_summary.json"
+  }
+}

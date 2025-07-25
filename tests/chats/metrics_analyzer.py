@@ -313,7 +313,7 @@ class MetricsAnalyzer:
         print(f"Enhanced analysis report saved to: {report_file}")
         return report_text
     
-    def create_enhanced_visualizations(self):
+    def create_visualizations(self):
         """Create enhanced visualizations for the new metrics"""
         
         if not PLOTTING_AVAILABLE:
@@ -325,7 +325,8 @@ class MetricsAnalyzer:
         if 'seaborn' in plt.style.available:
             plt.style.use('seaborn-v0_8-whitegrid')
         
-        # 1. Refinement Loop Distribution
+        # 📊 原有的图表
+        # 1. Refinement Loop Distribution (修复后)
         self._plot_refinement_distribution()
         
         # 2. Test Type Performance Comparison
@@ -340,7 +341,19 @@ class MetricsAnalyzer:
         # 5. Response Time vs Refinement Loops
         self._plot_response_time_vs_loops()
         
+        # 📊 新增的图表
+        # 6. 响应时间频率分布图
+        self._plot_response_time_distribution()
+        
+        # 7. 响应评估结果分数 vs refinement循环次数分布图
+        self._plot_confidence_vs_refinement_scatter()
+        
         print(f"Enhanced visualizations saved to: {self.results_dir}")
+
+    # ✅ 更新方法名称以保持一致性
+    def create_enhanced_visualizations(self):
+        """Create enhanced visualizations for the new metrics"""
+        return self.create_visualizations()
     
     def _plot_refinement_distribution(self):
         """Plot distribution of refinement loops"""
@@ -353,12 +366,177 @@ class MetricsAnalyzer:
         loop_counts = [m["total_loops"] for m in refinement_tests]
         
         plt.figure(figsize=(10, 6))
-        plt.hist(loop_counts, bins=range(max(loop_counts) + 2), alpha=0.7, edgecolor='black')
-        plt.xlabel('Number of Refinement Loops')
-        plt.ylabel('Frequency')
-        plt.title('Distribution of Refinement Loops')
+        
+        # ✅ 修复：检查是否有refinement数据
+        if not loop_counts:
+            # 如果没有refinement数据，显示说明性图表
+            plt.text(0.5, 0.5, 'No Refinement Data Available\n(All tests ran without refinement)', 
+                    ha='center', va='center', transform=plt.gca().transAxes, 
+                    fontsize=14, bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"))
+            plt.title('Distribution of Refinement Loops - No Data')
+        else:
+            max_loops = max(loop_counts)
+            plt.hist(loop_counts, bins=range(max_loops + 2), alpha=0.7, edgecolor='black')
+            plt.xlabel('Number of Refinement Loops')
+            plt.ylabel('Frequency')
+            plt.title('Distribution of Refinement Loops')
+        
         plt.grid(True, alpha=0.3)
         plt.savefig(self.results_dir / 'refinement_loop_distribution.png', dpi=300, bbox_inches='tight')
+        plt.close()
+    
+    def _plot_response_time_distribution(self):
+        """📊 新增：响应时间频率分布图"""
+        all_metrics = []
+        all_metrics.extend(self.single_session_data)
+        for suite in self.multi_session_data:
+            all_metrics.extend(suite["metrics"])
+        
+        # 获取所有响应时间
+        response_times = [m["total_response_time"] for m in all_metrics if m.get("total_response_time")]
+        
+        plt.figure(figsize=(12, 6))
+        
+        if not response_times:
+            plt.text(0.5, 0.5, 'No Response Time Data Available', 
+                    ha='center', va='center', transform=plt.gca().transAxes, 
+                    fontsize=14, bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"))
+            plt.title('Response Time Distribution - No Data')
+        else:
+            # 创建直方图
+            plt.hist(response_times, bins=20, alpha=0.7, edgecolor='black', color='skyblue')
+            plt.xlabel('Response Time (seconds)')
+            plt.ylabel('Frequency')
+            plt.title('Response Time Frequency Distribution')
+            
+            # 添加统计信息
+            avg_time = sum(response_times) / len(response_times)
+            max_time = max(response_times)
+            min_time = min(response_times)
+            
+            plt.axvline(avg_time, color='red', linestyle='--', linewidth=2, label=f'Average: {avg_time:.1f}s')
+            plt.axvline(max_time, color='orange', linestyle='--', linewidth=1, label=f'Max: {max_time:.1f}s')
+            plt.axvline(min_time, color='green', linestyle='--', linewidth=1, label=f'Min: {min_time:.1f}s')
+            
+            plt.legend()
+        
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(self.results_dir / 'response_time_distribution.png', dpi=300, bbox_inches='tight')
+        plt.close()
+    
+    def _plot_confidence_vs_refinement_scatter(self):
+        """📊 新增：响应评估结果分数 vs refinement循环次数分布图"""
+        all_metrics = []
+        all_metrics.extend(self.single_session_data)
+        for suite in self.multi_session_data:
+            all_metrics.extend(suite["metrics"])
+        
+        # 收集所有数据点
+        refinement_loops = []
+        confidence_scores = []
+        response_times = []
+        test_types = []
+        
+        for m in all_metrics:
+            loops = m.get("total_loops", 0)
+            confidence = m.get("final_confidence", 0)
+            response_time = m.get("total_response_time", 0)
+            test_type = "Multi-Session" if any(m in suite["metrics"] for suite in self.multi_session_data) else "Single-Session"
+            
+            refinement_loops.append(loops)
+            confidence_scores.append(confidence)
+            response_times.append(response_time)
+            test_types.append(test_type)
+        
+        plt.figure(figsize=(14, 10))
+        
+        if not refinement_loops:
+            plt.text(0.5, 0.5, 'No Test Data Available', 
+                    ha='center', va='center', transform=plt.gca().transAxes, 
+                    fontsize=14, bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"))
+            plt.title('Confidence vs Refinement Loops - No Data')
+        else:
+            # 创建子图
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
+            
+            # 1. 置信度 vs 循环次数散点图
+            single_mask = [t == "Single-Session" for t in test_types]
+            multi_mask = [t == "Multi-Session" for t in test_types]
+            
+            if any(single_mask):
+                ax1.scatter([refinement_loops[i] for i, x in enumerate(single_mask) if x], 
+                           [confidence_scores[i] for i, x in enumerate(single_mask) if x], 
+                           alpha=0.6, label='Single-Session', color='blue', s=60)
+            if any(multi_mask):
+                ax1.scatter([refinement_loops[i] for i, x in enumerate(multi_mask) if x], 
+                           [confidence_scores[i] for i, x in enumerate(multi_mask) if x], 
+                           alpha=0.6, label='Multi-Session', color='orange', s=60)
+            
+            ax1.set_xlabel('Number of Refinement Loops')
+            ax1.set_ylabel('Final Confidence Score')
+            ax1.set_title('Confidence Score vs Refinement Loops')
+            ax1.grid(True, alpha=0.3)
+            ax1.legend()
+            ax1.set_ylim(0, 1)
+            
+            # 2. 响应时间 vs 循环次数
+            if any(single_mask):
+                ax2.scatter([refinement_loops[i] for i, x in enumerate(single_mask) if x], 
+                           [response_times[i] for i, x in enumerate(single_mask) if x], 
+                           alpha=0.6, label='Single-Session', color='blue', s=60)
+            if any(multi_mask):
+                ax2.scatter([refinement_loops[i] for i, x in enumerate(multi_mask) if x], 
+                           [response_times[i] for i, x in enumerate(multi_mask) if x], 
+                           alpha=0.6, label='Multi-Session', color='orange', s=60)
+            
+            ax2.set_xlabel('Number of Refinement Loops')
+            ax2.set_ylabel('Response Time (seconds)')
+            ax2.set_title('Response Time vs Refinement Loops')
+            ax2.grid(True, alpha=0.3)
+            ax2.legend()
+            
+            # 3. 置信度分布箱线图
+            single_confidences = [confidence_scores[i] for i, x in enumerate(single_mask) if x]
+            multi_confidences = [confidence_scores[i] for i, x in enumerate(multi_mask) if x]
+            
+            box_data = []
+            box_labels = []
+            if single_confidences:
+                box_data.append(single_confidences)
+                box_labels.append('Single-Session')
+            if multi_confidences:
+                box_data.append(multi_confidences)
+                box_labels.append('Multi-Session')
+            
+            if box_data:
+                ax3.boxplot(box_data, labels=box_labels)
+                ax3.set_ylabel('Confidence Score')
+                ax3.set_title('Confidence Score Distribution by Test Type')
+                ax3.grid(True, alpha=0.3)
+            
+            # 4. 响应时间分布箱线图
+            single_times = [response_times[i] for i, x in enumerate(single_mask) if x]
+            multi_times = [response_times[i] for i, x in enumerate(multi_mask) if x]
+            
+            time_box_data = []
+            time_box_labels = []
+            if single_times:
+                time_box_data.append(single_times)
+                time_box_labels.append('Single-Session')
+            if multi_times:
+                time_box_data.append(multi_times)
+                time_box_labels.append('Multi-Session')
+            
+            if time_box_data:
+                ax4.boxplot(time_box_data, labels=time_box_labels)
+                ax4.set_ylabel('Response Time (seconds)')
+                ax4.set_title('Response Time Distribution by Test Type')
+                ax4.grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+        
+        plt.savefig(self.results_dir / 'confidence_vs_refinement_analysis.png', dpi=300, bbox_inches='tight')
         plt.close()
     
     def _plot_test_type_comparison(self):
