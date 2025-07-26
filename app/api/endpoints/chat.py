@@ -224,13 +224,33 @@ async def get_chat_history(session_id: str, limit: int = 50):
             raise HTTPException(status_code=404, detail="Session not found")
         
         # Get recent messages (limited)
-        messages = session.messages[-limit:] if len(session.messages) > limit else session.messages
+        session_messages = session.messages[-limit:] if len(session.messages) > limit else session.messages
+        
+        # Convert to frontend format
+        formatted_messages = []
+        for msg in session_messages:
+            # Add user message
+            formatted_messages.append({
+                "role": "user",
+                "content": msg.user_message,
+                "timestamp": msg.timestamp.isoformat(),
+                "metadata": getattr(msg, 'metadata', {})
+            })
+            
+            # Add assistant response
+            formatted_messages.append({
+                "role": "assistant", 
+                "content": msg.agent_response,
+                "timestamp": msg.timestamp.isoformat(),
+                "metadata": {
+                    "confidence": getattr(msg, 'confidence', None),
+                    **(getattr(msg, 'metadata', {}))
+                }
+            })
         
         return {
-            "session_id": session_id,
-            "total_messages": len(session.messages),
-            "returned_messages": len(messages),
-            "messages": [msg.model_dump() for msg in messages]
+            "conversation_id": session_id,
+            "messages": formatted_messages
         }
         
     except HTTPException:
