@@ -9,6 +9,9 @@ TODO: Improve the following features
 4. Personalized recommendations
 """
 
+import os
+from amadeus import Client, ResponseError
+import asyncio
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import aiohttp
@@ -47,6 +50,8 @@ class HotelSearchInput(ToolInput):
 class HotelSearchOutput(ToolOutput):
     """Hotel search output"""
     hotels: List[Hotel] = []
+    total_results: int = 0
+    search_location: str = ""
 
 class HotelSearchTool(BaseTool):
     """Hotel search tool class using AMADEUS API"""
@@ -56,6 +61,7 @@ class HotelSearchTool(BaseTool):
             name="hotel_search",
             description="Search for hotel accommodation information using AMADEUS API, with multiple filtering conditions",
             category="accommodation",
+            tags=["hotel", "accommodation", "search", "booking", "amadeus"],
             tags=["hotel", "accommodation", "search", "booking", "amadeus"],
             timeout=30
         )
@@ -150,6 +156,8 @@ class HotelSearchTool(BaseTool):
             return HotelSearchOutput(
                 success=True,
                 hotels=filtered_hotels,
+                total_results=len(filtered_hotels),
+                search_location=input_data.location,
                 data={
                     "total_results": len(hotels),
                     "filtered_results": len(filtered_hotels),
@@ -331,15 +339,13 @@ class HotelSearchTool(BaseTool):
         logger.info(f"✅ Final filtered results: {len(filtered)} hotels")
         return filtered
 
+
     def get_input_schema(self) -> Dict[str, Any]:
-        """Get input schema"""
         return HotelSearchInput.model_json_schema()
-    
+
     def get_output_schema(self) -> Dict[str, Any]:
-        """Get output schema"""
         return HotelSearchOutput.model_json_schema()
 
-# Register the tool
 from app.tools.base_tool import tool_registry
 hotel_search_tool = HotelSearchTool()
 tool_registry.register(hotel_search_tool) 
