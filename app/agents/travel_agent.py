@@ -748,7 +748,7 @@ class TravelAgent(BaseAgent):
         ]
         for dest in destinations:
             if dest in user_message_lower:
-                destination = dest.title()
+                destination = dest.lower()  # Keep lowercase to match IATA mapping
                 break
 
         # Enhanced time extraction
@@ -1625,10 +1625,28 @@ class TravelAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Extract hotel search parameters intelligently"""
 
+        # Get destination and convert to IATA code for AMADEUS API
+        destination = requirements.get("destination", "unknown")
+        iata_code = self._convert_city_to_iata_code(destination)
+        
+        # Add debugging information
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"🏨 Hotel search - Original destination: '{destination}'")
+        logger.info(f"🏨 Hotel search - Converted IATA code: '{iata_code}'")
+        logger.info(f"🏨 Hotel search - IATA code type: {type(iata_code)}")
+        logger.info(f"🏨 Hotel search - IATA code length: {len(iata_code) if iata_code else 0}")
+
+        # Set default dates (7 days from now for check-in, 10 days from now for check-out)
+        from datetime import datetime, timedelta
+        default_check_in = datetime.now() + timedelta(days=7)
+        default_check_out = datetime.now() + timedelta(days=10)
+        
         params = {
-            "destination": requirements.get("destination", "unknown"),
-            "check_in": "flexible",
-            "check_out": "flexible",
+            "location": iata_code,  # Use IATA code for AMADEUS API
+            "destination": destination,  # Keep original for display
+            "check_in": default_check_in.strftime("%Y-%m-%d"),
+            "check_out": default_check_out.strftime("%Y-%m-%d"),
             "guests": 1,
             "rooms": 1,
             "star_rating": "any",
@@ -1653,6 +1671,7 @@ class TravelAgent(BaseAgent):
         elif any(word in user_message_lower for word in ["budget", "cheap", "hostel"]):
             params["star_rating"] = "3"
 
+        logger.info(f"🏨 Hotel search - Final parameters: {params}")
         return params
 
     async def _extract_attraction_parameters(
@@ -2041,8 +2060,12 @@ class TravelAgent(BaseAgent):
                     elif tool_name == "hotel_search":
                         # For hotel search, we need proper date handling
                         # Since we don't have specific dates, we'll provide basic search
+                        # Convert destination to IATA code for AMADEUS API
+                        destination = tool_params.get("destination", "unknown")
+                        iata_code = self._convert_city_to_iata_code(destination)
+                        
                         hotel_params = {
-                            "location": tool_params.get("destination", "unknown"),
+                            "location": iata_code,  # Use IATA code for AMADEUS API
                             "check_in": tool_params.get(
                                 "check_in", "2024-06-01"
                             ),  # Default dates
@@ -2051,6 +2074,14 @@ class TravelAgent(BaseAgent):
                             "rooms": 1,
                             "min_rating": 4.0,
                         }
+                        
+                        # Add debugging to see what's being sent to tool executor
+                        from app.core.logging_config import get_logger
+                        logger = get_logger(__name__)
+                        logger.info(f"🏨 Travel agent - Creating hotel search ToolCall")
+                        logger.info(f"🏨 Travel agent - Original destination: '{destination}'")
+                        logger.info(f"🏨 Travel agent - Converted IATA code: '{iata_code}'")
+                        logger.info(f"🏨 Travel agent - Hotel params being sent: {hotel_params}")
                         tool_calls.append(
                             ToolCall(
                                 tool_name=tool_name,
@@ -2954,8 +2985,81 @@ This will help me provide you with the most relevant travel guidance possible.""
 
         return structured_plan
 
+    def _convert_city_to_iata_code(self, city_name: str) -> str:
+        """Convert city name to IATA city code for AMADEUS API"""
+        # Add debugging information
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"🌍 Converting city to IATA code - Input: '{city_name}'")
+        
+        # City to IATA code mapping based on the provided list
+        city_to_iata = {
+            'amsterdam': 'AMS',
+            'barcelona': 'BCN', 
+            'beijing': 'PEK',
+            'berlin': 'BER',
+            'budapest': 'BUD',
+            'kyoto': 'ITM',  # Kyoto doesn't have a major airport, using nearby Osaka
+            'london': 'LON',
+            'munich': 'MUC',
+            'paris': 'PAR',
+            'prague': 'PRG',
+            'rome': 'ROM',
+            'seoul': 'SEL',
+            'shanghai': 'SHA',
+            'singapore': 'SIN',
+            'tokyo': 'TYO',
+            'vienna': 'VIE',
+            # Country codes (using major cities)
+            'australia': 'SYD',  # Sydney
+            'brazil': 'SAO',     # Sao Paulo
+            'canada': 'YYZ',     # Toronto
+            'china': 'PEK',      # Beijing
+            'hong_kong': 'HKG',
+            'india': 'DEL',      # Delhi
+            'japan': 'TYO',      # Tokyo
+            'south_africa': 'JNB', # Johannesburg
+            'south_korea': 'SEL',  # Seoul
+            'thailand': 'BKK',     # Bangkok
+            'uk': 'LON',          # London
+            'usa': 'JFK'          # New York
+        }
+        
+        # Normalize city name
+        normalized_city = city_name.lower().strip()
+        
+        # Handle special cases
+        if 'tokyo' in normalized_city and 'japan' in normalized_city:
+            normalized_city = 'tokyo'
+        
+        # Get IATA code
+        iata_code = city_to_iata.get(normalized_city)
+        
+        # Add debugging information
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"🌍 Normalized city: '{normalized_city}'")
+        logger.info(f"🌍 Found IATA code: '{iata_code}'")
+        
+        if iata_code:
+            logger.info(f"✅ Successfully converted '{city_name}' to IATA code '{iata_code}'")
+            # Ensure the IATA code is clean
+            clean_iata = iata_code.strip().upper()
+            logger.info(f"✅ Clean IATA code: '{clean_iata}'")
+            return clean_iata
+        else:
+            # If not found, return the original city name (will be handled by API)
+            fallback_code = city_name.upper()[:3] if len(city_name) >= 3 else city_name.upper()
+            logger.warning(f"⚠️ No IATA code found for '{city_name}', using fallback: '{fallback_code}'")
+            return fallback_code
+
     def _extract_destination_from_message(self, message: str) -> str:
         """Extract destination from user message"""
+        # Add debugging information
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"🌍 Extracting destination from message: '{message}'")
+        
         message_lower = message.lower()
 
         # Common destinations
@@ -2984,25 +3088,31 @@ This will help me provide you with the most relevant travel guidance possible.""
 
         for dest in destinations:
             if dest in message_lower:
-                return dest.title()
+                logger.info(f"🌍 Found destination '{dest}' in message")
+                # Return lowercase to match the IATA mapping
+                result = dest.lower()
+                logger.info(f"🌍 Returning destination: '{result}'")
+                return result
 
         # Try to find destination with common patterns
         import re
 
         patterns = [
-            r"to\s+([A-Z][a-zA-Z\s]+)",
-            r"in\s+([A-Z][a-zA-Z\s]+)",
-            r"visit\s+([A-Z][a-zA-Z\s]+)",
-            r"travel\s+to\s+([A-Z][a-zA-Z\s]+)",
+            r"to\s+([a-zA-Z\s]+)",
+            r"in\s+([a-zA-Z\s]+)",
+            r"visit\s+([a-zA-Z\s]+)",
+            r"travel\s+to\s+([a-zA-Z\s]+)",
         ]
 
         for pattern in patterns:
-            match = re.search(pattern, message)
+            match = re.search(pattern, message_lower)
             if match:
                 location = match.group(1).strip()
                 if len(location) < 30:  # Reasonable destination name
-                    return location
+                    # Return lowercase to match the IATA mapping
+                    return location.lower()
 
+        logger.warning(f"🌍 No destination found in message, returning 'Unknown Destination'")
         return "Unknown Destination"
 
     def configure_refinement(

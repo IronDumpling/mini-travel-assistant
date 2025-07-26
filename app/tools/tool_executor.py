@@ -410,21 +410,9 @@ Example Queries:
         user_request_lower = user_request.lower()
         params = {}
 
-        # Extract destination
-        destinations = [
-            "tokyo",
-            "kyoto",
-            "osaka",
-            "paris",
-            "london",
-            "new york",
-            "beijing",
-            "shanghai",
-        ]
-        for dest in destinations:
-            if dest in user_request_lower:
-                params["destination"] = dest
-                break
+        # Do not extract destination here - let travel agent handle IATA code conversion
+        # The travel agent should provide the location parameter with IATA code
+        pass
 
         # Extract dates information
         if any(word in user_request_lower for word in ["day", "days", "date", "dates"]):
@@ -454,15 +442,19 @@ Example Queries:
                 }
             )
         elif tool_name == "hotel_search":
+            # For hotel search, only set parameters that are not provided by travel agent
+            # The travel agent should provide: location (IATA code), check_in, check_out, guests
             params.update(
                 {
-                    "destination": params.get("destination", "unknown"),
                     "check_in": params.get("check_in", "flexible"),
                     "check_out": params.get("check_out", "flexible"),
                     "guests": params.get("guests", 1),
                     "room_type": params.get("room_type", "standard"),
                 }
             )
+            # Do not override location - let travel agent provide the IATA code
+            logger.info(f"🔧 Tool executor - Hotel search params after update: {params}")
+            logger.info(f"🔧 Tool executor - Location from travel agent: '{params.get('location')}'")
         elif tool_name == "attraction_search":
             params.update(
                 {
@@ -1010,6 +1002,10 @@ class ToolExecutor:
             elif tool_name == "hotel_search":
                 from app.tools.hotel_search import HotelSearchInput
                 from datetime import datetime
+                from app.core.logging_config import get_logger
+                
+                logger = get_logger(__name__)
+                logger.info(f"🔧 Tool executor - Creating hotel search input with data: {input_data}")
 
                 # Map travel agent parameters to hotel search parameters and convert dates
                 check_in_str = input_data.get("check_in", "2024-06-01")
@@ -1041,6 +1037,8 @@ class ToolExecutor:
                 }
                 # Remove None values
                 cleaned_data = {k: v for k, v in cleaned_data.items() if v is not None}
+                logger.info(f"🔧 Tool executor - Cleaned data for hotel search: {cleaned_data}")
+                logger.info(f"🔧 Tool executor - Location being passed: '{cleaned_data.get('location')}'")
                 return HotelSearchInput(**cleaned_data)
 
             elif tool_name == "flight_search":
