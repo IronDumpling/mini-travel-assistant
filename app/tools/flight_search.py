@@ -2,16 +2,12 @@
 Flight Search Tool - Flight Search Utility
 
 Refactored based on the new architecture, integrating the tool base class and standardized interfaces  
-TODO: Improve the following features  
-1. Integration with multiple flight search APIs (Amadeus, Skyscanner, etc.)  
-2. Intelligent price comparison and recommendations  
-3. Flight change and cancellation notifications  
-4. User preference memory  
+Integrated with Amadeus API for real flight search functionality
 """
 
 import os
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 import aiohttp
 from pydantic import BaseModel, Field
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
