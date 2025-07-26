@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Calendar, Clock, MapPin, Plane, Hotel, Camera, Star } from 'lucide-react';
-import { format, addHours, startOfDay, endOfDay } from 'date-fns';
+import { format, addHours, startOfDay } from 'date-fns';
 import { useTravelPlans } from '../../hooks/useApi';
 import type { TravelPlan, CalendarEvent } from '../../types/api';
 
