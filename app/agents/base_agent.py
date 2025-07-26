@@ -202,6 +202,7 @@ class BaseAgent(ABC):
                     self._assess_response_quality(message, current_response, iteration),
                     timeout=self.assess_timeout_seconds,
                 )
+                
             except asyncio.TimeoutError:
                 self.record_error(
                     "Timeout during quality assessment",
@@ -222,6 +223,7 @@ class BaseAgent(ABC):
                     meets_threshold=False,
                     assessment_details={"fallback": True, "iteration": iteration},
                 )
+                logger.warning(f"⚠️ Quality assessment timed out, using fallback score: 0.5")
             except Exception as e:
                 self.record_error(
                     f"Exception during quality assessment: {str(e)}",
@@ -236,6 +238,7 @@ class BaseAgent(ABC):
                     meets_threshold=False,
                     assessment_details={"exception": str(e), "iteration": iteration},
                 )
+                logger.error(f"❌ Quality assessment failed with exception: {str(e)}")
 
             refinement_history.append(quality_assessment)
 
@@ -275,13 +278,14 @@ class BaseAgent(ABC):
                 improvement = current_score - previous_score
                 improvement_threshold = 0.05  # Minimum meaningful improvement
                 
-                # Also check score plateau (3+ iterations with <1% improvement)
-                if iteration >= 3 and len(refinement_history) >= 3:
-                    recent_scores = [h.overall_score for h in refinement_history[-3:]]
+                # 🔧 Fix score plateau detection - be more lenient and require more data
+                if iteration >= 4 and len(refinement_history) >= 4:  # Increased from 3 to 4
+                    recent_scores = [h.overall_score for h in refinement_history[-4:]]  # Look at 4 scores instead of 3
                     score_variance = max(recent_scores) - min(recent_scores)
-                    if score_variance < 0.01:  # Less than 1% variance over 3 iterations
+                    # Increased variance threshold from 0.01 to 0.03 to be less aggressive
+                    if score_variance < 0.03:
                         current_response.metadata["refinement_status"] = "score_plateau"
-                        current_response.metadata["plateau_reason"] = f"Score variance {score_variance:.3f} < 0.01 over {len(recent_scores)} iterations"
+                        current_response.metadata["plateau_reason"] = f"Score variance {score_variance:.3f} < 0.03 over {len(recent_scores)} iterations"
                         logger.info(f"🔄 Refinement stopped due to score plateau: variance {score_variance:.3f}")
                         break
                 
@@ -307,11 +311,11 @@ class BaseAgent(ABC):
                             # Consistent significant decline over 2+ iterations
                             should_stop = True
                             stop_reason = f"consistent decline: {improvement:.3f}, trend: {recent_trend:.3f}"
-                        elif overall_improvement <= 0 and improvement <= 0 and iteration >= 4:
-                            # No overall progress after 4+ iterations
+                        elif overall_improvement <= 0 and improvement <= 0 and iteration >= 5:  # Increased from 4 to 5
+                            # No overall progress after 5+ iterations (was 4+)
                             should_stop = True  
                             stop_reason = f"no overall progress after {iteration} iterations: {overall_improvement:.3f}"
-                        elif improvement <= improvement_threshold and overall_improvement <= improvement_threshold and iteration >= 5:
+                        elif improvement <= improvement_threshold and overall_improvement <= improvement_threshold and iteration >= 6:  # Increased from 5 to 6
                             # Very small improvements after many iterations
                             should_stop = True
                             stop_reason = f"minimal progress: improvement {improvement:.3f}, overall {overall_improvement:.3f}"
@@ -329,18 +333,6 @@ class BaseAgent(ABC):
                             }
                             logger.info(f"📉 Refinement stopped after {iteration} iterations: {stop_reason}")
                             break
-                        else:
-                            # Continue refinement - we have potential for improvement
-                            if overall_improvement > 0:
-                                logger.debug(f"🔄 Continuing refinement: overall improvement {overall_improvement:.3f} > 0, iteration {iteration}")
-                            elif improvement > improvement_threshold:
-                                logger.debug(f"🔄 Continuing refinement: recent improvement {improvement:.3f} > threshold, iteration {iteration}")
-                            else:
-                                logger.debug(f"🔄 Continuing refinement: early in process (iteration {iteration}), allowing more attempts")
-                
-                # Special handling for iteration 2: be very lenient to allow the loop to develop
-                elif iteration == 2:
-                    logger.debug(f"🚀 Iteration 2: allowing refinement to continue (improvement: {improvement:.3f})")
 
             # If this is the last iteration, mark as completed
             if iteration >= self.max_refine_iterations:
@@ -350,7 +342,20 @@ class BaseAgent(ABC):
                 break
 
             current_response.metadata["refinement_status"] = "continuing"
-            logger.debug(f"🔄 Refinement iteration {iteration}: quality {quality_assessment.overall_score:.3f}, continuing...")
+
+        # Final refinement summary
+        final_iterations = iteration
+        total_refinement_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        # Count actual refinement loops (iterations beyond the first)
+        actual_refinement_loops = max(0, final_iterations - 1)
+        
+        logger.info(f"🏁 Refinement completed: {actual_refinement_loops} loops, {total_refinement_time:.1f}s total")
+        
+        # Ensure the refinement loop count is correctly recorded
+        if current_response:
+            current_response.metadata["actual_refinement_loops"] = actual_refinement_loops
+            current_response.metadata["total_iterations"] = final_iterations
 
         # Ensure we always return a response
         if current_response is None:

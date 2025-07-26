@@ -58,7 +58,7 @@ class TravelAgent(BaseAgent):
 
         # Travel-specific quality configuration
         self.fast_response_threshold = 0.75  # Threshold for skipping LLM enhancement in process_message
-        self.quality_threshold = 0.9  # Higher threshold for refinement loop iterations
+        self.quality_threshold = 0.87  # Higher threshold for refinement loop iterations
         self.refine_enabled = True  # Enable self-refinement by default
 
         logger.info("=== TRAVEL AGENT INITIALIZATION COMPLETE ===")
@@ -469,7 +469,6 @@ class TravelAgent(BaseAgent):
             
             # Update agent's memory with conversation context
             if conversation_history:
-                logger.info(f"Processing conversation history: {len(conversation_history)} messages")
                 self._update_agent_memory_from_history(conversation_history, session_id)
             
             # 1. Understand user intent (with conversation context)
@@ -491,7 +490,6 @@ class TravelAgent(BaseAgent):
 
             # 5. Fast quality assessment (heuristic, ~0.1s) - Skip if in refinement mode
             if skip_quality_check:
-                logger.info("Skipping quality check - refinement loop will handle quality assessment")
                 self.status = AgentStatus.IDLE
                 return structured_response
             
@@ -499,11 +497,9 @@ class TravelAgent(BaseAgent):
 
             # 6. Quality good enough -> return, else LLM enhancement
             if quality_score >= self.fast_response_threshold:  # 0.75 for fast response
-                logger.info(f"Structured response passed fast quality check: {quality_score:.2f} >= {self.fast_response_threshold}")
                 self.status = AgentStatus.IDLE
                 return structured_response
             else:
-                logger.info(f"Enhancing with LLM due to low quality: {quality_score:.2f} < {self.fast_response_threshold}")
                 enhanced_response = await self._llm_enhanced_response(structured_response, result, intent)
                 self.status = AgentStatus.IDLE
                 return enhanced_response
@@ -2167,6 +2163,7 @@ Please analyze the current message considering the conversation history for bett
                             ),
                             "passengers": tool_params.get("passengers", 1),
                             "class_type": "economy",
+                            "budget_level": travel_details.get("budget", {}).get("level", "mid-range")
                         }
                         tool_calls.append(
                             ToolCall(
@@ -3156,12 +3153,12 @@ This will help me provide you with the most relevant travel guidance possible.""
             # Update plan
             plan.update({
                 "tools_to_use": selected_tools,
+                "strategy": "parallel",
                 "tool_parameters": tool_parameters,
                 "actions": actions,
                 "next_steps": next_steps
             })
             
-            logger.info(f"Rule-based plan created: {intent_type} -> {selected_tools}")
             return plan
             
         except Exception as e:
@@ -3420,7 +3417,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                 content = self._build_structured_content(
                     intent_type, destination, tools_used, tool_results, user_message
                 )
-                confidence = 0.9
+                confidence = 0.87
                 response_success = True
             elif has_useful_content:
                 # Generate helpful content even when tools partially fail

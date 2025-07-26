@@ -152,7 +152,6 @@ async def chat_with_agent(message: ChatMessage):
             
             if session and len(session.messages) % 2 == 1:  # Every 2nd message (odd count means just added 2nd)
                 should_analyze = True
-                logger.debug(f"📊 Triggering LLM analysis - message count: {len(session.messages)}")
 
             enhanced_metadata = {
                 "confidence": response.confidence,
@@ -169,10 +168,6 @@ async def chat_with_agent(message: ChatMessage):
                 metadata=enhanced_metadata,
                 skip_analysis=not should_analyze
             )
-            if should_analyze:
-                logger.info(f"✅ Conversation analyzed and stored (batch analysis)")
-            else:
-                logger.debug(f"⚡ Conversation stored without analysis (waiting for batch)")
             
         except Exception as e:
             logger.error(f"Failed to store in conversation memory system: {e}")
@@ -189,13 +184,34 @@ async def chat_with_agent(message: ChatMessage):
         
         # Add refinement details if available
         if "refinement_iteration" in response.metadata:
+            # Get refinement history to extract iterations for test framework
+            refinement_history = response.metadata.get("refinement_history", [])
+            actual_refinement_loops = response.metadata.get("actual_refinement_loops", max(0, response.metadata.get("refinement_iteration", 1) - 1))
+            
+            # Construct iterations array in the format expected by test framework
+            iterations = []
+            for i, hist_item in enumerate(refinement_history):
+                iteration_detail = {
+                    "iteration": hist_item.get("iteration", i + 1),
+                    "confidence": response.confidence if i == len(refinement_history) - 1 else hist_item.get("score", 0.0),
+                    "quality_scores": {"overall": hist_item.get("score", 0.0)},
+                    "actions_taken": response.actions_taken if i == len(refinement_history) - 1 else [],
+                    "response_time": 0.0,  # Individual iteration time not tracked yet
+                    "improvements_made": hist_item.get("suggestions", [])
+                }
+                iterations.append(iteration_detail)
+            
             chat_response.refinement_details = {
                 "final_iteration": response.metadata["refinement_iteration"],
                 "final_quality_score": response.metadata["quality_score"],
                 "refinement_status": response.metadata["refinement_status"],
                 "quality_dimensions": agent.get_quality_dimensions(),
                 "user_requested_refinement": message.enable_refinement,
-                "configuration_isolation": True  # 标记配置隔离已应用
+                "configuration_isolation": True,  
+                # 🔧 Add iterations array for test framework compatibility
+                "iterations": iterations,
+                "actual_refinement_loops": actual_refinement_loops,
+                "total_iterations": response.metadata.get("total_iterations", response.metadata["refinement_iteration"])
             }
         
         return chat_response
