@@ -446,9 +446,9 @@ class TravelAgent(BaseAgent):
             },
         )
 
-    async def plan_travel(self, message: AgentMessage) -> AgentResponse:
+    async def plan_travel(self, message: AgentMessage, enable_refinement: Optional[bool] = None) -> AgentResponse:
         """Public method to plan travel with self-refinement enabled"""
-        return await self.process_with_refinement(message)
+        return await self.process_with_refinement(message, enable_refinement=enable_refinement)
 
     async def process_message(self, message: AgentMessage, skip_quality_check: bool = False) -> AgentResponse:
         """

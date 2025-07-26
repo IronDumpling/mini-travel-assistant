@@ -112,26 +112,12 @@ async def chat_with_agent(message: ChatMessage):
             }
         )
         
-        # Temporary configuration processing - avoid global configuration pollution
-        original_refine_enabled = agent.refine_enabled
-        
-        try:
-            # If user's refinement setting is different from current agent setting, temporarily adjust
-            if message.enable_refinement != original_refine_enabled:
-                logger.info(f"Temporarily adjust refinement setting: {original_refine_enabled} -> {message.enable_refinement}")
-                agent.configure_refinement(enabled=message.enable_refinement)
-            
-            # Process with self-refinement based on user preference
-            if message.enable_refinement:
-                response = await agent.plan_travel(agent_message)
-            else:
-                response = await agent.process_message(agent_message)
-                
-        finally:
-            # 🔄 Restore original configuration to avoid affecting other API calls
-            if message.enable_refinement != original_refine_enabled:
-                logger.info(f"Restore original refinement setting: {message.enable_refinement} -> {original_refine_enabled}")
-                agent.configure_refinement(enabled=original_refine_enabled)
+        # Pass refinement preference as parameter instead of modifying singleton state
+        # This eliminates the race condition where concurrent requests interfere with each other
+        if message.enable_refinement:
+            response = await agent.plan_travel(agent_message, enable_refinement=True)
+        else:
+            response = await agent.process_message(agent_message)
         
         # 📝 Store conversation in both systems
         # 1. Store in session manager (basic storage)

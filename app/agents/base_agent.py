@@ -113,9 +113,12 @@ class BaseAgent(ABC):
         """Get available tools list (subclass must implement)"""
         pass
 
-    async def process_with_refinement(self, message: AgentMessage) -> AgentResponse:
+    async def process_with_refinement(self, message: AgentMessage, enable_refinement: Optional[bool] = None) -> AgentResponse:
         """Process message with self-refinement loop"""
-        if not self.refine_enabled:
+        # Use parameter if provided, otherwise fall back to instance configuration
+        should_refine = enable_refinement if enable_refinement is not None else self.refine_enabled
+        
+        if not should_refine:
             return await self.process_message(message)
 
         iteration = 0
