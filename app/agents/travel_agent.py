@@ -2026,17 +2026,6 @@ Please analyze the current message considering the conversation history for bett
                 "Ask follow-up questions",
             ]
 
-        # TODO: Use LLM for more sophisticated planning
-        # llm_prompt = f"""
-        # Based on the user intent: {intent}
-        # And context: {context}
-        # Create a detailed action plan including:
-        # 1. Sequence of actions to take
-        # 2. Tools to use
-        # 3. Parameters for each tool
-        # 4. Expected outcomes
-        # """
-
         return plan
 
     def _parse_llm_requirements(self, llm_response: str) -> Dict[str, Any]:
