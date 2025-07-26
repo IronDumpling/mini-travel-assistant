@@ -2,7 +2,6 @@ import axios from 'axios';
 import type {
   ChatMessage,
   ChatResponse,
-  Session,
   SessionCreate,
   SessionResponse,
   SessionsListResponse,
