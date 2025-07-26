@@ -1,6 +1,6 @@
 # Chat API Testing Framework
 
-This testing framework provides comprehensive testing capabilities for the Chat API with two distinct testing modes and detailed refinement loop analysis.
+This testing framework provides comprehensive testing capabilities for the Chat API with two distinct testing modes and detailed refinement loop analysis. The framework is designed to test the DeepSeek-powered travel agent's self-refinement capabilities and performance across different conversation scenarios.
 
 ## 🔧 Features
 
@@ -29,23 +29,33 @@ This testing framework provides comprehensive testing capabilities for the Chat 
 - Each test run gets its own directory with complete isolation
 - Easy to compare different test runs over time
 
+### Enhanced Visualizations
+
+- **Confidence Progression**: Shows how confidence scores evolve through refinement loops
+- **Response Time Distribution**: Analyzes response time patterns and performance
+- **Quality Assessment Tracking**: Monitors the 6-dimension quality scoring system
+- **Session Progression Analysis**: Tracks conversation development over multiple queries
+
 ## 📁 File Structure
 
 ```
 tests/chats/
 ├── chat_tester.py                 # Core testing framework
 ├── test_scenarios.py              # Test scenario definitions  
-├── metrics_analyzer.py            # Metrics analysis
+├── metrics_analyzer.py            # Metrics analysis and visualization
 ├── test_runner.py                 # Main test runner
-├── run_demo.py                    # Demo script
-├── README_TESTING.md              # This documentation
+├── test_chat_pytest.py            # Pytest-based unit tests
+├── test_connectivity.py           # API connectivity tests
+├── README.md                      # This documentation
 └── results/
     └── YYYYMMDD_HHMMSS/           # Timestamped results
         ├── single_session_tests.json
         ├── multi_session_tests.json
         ├── test_summary.json
-        ├── analysis_report.txt
-        └── *.png                   # Visualization files
+        ├── enhanced_analysis_report.txt
+        ├── confidence_vs_loops.png
+        ├── response_time_distribution.png
+        └── *.png                   # Additional visualization files
 ```
 
 ## 🚀 Usage
@@ -137,13 +147,15 @@ python test_runner.py --analyze-only
 
 ## 📋 Prerequisites
 
-1. **API Server Running**: The Chat API server must be running at the specified URL
-2. **Knowledge Base Initialized**: Server should have the travel knowledge base loaded
-3. **Dependencies**: Required Python packages (httpx, matplotlib, numpy, pandas)
+1. **API Server Running**: The Chat API server must be running at the specified URL (default: http://localhost:8000)
+2. **Knowledge Base Initialized**: Server should have the travel knowledge base loaded with ChromaDB
+3. **DeepSeek API Key**: Valid DeepSeek API key configured in environment
+4. **RAG Engine**: ChromaDB vector database initialized with travel knowledge
+5. **Dependencies**: Required Python packages for testing and visualization
 
 ```bash
 # Install dependencies
-pip install httpx matplotlib numpy pandas seaborn
+pip install httpx matplotlib numpy pandas seaborn pytest pytest-asyncio
 ```
 
 ## 🎯 Example Workflows
@@ -175,6 +187,20 @@ python test_runner.py --analyze-only
 python metrics_analyzer.py
 ```
 
+## 🧪 Additional Test Types
+
+### Unit Tests (`test_chat_pytest.py`)
+- Pytest-based unit tests for individual API endpoints
+- Validation of request/response schemas
+- Error handling and edge case testing
+- Integration with DeepSeek LLM service
+
+### Connectivity Tests (`test_connectivity.py`)
+- API server availability and health checks
+- Session management functionality validation
+- Knowledge base initialization verification
+- RAG engine connectivity testing
+
 ## 📊 Understanding Results
 
 ### Single-Session Results (`single_session_tests.json`)
@@ -184,35 +210,51 @@ Each entry contains:
 - `refinement_loops`: Detailed loop-by-loop metrics
 - `final_confidence`: Final confidence score
 - `total_response_time`: Complete response time
+- `refinement_enabled`: Whether self-refinement was used
 
 ### Multi-Session Results (`multi_session_tests.json`)
 Each session suite contains:
 - `session_title`: Description of the session
 - `queries`: List of all queries in the session
 - `metrics`: Array of metrics for each query
+- `session_progression`: Analysis of conversation development
 
-### Analysis Report (`analysis_report.txt`)
+### Enhanced Analysis Report (`enhanced_analysis_report.txt`)
 Comprehensive analysis including:
 - Overall summary statistics
 - Test type performance comparison
-- Refinement loop effectiveness
+- Refinement loop effectiveness analysis
 - Session progression insights
+- Quality dimension breakdown
+- Performance metrics and trends
 
-### Visualizations
-- `refinement_loop_distribution.png`: Distribution of loop counts
-- `test_type_comparison.png`: Performance comparison chart
-- `confidence_vs_loops.png`: Confidence improvement analysis
-- `session_progression.png`: Multi-session progression charts
-- `response_time_vs_loops.png`: Time cost analysis
+### Enhanced Visualizations
+- `confidence_vs_loops.png`: Detailed confidence progression through refinement iterations
+- `response_time_distribution.png`: Response time frequency analysis with statistical metrics
+- `refinement_loop_distribution.png`: Distribution of refinement loop counts
+- `test_type_comparison.png`: Performance comparison between single and multi-session tests
+- `session_progression.png`: Multi-session conversation development charts
+
+## 🔗 Integration with System Architecture
+
+This testing framework is designed to work seamlessly with the complete Mini Travel Assistant architecture:
+
+- **DeepSeek LLM Integration**: Tests validate the DeepSeek-powered agent responses
+- **RAG Engine Testing**: Validates ChromaDB knowledge retrieval and semantic search
+- **Session Management**: Tests the dual-system conversation storage with RAG indexing
+- **Quality Assessment**: Validates the 6-dimension quality scoring system
+- **Self-Refinement Loop**: Comprehensive testing of the iterative improvement process
 
 ## 🔍 Troubleshooting
 
 ### Common Issues
 
-1. **Connection Errors**: Ensure API server is running
-2. **Timeout Errors**: Increase timeout for refinement tests
+1. **Connection Errors**: Ensure API server is running at the correct URL
+2. **Timeout Errors**: Increase timeout for refinement tests (recommended: 600s+)
 3. **Import Errors**: Ensure you're in the `tests/chats` directory
-4. **Visualization Errors**: Install matplotlib/seaborn/numpy
+4. **Visualization Errors**: Install matplotlib/seaborn/numpy/pandas
+5. **DeepSeek API Errors**: Verify API key is configured correctly
+6. **ChromaDB Errors**: Ensure knowledge base is properly initialized
 
 ### Performance Tips
 
@@ -220,14 +262,4 @@ Comprehensive analysis including:
 - Use `--mode single` for quick API validation
 - Use `--timeout 600` or higher for comprehensive refinement testing
 - Use `--mode comparison` to evaluate refinement effectiveness
-
-## 🎯 Quick Start
-
-Run a quick demo to see the framework in action:
-
-```bash
-# Run the demo script
-python run_demo.py
-```
-
-This will demonstrate both single-session and multi-session testing capabilities with a small subset of scenarios. 
+- Monitor system resources during multi-session tests with large datasets
