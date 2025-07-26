@@ -308,7 +308,7 @@ class MetricsAnalyzer:
         report_text = "\n".join(report)
         report_file = self.results_dir / "enhanced_analysis_report.txt"
         with open(report_file, 'w', encoding='utf-8') as f:
-            f.write(report_text)
+                f.write(report_text)
         
         print(f"Enhanced analysis report saved to: {report_file}")
         return report_text

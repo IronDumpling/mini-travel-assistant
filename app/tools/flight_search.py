@@ -14,6 +14,9 @@ from datetime import datetime
 import aiohttp
 from pydantic import BaseModel
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class Flight(BaseModel):
     airline: str
@@ -59,6 +62,8 @@ class FlightSearchTool(BaseTool):
     async def _execute(self, input_data: FlightSearchInput, context: ToolExecutionContext) -> FlightSearchOutput:
         """Execute flight search"""
         try:
+            logger.info(f"Searching flights: {input_data.origin} -> {input_data.destination} for {input_data.passengers} passengers")
+            
             flights = await self._search_flights(
                 input_data.origin,
                 input_data.destination,
@@ -67,8 +72,10 @@ class FlightSearchTool(BaseTool):
                 input_data.passengers
             )
             
-            # TODO: Filter and sort flights based on user preferences
+            # Filter and sort flights based on user preferences
             filtered_flights = self._filter_flights(flights, input_data)
+            
+            logger.info(f"Flight search completed: {len(flights)} total, {len(filtered_flights)} after filtering")
             
             return FlightSearchOutput(
                 success=True,
@@ -79,6 +86,7 @@ class FlightSearchTool(BaseTool):
                 }
             )
         except Exception as e:
+            logger.error(f"Flight search failed: {e}")
             return FlightSearchOutput(
                 success=False,
                 error=str(e),
@@ -110,6 +118,8 @@ class FlightSearchTool(BaseTool):
                 "Content-Type": "application/json"
             }
             
+            logger.debug(f"Calling flight search API with params: {params}")
+            
             async with session.get(
                 f"{self.base_url}/search",
                 params=params,
@@ -117,9 +127,11 @@ class FlightSearchTool(BaseTool):
             ) as response:
                 if response.status == 200:
                     data = await response.json()
+                    flights_count = len(data.get("flights", []))
+                    logger.debug(f"Flight API returned {flights_count} results")
                     return [self._parse_flight(flight) for flight in data["flights"]]
                 else:
-                    # TODO: Better error handling
+                    logger.warning(f"Flight search API failed with status {response.status}")
                     return []
     
     def _filter_flights(self, flights: List[Flight], criteria: FlightSearchInput) -> List[Flight]:

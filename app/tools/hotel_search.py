@@ -14,6 +14,9 @@ from datetime import datetime
 import aiohttp
 from pydantic import BaseModel
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class Hotel(BaseModel):
     name: str
@@ -57,6 +60,8 @@ class HotelSearchTool(BaseTool):
     async def _execute(self, input_data: HotelSearchInput, context: ToolExecutionContext) -> HotelSearchOutput:
         """Execute hotel search"""
         try:
+            logger.info(f"Searching hotels in {input_data.location} for {input_data.guests} guests, check-in: {input_data.check_in.strftime('%Y-%m-%d')}")
+            
             hotels = await self._search_hotels(
                 input_data.location,
                 input_data.check_in,
@@ -67,6 +72,8 @@ class HotelSearchTool(BaseTool):
             # Filter hotels based on search criteria
             filtered_hotels = self._filter_hotels(hotels, input_data)
             
+            logger.info(f"Hotel search completed: {len(hotels)} total, {len(filtered_hotels)} after filtering")
+            
             return HotelSearchOutput(
                 success=True,
                 hotels=filtered_hotels,
@@ -76,6 +83,7 @@ class HotelSearchTool(BaseTool):
                 }
             )
         except Exception as e:
+            logger.error(f"Hotel search failed for {input_data.location}: {e}")
             return HotelSearchOutput(
                 success=False,
                 error=str(e),
@@ -103,6 +111,8 @@ class HotelSearchTool(BaseTool):
                 "Content-Type": "application/json"
             }
             
+            logger.debug(f"Calling hotel search API with params: {params}")
+            
             async with session.get(
                 f"{self.base_url}/search",
                 params=params,
@@ -110,8 +120,11 @@ class HotelSearchTool(BaseTool):
             ) as response:
                 if response.status == 200:
                     data = await response.json()
+                    hotels_count = len(data.get("hotels", []))
+                    logger.debug(f"Hotel API returned {hotels_count} results")
                     return [self._parse_hotel(hotel) for hotel in data["hotels"]]
                 else:
+                    logger.warning(f"Hotel search API failed with status {response.status}")
                     return []
     
     def _filter_hotels(self, hotels: List[Hotel], criteria: HotelSearchInput) -> List[Hotel]:

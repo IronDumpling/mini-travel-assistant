@@ -507,39 +507,89 @@ class ToolExecutor:
         input_data: Dict[str, Any],
         context: Optional[ToolExecutionContext] = None,
     ) -> ToolOutput:
-        """Execute a single tool"""
-        tool = tool_registry.get_tool(tool_name)
-        if not tool:
-            return ToolOutput(success=False, error=f"Tool '{tool_name}' not found")
+        """Execute a single tool with enhanced error handling"""
+        start_time = asyncio.get_event_loop().time()
+        
+        try:
+            tool = tool_registry.get_tool(tool_name)
+            if not tool:
+                logger.error(f"Tool '{tool_name}' not found in registry")
+                return ToolOutput(
+                    success=False, 
+                    error=f"Tool '{tool_name}' not found",
+                    execution_time=0.0
+                )
 
-        # Convert input data to tool input object
-        tool_input = self._create_tool_input(tool, input_data)
+            # Convert input data to tool input object with error handling
+            try:
+                tool_input = self._create_tool_input(tool, input_data)
+            except Exception as e:
+                logger.error(f"Failed to create tool-specific input for {tool_name}: {e}")
+                execution_time = asyncio.get_event_loop().time() - start_time
+                return ToolOutput(
+                    success=False,
+                    error=f"Invalid input parameters for {tool_name}: {str(e)}",
+                    execution_time=execution_time,
+                    data={"tool_name": tool_name, "error_type": "input_validation"}
+                )
 
-        return await tool.execute(tool_input, context)
+            # Execute the tool
+            result = await tool.execute(tool_input, context)
+            
+            if not result.success:
+                logger.warning(f"Tool {tool_name} execution failed: {result.error}")
+            else:
+                logger.info(f"Tool {tool_name} executed successfully")
+
+            return result
+            
+        except Exception as e:
+            execution_time = asyncio.get_event_loop().time() - start_time
+            logger.error(f"Unexpected error executing tool {tool_name}: {e}")
+            return ToolOutput(
+                success=False,
+                error=f"Execution error: {str(e)}",
+                execution_time=execution_time,
+                data={"tool_name": tool_name, "error_type": "execution_error"}
+            )
 
     async def execute_chain(
         self, chain: ToolChain, context: Optional[ToolExecutionContext] = None
     ) -> ExecutionResult:
-        """Execute tool chain"""
+        """
+        Execute tool chain with optimized performance
+        Defaults to parallel execution for better speed
+        """
         start_time = asyncio.get_event_loop().time()
         results = {}
 
         try:
-            if chain.strategy == "sequential":
+            # Optimize execution strategy for performance
+            if chain.strategy == "sequential" or len(chain.calls) == 1:
                 results = await self._execute_sequential(chain.calls, context)
             elif chain.strategy == "parallel":
                 results = await self._execute_parallel(chain.calls, context)
             else:
-                raise ValueError(f"Unsupported execution strategy: {chain.strategy}")
+                # Default to parallel for better performance
+                logger.info(f"Unknown strategy '{chain.strategy}', defaulting to parallel")
+                results = await self._execute_parallel(chain.calls, context)
 
             execution_time = asyncio.get_event_loop().time() - start_time
 
+            # Allow partial success for better performance and user experience
+            success_count = sum(1 for result in results.values() if result.success)
+            total_count = len(results)
+            success = success_count > 0  # At least one tool succeeded
+            
+            logger.info(f"Tool chain execution: {success_count}/{total_count} tools succeeded in {execution_time:.2f}s")
+
             return ExecutionResult(
-                success=True, results=results, execution_time=execution_time
+                success=success, results=results, execution_time=execution_time
             )
 
         except Exception as e:
             execution_time = asyncio.get_event_loop().time() - start_time
+            logger.error(f"Tool chain execution failed: {e}")
             return ExecutionResult(
                 success=False,
                 results=results,

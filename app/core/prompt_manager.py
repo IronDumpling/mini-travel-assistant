@@ -4,6 +4,9 @@ Prompt Manager - Centralized prompt template management system
 
 from typing import Dict, List, Any, Optional
 from enum import Enum
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class PromptType(Enum):
@@ -695,12 +698,38 @@ class PromptManager:
         """
 
     def get_prompt(self, prompt_type: PromptType, **kwargs) -> str:
-        """Get and render prompt template"""
+        """
+        Get and render prompt template with optimized performance
+        Includes error handling and safe formatting
+        """
         template = self.templates.get(prompt_type.value)
         if not template:
-            raise ValueError(f"Prompt template for {prompt_type.value} not found")
+            # Return a basic fallback prompt instead of raising error
+            return f"Please help with {prompt_type.value} task. {kwargs.get('user_message', '')}"
 
-        return template.format(**kwargs)
+        try:
+            # Safe template formatting with fallback values
+            safe_kwargs = {}
+            for key, value in kwargs.items():
+                if value is None:
+                    safe_kwargs[key] = "unknown"
+                elif isinstance(value, dict):
+                    safe_kwargs[key] = str(value)
+                elif isinstance(value, list):
+                    safe_kwargs[key] = ", ".join(str(item) for item in value)
+                else:
+                    safe_kwargs[key] = str(value)
+            
+            return template.format(**safe_kwargs)
+            
+        except KeyError as e:
+            # Handle missing template variables gracefully
+            logger.warning(f"Missing template variable {e} for {prompt_type.value}")
+            return template.format_map(safe_kwargs)
+        except Exception as e:
+            # Fallback for any other formatting errors
+            logger.error(f"Error formatting prompt {prompt_type.value}: {e}")
+            return f"Please help with {prompt_type.value} task. {kwargs.get('user_message', '')}"
 
     def get_schema(self, prompt_type: PromptType) -> Dict[str, Any]:
         """Get corresponding JSON schema"""

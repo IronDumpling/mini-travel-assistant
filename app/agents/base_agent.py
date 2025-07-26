@@ -295,8 +295,42 @@ class BaseAgent(ABC):
     async def _assess_response_quality(
         self, original_message: AgentMessage, response: AgentResponse, iteration: int
     ) -> QualityAssessment:
-        """Assess the quality of a response"""
-        # Get quality dimensions specific to this agent
+        """
+        Assess the quality of a response
+        Uses fast heuristic assessment for performance optimization
+        """
+        # Check if this agent has a fast quality assessment method
+        if hasattr(self, '_fast_quality_assessment'):
+            # Use fast heuristic assessment
+            overall_score = await self._fast_quality_assessment(original_message, response)
+            
+            # Generate basic dimension scores based on overall score
+            quality_dimensions = self.get_quality_dimensions()
+            dimension_scores = {dim: overall_score for dim in quality_dimensions}
+            
+            # Generate improvement suggestions only if quality is low
+            improvement_suggestions = []
+            if overall_score < self.quality_threshold:
+                improvement_suggestions = await self._generate_improvement_suggestions(
+                    "overall", original_message, response, overall_score
+                )
+            
+            meets_threshold = overall_score >= self.quality_threshold
+            
+            return QualityAssessment(
+                overall_score=overall_score,
+                dimension_scores=dimension_scores,
+                improvement_suggestions=improvement_suggestions,
+                meets_threshold=meets_threshold,
+                assessment_details={
+                    "iteration": iteration,
+                    "threshold": self.quality_threshold,
+                    "assessment_method": "fast_heuristic",
+                    "quality_dimensions": quality_dimensions,
+                },
+            )
+        
+        # Fallback to original detailed assessment for agents without fast assessment
         quality_dimensions = self.get_quality_dimensions()
 
         dimension_scores = {}
@@ -330,6 +364,7 @@ class BaseAgent(ABC):
             assessment_details={
                 "iteration": iteration,
                 "threshold": self.quality_threshold,
+                "assessment_method": "detailed_llm",
                 "quality_dimensions": quality_dimensions,
             },
         )
