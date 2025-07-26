@@ -126,7 +126,8 @@ Importance Score: {turn.importance_score}
         session_id: str, 
         user_message: str, 
         agent_response: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        skip_analysis: bool = False
     ) -> ConversationTurn:
         """Enhanced conversation turn addition with LLM analysis"""
         session = self.get_session(session_id)
@@ -141,23 +142,31 @@ Importance Score: {turn.importance_score}
             agent_response=agent_response
         )
         
-        # 🔧 Enhanced analysis using LLM services
-        try:
-            # Analyze intent, sentiment, and extract entities using LLM
-            analysis_result = await self._analyze_conversation_turn(user_message, agent_response)
-            
-            turn.intent = analysis_result.get("intent")
-            turn.sentiment = analysis_result.get("sentiment")
-            turn.entities = analysis_result.get("entities", {})
-            turn.topics = analysis_result.get("topics", [])
-            turn.user_preferences = analysis_result.get("user_preferences", {})
-            turn.confidence_score = analysis_result.get("confidence_score", 0.5)
-            
-        except Exception as e:
-            logger.warning(f"LLM analysis failed for turn {turn_id}: {e}")
-            # Fallback to basic analysis
+        if not skip_analysis:
+            try:
+                # Analyze intent, sentiment, and extract entities using LLM
+                analysis_result = await self._analyze_conversation_turn(user_message, agent_response)
+                
+                turn.intent = analysis_result.get("intent")
+                turn.sentiment = analysis_result.get("sentiment")
+                turn.entities = analysis_result.get("entities", {})
+                turn.topics = analysis_result.get("topics", [])
+                turn.user_preferences = analysis_result.get("user_preferences", {})
+                turn.confidence_score = analysis_result.get("confidence_score", 0.5)
+                
+                logger.debug(f"✅ LLM analysis completed for turn {turn_id}")
+                
+            except Exception as e:
+                logger.warning(f"LLM analysis failed for turn {turn_id}: {e}")
+                # Fallback to basic analysis
+                turn.intent = self._basic_intent_detection(user_message)
+                turn.sentiment = self._basic_sentiment_analysis(user_message)
+        else:
+            logger.debug(f"⚡ Skipping LLM analysis for turn {turn_id} (batch mode)")
             turn.intent = self._basic_intent_detection(user_message)
             turn.sentiment = self._basic_sentiment_analysis(user_message)
+            # Set basic confidence for skipped analysis
+            turn.confidence_score = 0.3
         
         # Apply metadata if provided
         if metadata:

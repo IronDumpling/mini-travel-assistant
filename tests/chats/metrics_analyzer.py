@@ -118,7 +118,7 @@ class MetricsAnalyzer:
         for loop_count in set(loop_counts):
             tests_with_count = [m for m in refinement_tests if m["total_loops"] == loop_count]
             successful = sum(1 for m in tests_with_count if m["final_success"])
-            success_by_loops[loop_count] = successful / len(tests_with_count) * 100
+            success_by_loops[loop_count] = successful / len(tests_with_count) * 100 if tests_with_count else 0
         
         return RefinementAnalysis(
             avg_loops_per_test=avg_loops,
@@ -295,7 +295,7 @@ class MetricsAnalyzer:
             for i, (session_id, progression) in enumerate(list(session_progression.items())[:3]):
                 report.append(f"\nSample Session {i+1} ({session_id[:8]}...):")
                 report.append(f"  Queries: {progression['query_count']}")
-                success_rate = sum(progression['success_progression']) / len(progression['success_progression']) * 100
+                success_rate = sum(progression['success_progression']) / len(progression['success_progression']) * 100 if progression['success_progression'] else 0
                 report.append(f"  Success Rate: {success_rate:.1f}%")
                 if progression['confidence_progression']:
                     avg_confidence = sum(c for c, s in zip(progression['confidence_progression'], progression['success_progression']) if s) / max(sum(progression['success_progression']), 1)
@@ -584,11 +584,21 @@ class MetricsAnalyzer:
         plt.title('Confidence Score vs Refinement Loops')
         plt.grid(True, alpha=0.3)
         
-        # Add trend line if enough data
-        if len(loops) > 5:
-            z = np.polyfit(loops, confidences, 1)
-            p = np.poly1d(z)
-            plt.plot(sorted(set(loops)), p(sorted(set(loops))), "r--", alpha=0.8)
+        # Add trend line if enough data and variation in loops
+        unique_loops = list(set(loops))
+        if len(loops) > 5 and len(unique_loops) > 1:
+            try:
+                z = np.polyfit(loops, confidences, 1)
+                p = np.poly1d(z)
+                plt.plot(sorted(unique_loops), p(sorted(unique_loops)), "r--", alpha=0.8)
+            except np.linalg.LinAlgError:
+                # Skip trend line if numerical issues occur
+                pass
+        elif len(unique_loops) == 1:
+            # Add a note when all loops are the same
+            plt.text(0.5, 0.95, f'All tests used {unique_loops[0]} refinement loops', 
+                    transform=plt.gca().transAxes, ha='center', va='top',
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
         
         plt.savefig(self.results_dir / 'confidence_vs_loops.png', dpi=300, bbox_inches='tight')
         plt.close()

@@ -123,7 +123,7 @@ MULTI_QUERY_SCENARIOS = [
 
 # Configuration for refinement testing
 REFINEMENT_TEST_CONFIG = {
-    "quality_thresholds": [0.6, 0.75, 0.85],
+    "quality_thresholds": [0.6, 0.75, 0.9],
     "max_iterations": [2, 3, 5],
     "timeout_seconds": 300.0
 }

@@ -152,10 +152,12 @@ class ChatAPITester:
         else:
             raise Exception(f"Failed to get agent status: {response.status_code}")
     
-    async def configure_agent(self, enabled: bool = True, quality_threshold: float = 0.75, max_iterations: int = 3):
-        """Configure agent refinement settings"""
+    async def configure_agent(self, enabled: bool = True, fast_response_threshold: float = 0.75, 
+                             quality_threshold: float = 0.9, max_iterations: int = 3):
+        """Configure agent refinement settings with two-tier thresholds"""
         config = {
             "enabled": enabled,
+            "fast_response_threshold": fast_response_threshold,
             "quality_threshold": quality_threshold,
             "max_iterations": max_iterations
         }

@@ -147,6 +147,13 @@ async def chat_with_agent(message: ChatMessage):
         
         # 2. Store in conversation memory (RAG enhanced analysis and indexing)
         try:
+            session = session_manager.get_current_session()
+            should_analyze = False
+            
+            if session and len(session.messages) % 2 == 1:  # Every 2nd message (odd count means just added 2nd)
+                should_analyze = True
+                logger.debug(f"📊 Triggering LLM analysis - message count: {len(session.messages)}")
+
             enhanced_metadata = {
                 "confidence": response.confidence,
                 "actions_taken": response.actions_taken,
@@ -159,13 +166,16 @@ async def chat_with_agent(message: ChatMessage):
                 session_id=message.session_id,
                 user_message=message.message,
                 agent_response=response.content,
-                metadata=enhanced_metadata
+                metadata=enhanced_metadata,
+                skip_analysis=not should_analyze
             )
-            logger.debug(f"Conversation stored in RAG-enhanced conversation memory system")
+            if should_analyze:
+                logger.info(f"✅ Conversation analyzed and stored (batch analysis)")
+            else:
+                logger.debug(f"⚡ Conversation stored without analysis (waiting for batch)")
             
         except Exception as e:
             logger.error(f"Failed to store in conversation memory system: {e}")
-            # 不影响主流程，只记录错误
         
         # Prepare response
         chat_response = ChatResponse(

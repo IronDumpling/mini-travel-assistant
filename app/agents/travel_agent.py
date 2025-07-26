@@ -57,7 +57,8 @@ class TravelAgent(BaseAgent):
         self.user_preferences_history: Dict[str, Any] = {}
 
         # Travel-specific quality configuration
-        self.quality_threshold = 0.8  # Higher threshold for travel planning
+        self.fast_response_threshold = 0.75  # Threshold for skipping LLM enhancement in process_message
+        self.quality_threshold = 0.9  # Higher threshold for refinement loop iterations
         self.refine_enabled = True  # Enable self-refinement by default
 
         logger.info("=== TRAVEL AGENT INITIALIZATION COMPLETE ===")
@@ -449,7 +450,7 @@ class TravelAgent(BaseAgent):
         """Public method to plan travel with self-refinement enabled"""
         return await self.process_with_refinement(message)
 
-    async def process_message(self, message: AgentMessage) -> AgentResponse:
+    async def process_message(self, message: AgentMessage, skip_quality_check: bool = False) -> AgentResponse:
         """
         Process user message with optimized performance flow:
         1. Intent analysis (with conversation context)
@@ -488,16 +489,21 @@ class TravelAgent(BaseAgent):
             # 4. Structured response fusion (template-based, fast)
             structured_response = self._generate_structured_response(result, intent, message.content)
 
-            # 5. Fast quality assessment (heuristic, ~0.1s)
+            # 5. Fast quality assessment (heuristic, ~0.1s) - Skip if in refinement mode
+            if skip_quality_check:
+                logger.info("Skipping quality check - refinement loop will handle quality assessment")
+                self.status = AgentStatus.IDLE
+                return structured_response
+            
             quality_score = await self._fast_quality_assessment(message, structured_response)
 
-            # 6. Smart decision: quality good enough -> return, else LLM enhancement
-            if quality_score >= self.quality_threshold:  # 0.75 default
-                logger.info(f"Structured response passed quality check: {quality_score:.2f}")
+            # 6. Quality good enough -> return, else LLM enhancement
+            if quality_score >= self.fast_response_threshold:  # 0.75 for fast response
+                logger.info(f"Structured response passed fast quality check: {quality_score:.2f} >= {self.fast_response_threshold}")
                 self.status = AgentStatus.IDLE
                 return structured_response
             else:
-                logger.info(f"Enhancing with LLM due to low quality: {quality_score:.2f}")
+                logger.info(f"Enhancing with LLM due to low quality: {quality_score:.2f} < {self.fast_response_threshold}")
                 enhanced_response = await self._llm_enhanced_response(structured_response, result, intent)
                 self.status = AgentStatus.IDLE
                 return enhanced_response
@@ -3100,12 +3106,14 @@ This will help me provide you with the most relevant travel guidance possible.""
     def configure_refinement(
         self,
         enabled: bool = True,
-        quality_threshold: float = 0.8,
+        fast_response_threshold: float = 0.75,
+        quality_threshold: float = 0.9,
         max_iterations: int = 3,
     ):
-        """Configure self-refinement settings"""
+        """Configure self-refinement settings with two-tier thresholds"""
         self.refine_enabled = enabled
-        self.quality_threshold = quality_threshold
+        self.fast_response_threshold = fast_response_threshold  # For process_message LLM enhancement decision
+        self.quality_threshold = quality_threshold  # For refinement loop iteration decision
         self.max_refine_iterations = max_iterations
 
     def _create_rule_based_action_plan(
@@ -3412,7 +3420,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                 content = self._build_structured_content(
                     intent_type, destination, tools_used, tool_results, user_message
                 )
-                confidence = 0.85
+                confidence = 0.9
                 response_success = True
             elif has_useful_content:
                 # Generate helpful content even when tools partially fail

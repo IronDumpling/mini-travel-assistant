@@ -10,9 +10,10 @@ from app.agents.base_agent import agent_manager
 router = APIRouter()
 
 class RefinementConfig(BaseModel):
-    """Configuration for self-refinement"""
+    """Configuration for self-refinement with two-tier thresholds"""
     enabled: bool = True
-    quality_threshold: float = 0.75
+    fast_response_threshold: float = 0.75  # Threshold for skipping LLM enhancement
+    quality_threshold: float = 0.9  # Threshold for refinement loop iterations
     max_iterations: int = 3
 
 class AgentConfigResponse(BaseModel):
@@ -33,6 +34,7 @@ async def configure_agent_refinement(config: RefinementConfig):
         # Configure refinement settings on the actual agent instance
         agent.configure_refinement(
             enabled=config.enabled,
+            fast_response_threshold=config.fast_response_threshold,
             quality_threshold=config.quality_threshold,
             max_iterations=config.max_iterations
         )
@@ -56,6 +58,11 @@ async def get_agent_status():
         
         status = agent.get_status()
         
+        # Safely access agent attributes with fallbacks
+        user_preferences_count = len(getattr(agent, 'user_preferences_history', {}))
+        fast_threshold = getattr(agent, 'fast_response_threshold', 0.75)
+        quality_threshold = getattr(agent, 'quality_threshold', 0.9)
+        
         return {
             "agent_info": {
                 "name": status["name"],
@@ -67,9 +74,12 @@ async def get_agent_status():
             "quality_dimensions": agent.get_quality_dimensions(),
             "system_status": "operational",
             "agent_instance_id": id(agent),  # Add instance ID to verify same agent
-            "conversation_history_length": len(agent.conversation_history),
-            "user_preferences_count": len(agent.user_preferences_history),
-            "singleton_verified": True
+            "user_preferences_count": user_preferences_count,
+            "singleton_verified": True,
+            "thresholds": {
+                "fast_response_threshold": fast_threshold,
+                "quality_threshold": quality_threshold
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
@@ -126,14 +136,21 @@ async def reset_agent():
         # Reset the agent state
         await agent.reset()
         
+        # Safely access agent attributes with fallbacks
+        fast_threshold = getattr(agent, 'fast_response_threshold', 0.75)
+        quality_threshold = getattr(agent, 'quality_threshold', 0.9)
+        
         return {
             "message": "Agent reset to default state successfully",
             "status": "success",
             "agent_instance_id": id(agent),
-            "conversation_history_cleared": True,
             "user_preferences_cleared": True,
             "status_reset": True,
-            "singleton_maintained": True
+            "singleton_maintained": True,
+            "thresholds_reset": {
+                "fast_response_threshold": fast_threshold,
+                "quality_threshold": quality_threshold
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent reset failed: {str(e)}")

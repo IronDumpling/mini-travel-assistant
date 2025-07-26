@@ -44,7 +44,8 @@ async def run_tests(
                 try:
                     agent_config = await tester.configure_agent(
                         enabled=True,
-                        quality_threshold=0.75,
+                        fast_response_threshold=0.75,  # For LLM enhancement decision
+                        quality_threshold=0.9,  # For refinement loop iteration
                         max_iterations=3
                     )
                     print(f"   ✅ Agent configured: {agent_config.get('message', 'Success')}")

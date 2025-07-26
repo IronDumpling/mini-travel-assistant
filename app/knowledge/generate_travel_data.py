@@ -340,7 +340,7 @@ class TravelDataGenerator:
             "source": {
                 "name": "Activity Provider",
                 "url": "https://example.com/activity",
-                "reliability_score": 0.85
+                "reliability_score": 0.9
             },
             "last_updated": datetime.now().isoformat()
         }
