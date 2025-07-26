@@ -2163,7 +2163,7 @@ Please analyze the current message considering the conversation history for bett
                             ),
                             "passengers": tool_params.get("passengers", 1),
                             "class_type": "economy",
-                            "budget_level": travel_details.get("budget", {}).get("level", "mid-range")
+                            "budget_level": tool_params.get("budget_level", "mid-range")
                         }
                         tool_calls.append(
                             ToolCall(
