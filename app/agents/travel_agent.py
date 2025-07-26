@@ -11,6 +11,7 @@ TODO: Implement the following features
 
 from typing import Dict, List, Any, Optional
 import time
+from datetime import datetime
 from app.agents.base_agent import (
     BaseAgent,
     AgentMessage,
@@ -46,14 +47,6 @@ class TravelAgent(BaseAgent):
         logger.info("Initializing RAG engine...")
         self.rag_engine = get_rag_engine()
         logger.info(f"RAG engine initialized: {self.rag_engine}")
-        logger.info(f"RAG engine vector store: {self.rag_engine.vector_store}")
-
-        # Check RAG engine stats
-        try:
-            rag_stats = self.rag_engine.vector_store.get_stats()
-            logger.info(f"RAG engine vector store stats: {rag_stats}")
-        except Exception as e:
-            logger.error(f"Failed to get RAG engine stats: {e}")
 
         logger.info("Initializing tool executor...")
         self.tool_executor = get_tool_executor()
@@ -64,7 +57,8 @@ class TravelAgent(BaseAgent):
         self.user_preferences_history: Dict[str, Any] = {}
 
         # Travel-specific quality configuration
-        self.quality_threshold = 0.8  # Higher threshold for travel planning
+        self.fast_response_threshold = 0.75  # Threshold for skipping LLM enhancement in process_message
+        self.quality_threshold = 0.87  # Higher threshold for refinement loop iterations
         self.refine_enabled = True  # Enable self-refinement by default
 
         logger.info("=== TRAVEL AGENT INITIALIZATION COMPLETE ===")
@@ -452,65 +446,136 @@ class TravelAgent(BaseAgent):
             },
         )
 
-    async def plan_travel(self, message: AgentMessage) -> AgentResponse:
+    async def plan_travel(self, message: AgentMessage, enable_refinement: Optional[bool] = None) -> AgentResponse:
         """Public method to plan travel with self-refinement enabled"""
-        return await self.process_with_refinement(message)
+        return await self.process_with_refinement(message, enable_refinement=enable_refinement)
 
-    async def process_message(self, message: AgentMessage) -> AgentResponse:
-        """Process user message - core implementation called by refinement loop"""
+    async def process_message(self, message: AgentMessage, skip_quality_check: bool = False) -> AgentResponse:
+        """
+        Process user message with optimized performance flow:
+        1. Intent analysis (with conversation context)
+        2. Rule-based tool planning (no LLM call)
+        3. Execute tools
+        4. Structured response fusion (template-based, fast)
+        5. Fast quality assessment (heuristic, ~0.1s)
+        6. Smart decision: return if quality good, else LLM enhancement
+        """
         try:
             self.status = AgentStatus.THINKING
 
-            # 1. Understand user intent
-            intent = await self._analyze_user_intent(message.content)
+            # 0. Process conversation history and maintain agent state
+            conversation_history = message.metadata.get("conversation_history", [])
+            session_id = message.metadata.get("session_id")
+            
+            # Update agent's memory with conversation context
+            if conversation_history:
+                self._update_agent_memory_from_history(conversation_history, session_id)
+            
+            # 1. Understand user intent (with conversation context)
+            intent = await self._analyze_user_intent(message.content, conversation_history)
 
-            # 2. Retrieve relevant knowledge with structured intent
-            structured_analysis = intent.get("structured_analysis", {})
-            knowledge_context = await self._retrieve_knowledge_context(
-                query=message.content, structured_intent=structured_analysis
-            )
+            # 2. Rule-based tool planning (no LLM call)
+            action_plan = self._create_rule_based_action_plan(intent, message.content)
 
-            # 3. Make a tool action plan
-            action_plan = await self._create_action_plan(intent, knowledge_context)
-
-            # 4. Execute tool action plan
+            # 3. Execute tool action plan
             self.status = AgentStatus.ACTING
-            # Add original message to context for knowledge retrieval
             execution_context = {
                 **message.metadata,
                 "original_message": message.content,
             }
             result = await self._execute_action_plan(action_plan, execution_context)
 
-            # 5. Generate response
-            response_content = await self._generate_response(result, intent)
+            # 4. Structured response fusion (template-based, fast)
+            structured_response = self._generate_structured_response(result, intent, message.content)
 
-            self.status = AgentStatus.IDLE
+            # 5. Fast quality assessment (heuristic, ~0.1s) - Skip if in refinement mode
+            if skip_quality_check:
+                self.status = AgentStatus.IDLE
+                return structured_response
+            
+            quality_score = await self._fast_quality_assessment(message, structured_response)
 
-            return AgentResponse(
-                success=True,
-                content=response_content,
-                actions_taken=action_plan.get("actions", []),
-                next_steps=action_plan.get("next_steps", []),
-                confidence=0.85,
-                metadata={
-                    "intent": intent,
-                    "tools_used": result.get("tools_used", []),
-                    "execution_time": result.get("execution_time", 0),
-                },
-            )
+            # 6. Quality good enough -> return, else LLM enhancement
+            if quality_score >= self.fast_response_threshold:  # 0.75 for fast response
+                self.status = AgentStatus.IDLE
+                return structured_response
+            else:
+                enhanced_response = await self._llm_enhanced_response(structured_response, result, intent)
+                self.status = AgentStatus.IDLE
+                return enhanced_response
 
         except Exception as e:
             self.status = AgentStatus.ERROR
+            logger.error(f"Error processing message: {e}")
             return AgentResponse(
-                success=False, content=f"An error occurred while processing the message: {str(e)}", confidence=0.0
+                success=False,
+                content=f"I encountered an error while processing your request: {str(e)}",
+                confidence=0.0,
+                metadata={"error": str(e)}
             )
 
-    async def _analyze_user_intent(self, user_message: str) -> Dict[str, Any]:
-        """Enhanced intent analysis with information fusion strategy"""
+    def _update_agent_memory_from_history(self, conversation_history: List[Dict], session_id: str):
+        """Update agent's memory and preferences from conversation history"""
+        logger.debug(f"Updating agent memory from {len(conversation_history)} conversation entries")
+        
+        # Update current planning context with session info
+        if not self.current_planning_context:
+            self.current_planning_context = {}
+        
+        self.current_planning_context.update({
+            "session_id": session_id,
+            "conversation_history": conversation_history,
+            "last_updated": datetime.now().isoformat(),
+        })
+        
+        # Extract user preferences from conversation history
+        for entry in conversation_history:
+            user_msg = entry.get("user", "").lower()
+            assistant_msg = entry.get("assistant", "").lower()
+            
+            # Extract travel preferences
+            if any(word in user_msg for word in ["prefer", "like", "love", "enjoy"]):
+                if "budget" in user_msg or "cheap" in user_msg:
+                    self.user_preferences_history["budget_conscious"] = True
+                if "luxury" in user_msg or "expensive" in user_msg:
+                    self.user_preferences_history["budget_conscious"] = False
+                if "adventure" in user_msg:
+                    self.user_preferences_history.setdefault("interests", []).append("adventure")
+                if "culture" in user_msg or "museum" in user_msg:
+                    self.user_preferences_history.setdefault("interests", []).append("culture")
+                if "food" in user_msg or "restaurant" in user_msg:
+                    self.user_preferences_history.setdefault("interests", []).append("food")
+            
+            # Extract mentioned destinations for context
+            destinations = ["tokyo", "kyoto", "paris", "london", "new york", "beijing", "shanghai", "rome", "barcelona"]
+            for dest in destinations:
+                if dest in user_msg:
+                    self.user_preferences_history.setdefault("visited_destinations", []).append(dest)
+        
+        # Remove duplicates from interests and destinations
+        if "interests" in self.user_preferences_history:
+            self.user_preferences_history["interests"] = list(set(self.user_preferences_history["interests"]))
+        if "visited_destinations" in self.user_preferences_history:
+            self.user_preferences_history["visited_destinations"] = list(set(self.user_preferences_history["visited_destinations"]))
+        
+        logger.debug(f"Updated user preferences: {self.user_preferences_history}")
 
-        # Step 1: Get LLM intent analysis using enhanced prompt
-        llm_analysis = await self._get_enhanced_llm_intent_analysis(user_message)
+    async def _analyze_user_intent(self, user_message: str, conversation_history: List[Dict] = None) -> Dict[str, Any]:
+        """Enhanced intent analysis with information fusion strategy and conversation context"""
+
+        # Step 0: Prepare conversation context for intent analysis
+        conversation_context = ""
+        if conversation_history:
+            recent_context = conversation_history[-3:]  # Use last 3 exchanges for context
+            context_parts = []
+            for entry in recent_context:
+                context_parts.append(f"User: {entry.get('user', '')}")
+                context_parts.append(f"Assistant: {entry.get('assistant', '')}")
+            conversation_context = "\n".join(context_parts)
+            logger.debug(f"Using conversation context for intent analysis: {len(conversation_context)} chars")
+
+        # Step 1: Get LLM intent analysis using enhanced prompt (with conversation context)
+        llm_analysis = await self._get_enhanced_llm_intent_analysis(user_message, conversation_context)
 
         # Step 2: Use structured response for deep analysis
         structured_intent = await self._parse_structured_intent(
@@ -522,15 +587,35 @@ class TravelAgent(BaseAgent):
             structured_intent, user_message
         )
 
+        # Step 4: Enhance with agent's learned preferences
+        if self.user_preferences_history:
+            enhanced_intent["learned_preferences"] = self.user_preferences_history.copy()
+            logger.debug(f"Added learned preferences to intent: {enhanced_intent['learned_preferences']}")
+
         return enhanced_intent
 
     async def _get_enhanced_llm_intent_analysis(
-        self, user_message: str
+        self, user_message: str, conversation_context: str = ""
     ) -> Dict[str, Any]:
-        """Get enhanced LLM intent analysis using updated prompt manager"""
+        """Get enhanced LLM intent analysis using updated prompt manager with conversation context"""
 
-        # Build enhanced prompt using updated prompt manager
-        analysis_prompt = prompt_manager.get_prompt(
+        # Build enhanced prompt with conversation context
+        if conversation_context:
+            # Create a context-aware prompt
+            context_aware_message = f"""
+Previous conversation context:
+{conversation_context}
+
+Current user message: {user_message}
+
+Please analyze the current message considering the conversation history for better context understanding.
+"""
+            analysis_prompt = prompt_manager.get_prompt(
+                PromptType.INTENT_ANALYSIS, user_message=context_aware_message
+            )
+        else:
+            # Standard prompt without context
+            analysis_prompt = prompt_manager.get_prompt(
             PromptType.INTENT_ANALYSIS, user_message=user_message
         )
 
@@ -1941,17 +2026,6 @@ class TravelAgent(BaseAgent):
                 "Ask follow-up questions",
             ]
 
-        # TODO: Use LLM for more sophisticated planning
-        # llm_prompt = f"""
-        # Based on the user intent: {intent}
-        # And context: {context}
-        # Create a detailed action plan including:
-        # 1. Sequence of actions to take
-        # 2. Tools to use
-        # 3. Parameters for each tool
-        # 4. Expected outcomes
-        # """
-
         return plan
 
     def _parse_llm_requirements(self, llm_response: str) -> Dict[str, Any]:
@@ -1983,7 +2057,7 @@ class TravelAgent(BaseAgent):
     async def _execute_action_plan(
         self, plan: Dict[str, Any], context: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute action plan using real tools"""
+        """Execute action plan using real tools and retrieve knowledge context"""
         results = {
             "tools_used": [],
             "results": {},
@@ -1994,8 +2068,17 @@ class TravelAgent(BaseAgent):
         try:
             # First, always retrieve knowledge context for any travel query
             query = context.get("original_message", "travel information")
+            # Use destination from plan for better knowledge retrieval
+            destination = plan.get("destination", "unknown")
+            if destination != "unknown":
+                query = f"{query} {destination}"
+            
             knowledge_context = await self._retrieve_knowledge_context(query)
             results["knowledge_context"] = knowledge_context
+            
+            # Add planning context to results
+            results["actions"] = plan.get("actions", [])
+            results["next_steps"] = plan.get("next_steps", [])
 
             # Execute tools using real tool executor
             if plan.get("tools_to_use"):
@@ -2069,6 +2152,7 @@ class TravelAgent(BaseAgent):
                             ),
                             "passengers": tool_params.get("passengers", 1),
                             "class_type": "economy",
+                            "budget_level": tool_params.get("budget_level", "mid-range")
                         }
                         tool_calls.append(
                             ToolCall(
@@ -3008,17 +3092,906 @@ This will help me provide you with the most relevant travel guidance possible.""
     def configure_refinement(
         self,
         enabled: bool = True,
-        quality_threshold: float = 0.8,
+        fast_response_threshold: float = 0.75,
+        quality_threshold: float = 0.9,
         max_iterations: int = 3,
     ):
-        """Configure self-refinement settings"""
+        """Configure self-refinement settings with two-tier thresholds"""
         self.refine_enabled = enabled
-        self.quality_threshold = quality_threshold
+        self.fast_response_threshold = fast_response_threshold  # For process_message LLM enhancement decision
+        self.quality_threshold = quality_threshold  # For refinement loop iteration decision
         self.max_refine_iterations = max_iterations
 
+    def _create_rule_based_action_plan(
+        self, intent: Dict[str, Any], user_message: str
+    ) -> Dict[str, Any]:
+        """
+        Create action plan using fast rule-based tool selection (no LLM calls)
+        Optimized for performance with simple but effective heuristics
+        """
+        try:
+            # Extract intent information
+            intent_type = intent.get("type") or intent.get("intent_type", "query")
+            destination = intent.get("destination", "unknown")
+            user_message_lower = user_message.lower()
+            
+            # Initialize plan
+            plan = {
+                "intent_type": intent_type,
+                "destination": destination,
+                "tools_to_use": [],
+                "tool_parameters": {},
+                "actions": [],
+                "next_steps": [],
+                "confidence": 0.8,
+                "planning_method": "rule_based"
+            }
+            
+            # Rule-based tool selection using keyword matching and intent analysis
+            selected_tools = self._select_tools_by_rules(intent_type, user_message_lower, destination)
+            
+            # Generate tool parameters using extracted intent information
+            tool_parameters = self._extract_tool_parameters_from_intent(
+                selected_tools, intent, user_message
+            )
+            
+            # Generate actions and next steps based on intent and tools
+            actions = self._generate_rule_based_actions(intent_type, selected_tools, destination)
+            next_steps = self._generate_rule_based_next_steps(intent_type, selected_tools)
+            
+            # Update plan
+            plan.update({
+                "tools_to_use": selected_tools,
+                "strategy": "parallel",
+                "tool_parameters": tool_parameters,
+                "actions": actions,
+                "next_steps": next_steps
+            })
+            
+            return plan
+            
+        except Exception as e:
+            logger.error(f"Error in rule-based action planning: {e}")
+            # Return minimal safe plan
+            return {
+                "intent_type": "query",
+                "tools_to_use": ["attraction_search"],
+                "tool_parameters": {"attraction_search": {"destination": destination}},
+                "actions": ["search_attractions", "provide_information"],
+                "next_steps": ["Let me know if you need more specific information"],
+                "confidence": 0.5,
+                "planning_method": "fallback"
+            }
 
-# Register Travel Agent
-from app.agents.base_agent import agent_manager
+    def _select_tools_by_rules(
+        self, intent_type: str, user_message_lower: str, destination: str
+    ) -> List[str]:
+        """Fast rule-based tool selection using keyword matching and intent patterns"""
+        
+        selected_tools = []
+        
+        # Tool selection rules based on keywords and intent
+        tool_rules = {
+            "flight_search": {
+                "keywords": ["flight", "fly", "airline", "airport", "ticket", "plane"],
+                "intent_weight": {"planning": 0.8, "booking": 0.9, "query": 0.3},
+                "priority": 1
+            },
+            "hotel_search": {
+                "keywords": ["hotel", "stay", "accommodation", "sleep", "room", "lodge"],
+                "intent_weight": {"planning": 0.9, "booking": 0.9, "query": 0.4},
+                "priority": 2
+            },
+            "attraction_search": {
+                "keywords": ["attraction", "visit", "see", "tour", "activity", "explore", "museum", "park"],
+                "intent_weight": {"planning": 0.7, "recommendation": 0.9, "query": 0.8},
+                "priority": 3
+            }
+        }
+        
+        # Calculate scores for each tool
+        tool_scores = {}
+        for tool_name, rules in tool_rules.items():
+            score = 0.0
+            
+            # Keyword matching score
+            keyword_matches = sum(1 for keyword in rules["keywords"] if keyword in user_message_lower)
+            if keyword_matches > 0:
+                score += min(keyword_matches * 0.3, 1.0)
+            
+            # Intent type bonus
+            intent_bonus = rules["intent_weight"].get(intent_type, 0.1)
+            score += intent_bonus
+            
+            # Destination bonus (all tools benefit from known destinations)
+            if destination != "unknown":
+                score += 0.2
+                
+            tool_scores[tool_name] = score
+        
+        # Select tools above threshold
+        threshold = 0.4
+        for tool_name, score in tool_scores.items():
+            if score >= threshold:
+                selected_tools.append(tool_name)
+        
+        # Ensure we have at least one tool for any travel request
+        if not selected_tools:
+            selected_tools = ["attraction_search"]  # Default fallback
+            
+        # Sort by score (highest first) and limit to 3 tools max for performance
+        selected_tools.sort(key=lambda x: tool_scores.get(x, 0), reverse=True)
+        selected_tools = selected_tools[:3]
+        
+        return selected_tools
 
-travel_agent = TravelAgent()
-agent_manager.register_agent(travel_agent)
+    def _extract_tool_parameters_from_intent(
+        self, selected_tools: List[str], intent: Dict[str, Any], user_message: str
+    ) -> Dict[str, Dict[str, Any]]:
+        """Extract tool parameters from intent analysis with safe defaults"""
+        
+        import datetime
+        
+        tool_parameters = {}
+        destination = intent.get("destination", "unknown")
+        
+        # Generate safe default dates (30 days from now)
+        default_check_in = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+        default_check_out = (datetime.datetime.now() + datetime.timedelta(days=33)).strftime("%Y-%m-%d")
+        default_departure = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+        
+        # Extract structured analysis if available
+        structured_analysis = intent.get("structured_analysis", {})
+        travel_details = structured_analysis.get("travel_details", {})
+        preferences = structured_analysis.get("preferences", {})
+        
+        for tool_name in selected_tools:
+            if tool_name == "attraction_search":
+                tool_parameters[tool_name] = {
+                    "location": destination if destination != "unknown" else "Tokyo",  # Safe fallback
+                    "query": None,  # Let tool use location-based search
+                    "max_results": 10,
+                    "include_photos": True,
+                    "min_rating": 4.0,
+                    "radius_meters": 10000,
+                    "interests": preferences.get("interests", [])
+                }
+                
+            elif tool_name == "hotel_search":
+                # Extract dates safely with proper format
+                dates_info = travel_details.get("dates", {})
+                check_in_date = dates_info.get("departure", default_check_in)
+                check_out_date = dates_info.get("return", default_check_out)
+                
+                # Ensure dates are in correct format
+                if check_in_date in ["unknown", "", None]:
+                    check_in_date = default_check_in
+                if check_out_date in ["unknown", "", None]:
+                    check_out_date = default_check_out
+                
+                tool_parameters[tool_name] = {
+                    "location": destination if destination != "unknown" else "Tokyo",  # Safe fallback
+                    "check_in": check_in_date,
+                    "check_out": check_out_date,
+                    "guests": max(travel_details.get("travelers", 1), 1),
+                    "rooms": 1,
+                    "min_rating": 4.0,
+                    "budget_level": travel_details.get("budget", {}).get("level", "mid-range")
+                }
+                
+            elif tool_name == "flight_search":
+                # Extract departure date safely
+                dates_info = travel_details.get("dates", {})
+                departure_date = dates_info.get("departure", default_departure)
+                
+                if departure_date in ["unknown", "", None]:
+                    departure_date = default_departure
+                
+                tool_parameters[tool_name] = {
+                    "origin": "JFK",  # Use realistic default airport code
+                    "destination": destination if destination != "unknown" else "Tokyo",
+                    "start_date": departure_date,
+                    "passengers": max(travel_details.get("travelers", 1), 1),
+                    "class_type": "economy",
+                    "budget_level": travel_details.get("budget", {}).get("level", "mid-range")
+                }
+        
+        logger.info(f"Generated tool parameters: {tool_parameters}")
+        return tool_parameters
+
+    def _generate_rule_based_actions(
+        self, intent_type: str, selected_tools: List[str], destination: str
+    ) -> List[str]:
+        """Generate action sequence based on intent and selected tools"""
+        
+        actions = []
+        
+        # Intent-based action templates
+        if intent_type == "planning":
+            actions.extend([
+                f"Analyze travel requirements for {destination}",
+                "Search for comprehensive travel options"
+            ])
+        elif intent_type == "recommendation":
+            actions.extend([
+                f"Find top recommendations for {destination}",
+                "Analyze user preferences"
+            ])
+        elif intent_type == "query":
+            actions.extend([
+                f"Search for information about {destination}",
+                "Provide relevant details"
+            ])
+        else:
+            actions.append(f"Process travel request for {destination}")
+        
+        # Tool-specific actions
+        for tool in selected_tools:
+            if tool == "attraction_search":
+                actions.append("Search for attractions and activities")
+            elif tool == "hotel_search":
+                actions.append("Search for accommodation options")
+            elif tool == "flight_search":
+                actions.append("Search for flight information")
+        
+        actions.append("Compile comprehensive travel information")
+        
+        return actions
+
+    def _generate_rule_based_next_steps(
+        self, intent_type: str, selected_tools: List[str]
+    ) -> List[str]:
+        """Generate next steps based on intent and tools used"""
+        
+        next_steps = []
+        
+        # Intent-based next steps
+        if intent_type == "planning":
+            next_steps.extend([
+                "Review the travel plan and let me know your preferences",
+                "I can help create a detailed day-by-day itinerary"
+            ])
+        elif intent_type == "recommendation":
+            next_steps.extend([
+                "Let me know which recommendations interest you most",
+                "I can provide more details about specific attractions"
+            ])
+        elif intent_type == "booking":
+            next_steps.extend([
+                "Compare the options and choose your preferences",
+                "I can help you with the booking process"
+            ])
+        else:
+            next_steps.append("Let me know if you need more specific information")
+        
+        # Tool-specific next steps
+        if "flight_search" in selected_tools:
+            next_steps.append("Consider booking flights early for better prices")
+        if "hotel_search" in selected_tools:
+            next_steps.append("Check hotel reviews and amenities")
+        
+        # General travel planning steps
+        next_steps.extend([
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+        ])
+        
+        return next_steps
+
+    def _generate_structured_response(
+        self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
+    ) -> AgentResponse:
+        """
+        Generate structured response using fast template-based fusion
+        No LLM calls - uses templates and rule-based content generation
+        """
+        try:
+            # Extract key information
+            intent_type = intent.get("type") or intent.get("intent_type", "query")
+            destination = intent.get("destination", "unknown")
+            tools_used = execution_result.get("tools_used", [])
+            tool_results = execution_result.get("results", {})
+            execution_success = execution_result.get("success", False)
+            
+            # Determine response success based on whether we can provide useful content
+            # Even if tools fail, we can still provide value with knowledge and guidance
+            has_useful_content = (
+                destination != "unknown" or 
+                tool_results or 
+                intent_type in ["query", "recommendation", "planning"]
+            )
+            
+            # Generate content using templates based on intent and results
+            if execution_success and tool_results:
+                content = self._build_structured_content(
+                    intent_type, destination, tools_used, tool_results, user_message
+                )
+                confidence = 0.87
+                response_success = True
+            elif has_useful_content:
+                # Generate helpful content even when tools partially fail
+                content = self._build_mixed_content(
+                    intent_type, destination, tools_used, tool_results, user_message
+                )
+                confidence = 0.75
+                response_success = True  # We can still help the user
+            else:
+                # Handle true error cases with fallback content
+                content = self._build_fallback_content(intent_type, destination, user_message)
+                confidence = 0.6
+                response_success = False
+            
+            # Create response with structured metadata
+            response = AgentResponse(
+                success=response_success,
+                content=content,
+                actions_taken=execution_result.get("actions", []),
+                next_steps=execution_result.get("next_steps", []),
+                confidence=confidence,
+                metadata={
+                    "intent": intent,
+                    "tools_used": tools_used,
+                    "execution_time": execution_result.get("execution_time", 0),
+                    "response_method": "structured_template",
+                    "destination": destination,
+                    "intent_type": intent_type,
+                    "tool_execution_success": execution_success,
+                    "partial_tool_success": bool(tool_results)
+                }
+            )
+            
+            logger.info(f"Structured response generated: success={response_success}, {len(content)} chars, confidence: {confidence}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating structured response: {e}")
+            # Emergency fallback
+            return AgentResponse(
+                success=False,
+                content=f"I apologize, but I encountered an issue processing your travel request about {destination}. Please try rephrasing your question.",
+                confidence=0.3,
+                metadata={"error": str(e), "response_method": "emergency_fallback"}
+            )
+
+    def _build_structured_content(
+        self, intent_type: str, destination: str, tools_used: List[str], 
+        tool_results: Dict[str, Any], user_message: str
+    ) -> str:
+        """Build response content using structured templates"""
+        
+        content_parts = []
+        
+        # Add greeting/acknowledgment based on intent
+        greeting = self._get_intent_greeting(intent_type, destination)
+        content_parts.append(greeting)
+        
+        # Add tool-specific content sections
+        for tool_name in tools_used:
+            if tool_name in tool_results:
+                tool_content = self._format_tool_results(tool_name, tool_results[tool_name], destination)
+                if tool_content:
+                    content_parts.append(tool_content)
+        
+        # Add recommendations and next steps
+        recommendations = self._generate_template_recommendations(intent_type, destination, tools_used)
+        if recommendations:
+            content_parts.append(recommendations)
+        
+        # Join all parts with proper spacing
+        return "\n\n".join(content_parts)
+
+    def _get_intent_greeting(self, intent_type: str, destination: str) -> str:
+        """Get appropriate greeting based on intent type"""
+        
+        greetings = {
+            "planning": f"I'll help you plan your trip to {destination}! Here's what I found:",
+            "recommendation": f"Here are my top recommendations for {destination}:",
+            "query": f"Here's information about {destination}:",
+            "booking": f"I found these booking options for {destination}:",
+            "modification": f"Here are updated options for your {destination} trip:"
+        }
+        
+        return greetings.get(intent_type, f"Here's information about {destination}:")
+
+    def _format_tool_results(self, tool_name: str, tool_result: Dict[str, Any], destination: str) -> str:
+        """Format individual tool results using templates"""
+        
+        if not tool_result or "error" in tool_result:
+            return f"I had trouble finding {tool_name.replace('_', ' ')} information, but I can still help with general advice about {destination}."
+        
+        if tool_name == "attraction_search":
+            return self._format_attraction_results(tool_result, destination)
+        elif tool_name == "hotel_search":
+            return self._format_hotel_results(tool_result, destination)
+        elif tool_name == "flight_search":
+            return self._format_flight_results(tool_result, destination)
+        else:
+            return f"Found information from {tool_name.replace('_', ' ')} search."
+
+    def _format_attraction_results(self, result: Dict[str, Any], destination: str) -> str:
+        """Format attraction search results"""
+        
+        content = f"🎯 **Top Attractions in {destination}**\n"
+        
+        attractions = result.get("attractions", [])
+        if attractions:
+            for i, attraction in enumerate(attractions[:5], 1):  # Top 5
+                name = attraction.get("name", "Unknown Attraction")
+                rating = attraction.get("rating", "No rating")
+                description = attraction.get("description", "")[:100] + "..." if len(attraction.get("description", "")) > 100 else attraction.get("description", "")
+                
+                content += f"{i}. **{name}** (Rating: {rating})\n   {description}\n"
+        else:
+            content += f"I found several popular attractions in {destination} that are worth visiting. "
+            content += "The area offers great opportunities for sightseeing and cultural experiences."
+        
+        return content
+
+    def _format_hotel_results(self, result: Dict[str, Any], destination: str) -> str:
+        """Format hotel search results"""
+        
+        content = f"🏨 **Accommodation Options in {destination}**\n"
+        
+        hotels = result.get("hotels", [])
+        if hotels:
+            for i, hotel in enumerate(hotels[:5], 1):  # Top 5
+                name = hotel.get("name", "Unknown Hotel")
+                price = hotel.get("price_per_night", hotel.get("price", "Price available"))
+                rating = hotel.get("rating", "No rating")
+                location = hotel.get("location", destination)
+                
+                content += f"{i}. **{name}** (Rating: {rating})\n   Location: {location} | Price: {price}\n"
+        else:
+            content += f"There are good accommodation options available in {destination}. "
+            content += "I recommend booking in advance for better rates and availability."
+        
+        return content
+
+    def _format_flight_results(self, result: Dict[str, Any], destination: str) -> str:
+        """Format flight search results"""
+        
+        content = f"✈️ **Flight Information to {destination}**\n"
+        
+        flights = result.get("flights", [])
+        if flights:
+            for i, flight in enumerate(flights[:3], 1):  # Top 3
+                airline = flight.get("airline", "Unknown Airline")
+                price = flight.get("price", "Price available")
+                duration = flight.get("duration", "Duration varies")
+                
+                content += f"{i}. **{airline}** | Price: {price} | Duration: {duration}\n"
+        else:
+            content += f"Flight options are available to {destination}. "
+            content += "I recommend comparing prices across different booking platforms and being flexible with dates."
+        
+        return content
+
+    def _generate_template_recommendations(
+        self, intent_type: str, destination: str, tools_used: List[str]
+    ) -> str:
+        """Generate recommendations using templates"""
+        
+        recommendations = []
+        
+        # Intent-specific recommendations
+        if intent_type == "planning":
+            recommendations.extend([
+                "💡 **Travel Tips:**",
+                f"• Research local customs and etiquette for {destination}",
+                "• Check weather conditions for your travel dates",
+                "• Consider getting travel insurance"
+            ])
+        elif intent_type == "recommendation":
+            recommendations.extend([
+                "💡 **Additional Suggestions:**",
+                "• Check opening hours and seasonal availability",
+                "• Read recent reviews from other travelers",
+                "• Consider booking popular attractions in advance"
+            ])
+        
+        # Tool-specific recommendations
+        if "flight_search" in tools_used:
+            recommendations.append("• Book flights 2-3 months in advance for better prices")
+        if "hotel_search" in tools_used:
+            recommendations.append("• Compare amenities and read recent guest reviews")
+        if "attraction_search" in tools_used:
+            recommendations.append("• Check for combo tickets or city passes for multiple attractions")
+        
+        return "\n".join(recommendations) if recommendations else ""
+
+    def _build_fallback_content(self, intent_type: str, destination: str, user_message: str) -> str:
+        """Build fallback content when tools fail"""
+        
+        content_parts = [
+            f"I understand you're interested in {intent_type} for {destination}.",
+            "",
+            "While I'm having some technical difficulties accessing current data, I can still help you with:",
+            "• General travel advice and tips",
+            "• Popular attractions and landmarks",
+            "• Local customs and cultural information",
+            "• Transportation options and guidance",
+            "",
+            "Please let me know what specific aspect of your trip you'd like to discuss, and I'll provide helpful information based on my knowledge."
+        ]
+        
+        return "\n".join(content_parts)
+
+    def _build_mixed_content(
+        self, intent_type: str, destination: str, tools_used: List[str], 
+        tool_results: Dict[str, Any], user_message: str
+    ) -> str:
+        """Build content when some tools succeed and others fail"""
+        
+        content_parts = []
+        
+        # Add greeting/acknowledgment
+        greeting = self._get_intent_greeting(intent_type, destination)
+        content_parts.append(greeting)
+        
+        # Process available tool results
+        successful_tools = []
+        failed_tools = []
+        
+        for tool_name in tools_used:
+            if tool_name in tool_results and not tool_results[tool_name].get("error"):
+                successful_tools.append(tool_name)
+                tool_content = self._format_tool_results(tool_name, tool_results[tool_name], destination)
+                if tool_content:
+                    content_parts.append(tool_content)
+            else:
+                failed_tools.append(tool_name)
+        
+        # Add information about what we couldn't retrieve
+        if failed_tools:
+            failed_info = self._generate_fallback_info_for_failed_tools(failed_tools, destination)
+            if failed_info:
+                content_parts.append(failed_info)
+        
+        # Add general recommendations based on destination knowledge
+        if destination != "unknown":
+            general_advice = self._generate_destination_advice(destination, intent_type)
+            if general_advice:
+                content_parts.append(general_advice)
+        
+        # Add helpful next steps
+        recommendations = self._generate_template_recommendations(intent_type, destination, successful_tools)
+        if recommendations:
+            content_parts.append(recommendations)
+        
+        return "\n\n".join(content_parts)
+
+    def _generate_fallback_info_for_failed_tools(self, failed_tools: List[str], destination: str) -> str:
+        """Generate helpful information for failed tools"""
+        
+        if not failed_tools:
+            return ""
+        
+        info_parts = ["ℹ️ **Additional Information:**"]
+        
+        for tool_name in failed_tools:
+            if tool_name == "hotel_search":
+                info_parts.append(f"• For accommodation in {destination}, I recommend checking major booking platforms like Booking.com, Hotels.com, or Expedia")
+            elif tool_name == "flight_search":
+                info_parts.append(f"• For flights to {destination}, compare prices on Google Flights, Kayak, or airline websites directly")
+            elif tool_name == "attraction_search":
+                info_parts.append(f"• For attractions in {destination}, check TripAdvisor, local tourism websites, or travel guides")
+        
+        return "\n".join(info_parts) if len(info_parts) > 1 else ""
+
+    def _generate_destination_advice(self, destination: str, intent_type: str) -> str:
+        """Generate general advice based on destination knowledge"""
+        
+        # Basic destination advice based on common knowledge
+        destination_lower = destination.lower()
+        
+        advice_parts = ["🗺️ **General Travel Advice:**"]
+        
+        if destination_lower in ["tokyo", "japan"]:
+            advice_parts.extend([
+                "• Consider getting a JR Pass for convenient train travel",
+                "• Try local cuisine like sushi, ramen, and tempura",
+                "• Visit during spring (cherry blossoms) or fall (autumn colors)",
+                "• Learn basic Japanese phrases - locals appreciate the effort"
+            ])
+        elif destination_lower in ["paris", "france"]:
+            advice_parts.extend([
+                "• Visit iconic landmarks like the Eiffel Tower and Louvre Museum",
+                "• Try authentic French cuisine and visit local cafés", 
+                "• Consider a Seine river cruise for beautiful city views",
+                "• Book popular attractions in advance to avoid long lines"
+            ])
+        elif destination_lower in ["london", "uk"]:
+            advice_parts.extend([
+                "• Use an Oyster Card for convenient public transportation",
+                "• Visit free museums like the British Museum and Tate Modern",
+                "• Experience traditional afternoon tea and pub culture",
+                "• Check the weather and pack layers for unpredictable conditions"
+            ])
+        else:
+            advice_parts.extend([
+                f"• Research local customs and etiquette for {destination}",
+                "• Check visa requirements and travel documentation needed",
+                "• Look into local transportation options and travel cards",
+                "• Try authentic local cuisine and cultural experiences"
+            ])
+        
+        return "\n".join(advice_parts)
+
+    async def _fast_quality_assessment(
+        self, original_message: AgentMessage, response: AgentResponse
+    ) -> float:
+        """
+        Fast heuristic-based quality assessment (~0.1s)
+        No LLM calls - uses rule-based scoring
+        """
+        try:
+            user_message = original_message.content.lower()
+            response_content = response.content.lower()
+            metadata = response.metadata
+            
+            # Initialize score
+            total_score = 0.0
+            max_score = 0.0
+            
+            # 1. Relevance assessment (weight: 0.3)
+            relevance_score = self._assess_relevance_heuristic(user_message, response_content, metadata)
+            total_score += relevance_score * 0.3
+            max_score += 0.3
+            
+            # 2. Completeness assessment (weight: 0.25)
+            completeness_score = self._assess_completeness_heuristic(user_message, response_content, metadata)
+            total_score += completeness_score * 0.25
+            max_score += 0.25
+            
+            # 3. Actionability assessment (weight: 0.2)
+            actionability_score = self._assess_actionability_heuristic(response)
+            total_score += actionability_score * 0.2
+            max_score += 0.2
+            
+            # 4. Information fusion assessment (weight: 0.15)
+            fusion_score = self._assess_fusion_heuristic(metadata, response_content)
+            total_score += fusion_score * 0.15
+            max_score += 0.15
+            
+            # 5. Response structure assessment (weight: 0.1)
+            structure_score = self._assess_structure_heuristic(response_content)
+            total_score += structure_score * 0.1
+            max_score += 0.1
+            
+            # Calculate final normalized score
+            final_score = total_score / max_score if max_score > 0 else 0.5
+            
+            logger.debug(f"Fast quality assessment: {final_score:.3f} (relevance: {relevance_score:.2f}, completeness: {completeness_score:.2f}, actionability: {actionability_score:.2f})")
+            
+            return min(final_score, 1.0)
+            
+        except Exception as e:
+            logger.error(f"Error in fast quality assessment: {e}")
+            return 0.5  # Default neutral score
+
+    def _assess_relevance_heuristic(
+        self, user_message: str, response_content: str, metadata: Dict[str, Any]
+    ) -> float:
+        """Assess relevance using keyword matching and intent alignment"""
+        
+        score = 0.4  # Base score
+        
+        # Extract key travel-related terms from user message
+        travel_keywords = [
+            "trip", "travel", "visit", "plan", "go", "tour", "vacation", "holiday",
+            "flight", "hotel", "attraction", "restaurant", "activity", "sightseeing"
+        ]
+        
+        user_keywords = [word for word in travel_keywords if word in user_message]
+        response_keywords = [word for word in travel_keywords if word in response_content]
+        
+        # Keyword overlap score
+        if user_keywords:
+            overlap_ratio = len(set(user_keywords) & set(response_keywords)) / len(user_keywords)
+            score += overlap_ratio * 0.3
+        
+        # Destination mention check
+        destination = metadata.get("destination", "unknown")
+        if destination != "unknown" and destination.lower() in response_content:
+            score += 0.2
+        
+        # Intent alignment check
+        intent_type = metadata.get("intent_type", "")
+        intent_keywords = {
+            "planning": ["plan", "itinerary", "schedule", "organize"],
+            "recommendation": ["recommend", "suggest", "best", "top"],
+            "query": ["information", "about", "details", "facts"],
+            "booking": ["book", "reserve", "purchase", "buy"]
+        }
+        
+        if intent_type in intent_keywords:
+            intent_words = intent_keywords[intent_type]
+            if any(word in response_content for word in intent_words):
+                score += 0.1
+        
+        return min(score, 1.0)
+
+    def _assess_completeness_heuristic(
+        self, user_message: str, response_content: str, metadata: Dict[str, Any]
+    ) -> float:
+        """Assess completeness based on response structure and content"""
+        
+        score = 0.3  # Base score
+        
+        # Response length assessment (indicates thoroughness)
+        if len(response_content) >= 200:
+            score += 0.2
+        elif len(response_content) >= 100:
+            score += 0.1
+        
+        # Tools used assessment
+        tools_used = metadata.get("tools_used", [])
+        if tools_used:
+            score += min(len(tools_used) * 0.1, 0.3)
+        
+        # Structured content indicators
+        structure_indicators = ["**", "•", "1.", "2.", "3.", "🎯", "🏨", "✈️", "💡"]
+        structure_count = sum(1 for indicator in structure_indicators if indicator in response_content)
+        if structure_count >= 3:
+            score += 0.2
+        elif structure_count >= 1:
+            score += 0.1
+        
+        # Information variety (multiple aspects covered)
+        info_aspects = ["attraction", "hotel", "flight", "tip", "recommendation", "price", "rating"]
+        aspects_covered = sum(1 for aspect in info_aspects if aspect in response_content)
+        if aspects_covered >= 3:
+            score += 0.1
+        
+        return min(score, 1.0)
+
+    def _assess_actionability_heuristic(self, response: AgentResponse) -> float:
+        """Assess how actionable the response is"""
+        
+        score = 0.4  # Base score
+        
+        # Check for actionable elements
+        if response.actions_taken:
+            score += min(len(response.actions_taken) * 0.1, 0.2)
+        
+        if response.next_steps:
+            score += min(len(response.next_steps) * 0.1, 0.3)
+        
+        # Check for actionable language in content
+        actionable_phrases = [
+            "book", "reserve", "check", "compare", "consider", "visit", "contact",
+            "search", "browse", "review", "verify", "plan", "schedule"
+        ]
+        
+        content_lower = response.content.lower()
+        actionable_count = sum(1 for phrase in actionable_phrases if phrase in content_lower)
+        if actionable_count >= 3:
+            score += 0.1
+        
+        return min(score, 1.0)
+
+    def _assess_fusion_heuristic(self, metadata: Dict[str, Any], response_content: str) -> float:
+        """Assess information fusion quality"""
+        
+        score = 0.5  # Base score
+        
+        # Check if multiple information sources were used
+        tools_used = metadata.get("tools_used", [])
+        if len(tools_used) >= 2:
+            score += 0.3
+        elif len(tools_used) >= 1:
+            score += 0.1
+        
+        # Check for integration indicators
+        integration_phrases = [
+            "based on", "found", "available", "options", "information shows",
+            "according to", "results indicate", "search shows"
+        ]
+        
+        integration_count = sum(1 for phrase in integration_phrases if phrase in response_content)
+        if integration_count >= 2:
+            score += 0.2
+        elif integration_count >= 1:
+            score += 0.1
+        
+        return min(score, 1.0)
+
+    def _assess_structure_heuristic(self, response_content: str) -> float:
+        """Assess response structure and formatting"""
+        
+        score = 0.4  # Base score
+        
+        # Check for good formatting
+        formatting_elements = [
+            "**",  # Bold text
+            "•",   # Bullet points
+            "\n\n", # Paragraph breaks
+            ":",   # Section separators
+            "1.",  # Numbered lists
+        ]
+        
+        formatting_count = sum(1 for element in formatting_elements if element in response_content)
+        if formatting_count >= 3:
+            score += 0.4
+        elif formatting_count >= 2:
+            score += 0.2
+        elif formatting_count >= 1:
+            score += 0.1
+        
+        # Check for logical structure (sections)
+        has_sections = ("**" in response_content and 
+                       ("\n\n" in response_content or ":" in response_content))
+        if has_sections:
+            score += 0.2
+        
+        return min(score, 1.0)
+
+    async def _llm_enhanced_response(
+        self, structured_response: AgentResponse, execution_result: Dict[str, Any], intent: Dict[str, Any]
+    ) -> AgentResponse:
+        """
+        Enhance structured response using LLM when quality is insufficient
+        Only called when fast assessment shows quality below threshold
+        """
+        try:
+            logger.info("Enhancing response with LLM due to quality concerns")
+            
+            # Prepare context for LLM enhancement
+            user_message = execution_result.get("original_message", "")
+            knowledge_context = execution_result.get("knowledge_context", {})
+            tool_results = execution_result.get("results", {})
+            
+            # Retrieve knowledge context if not available
+            if not knowledge_context:
+                structured_analysis = intent.get("structured_analysis", {})
+                knowledge_context = await self._retrieve_knowledge_context(
+                    query=user_message, structured_intent=structured_analysis
+                )
+            
+            # Use existing LLM-based response generation
+            enhanced_content = await self._generate_response(execution_result, intent)
+            
+            # Create enhanced response
+            enhanced_response = AgentResponse(
+                success=structured_response.success,
+                content=enhanced_content,
+                actions_taken=structured_response.actions_taken,
+                next_steps=structured_response.next_steps,
+                confidence=min(structured_response.confidence + 0.1, 1.0),
+                metadata={
+                    **structured_response.metadata,
+                    "response_method": "llm_enhanced",
+                    "original_quality": structured_response.metadata.get("quality_score", 0.0),
+                    "enhancement_applied": True,
+                    "knowledge_context": knowledge_context
+                }
+            )
+            
+            logger.info(f"LLM enhancement completed, content length: {len(enhanced_content)}")
+            return enhanced_response
+            
+        except Exception as e:
+            logger.error(f"Error in LLM enhancement: {e}")
+            # Return original structured response if enhancement fails
+            structured_response.metadata["enhancement_failed"] = str(e)
+            return structured_response
+
+
+# Global travel agent instance (singleton pattern)
+_travel_agent: Optional[TravelAgent] = None
+
+def get_travel_agent() -> TravelAgent:
+    """Get travel agent instance (singleton pattern)"""
+    global _travel_agent
+    if _travel_agent is None:
+        _travel_agent = TravelAgent()
+        logger.info("✅ Created singleton Travel Agent instance")
+        
+        # Register with agent manager
+        from app.agents.base_agent import agent_manager
+        agent_manager.register_agent(_travel_agent)
+        
+    return _travel_agent
+
+# Initialize the singleton instance on module import
+travel_agent = get_travel_agent()

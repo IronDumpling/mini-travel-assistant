@@ -1,11 +1,16 @@
 """
-Session Management Endpoints - Session CRUD operations
+Session Management Endpoints - Session CRUD operations with RAG-enhanced search
 """
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
+from app.memory.conversation_memory import get_conversation_memory
+from app.core.logging_config import get_logger
+from datetime import datetime
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -247,4 +252,153 @@ async def export_session_messages(session_id: str, format: str = "json"):
         return JSONResponse(
             status_code=500,
             content={"error": f"Failed to export session: {str(e)}"}
+        )
+
+# 🆕 RAG-Enhanced Intelligent Features
+
+@router.get("/sessions/{session_id}/intelligent-search")
+async def intelligent_search_session(session_id: str, query: str, limit: int = 10):
+    """使用RAG进行智能语义搜索"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 使用RAG进行语义搜索
+        results = await conversation_memory.search_conversations(
+            query=query,
+            session_id=session_id
+        )
+        
+        return {
+            "session_id": session_id,
+            "query": query,
+            "results": [
+                {
+                    "user_message": turn.user_message,
+                    "agent_response": turn.agent_response,
+                    "timestamp": turn.timestamp.isoformat(),
+                    "importance_score": turn.importance_score,
+                    "intent": turn.intent,
+                    "sentiment": turn.sentiment
+                }
+                for turn in results[:limit]
+            ],
+            "total_found": len(results),
+            "search_type": "semantic_rag"
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"智能搜索失败: {str(e)}"}
+        )
+
+@router.get("/sessions/{session_id}/preferences")
+async def extract_user_preferences(session_id: str):
+    """提取用户旅行偏好"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 使用RAG分析用户偏好
+        preferences = await conversation_memory.extract_user_preferences(session_id)
+        
+        return {
+            "session_id": session_id,
+            "preferences": preferences,
+            "extraction_method": "rag_analysis",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"偏好提取失败: {str(e)}"}
+        )
+
+@router.get("/sessions/{session_id}/summary")
+async def get_session_summary(session_id: str):
+    """生成智能会话总结"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 生成智能总结
+        summary = await conversation_memory.get_session_summary(session_id)
+        
+        return {
+            "session_id": session_id,
+            "summary": summary,
+            "generation_method": "rag_enhanced",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"总结生成失败: {str(e)}"}
+        )
+
+@router.get("/sessions/{session_id}/context")
+async def get_relevant_context(session_id: str, query: str, max_turns: int = 5):
+    """获取与查询相关的对话上下文"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 获取相关上下文
+        context_turns = await conversation_memory.get_relevant_context(
+            session_id=session_id,
+            query=query,
+            max_turns=max_turns
+        )
+        
+        return {
+            "session_id": session_id,
+            "query": query,
+            "relevant_context": [
+                {
+                    "user_message": turn.user_message,
+                    "agent_response": turn.agent_response,
+                    "timestamp": turn.timestamp.isoformat(),
+                    "importance_score": turn.importance_score,
+                    "intent": turn.intent
+                }
+                for turn in context_turns
+            ],
+            "context_count": len(context_turns),
+            "max_requested": max_turns
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"上下文获取失败: {str(e)}"}
+        )
+
+@router.get("/conversations/global-search")
+async def global_intelligent_search(query: str, limit: int = 20):
+    """跨所有会话的全局智能搜索"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 全局语义搜索
+        results = await conversation_memory.search_conversations(
+            query=query,
+            session_id=None  # 搜索所有会话
+        )
+        
+        return {
+            "query": query,
+            "results": [
+                {
+                    "user_message": turn.user_message,
+                    "agent_response": turn.agent_response,
+                    "timestamp": turn.timestamp.isoformat(),
+                    "importance_score": turn.importance_score,
+                    "intent": turn.intent,
+                    "sentiment": turn.sentiment
+                }
+                for turn in results[:limit]
+            ],
+            "total_found": len(results),
+            "search_scope": "global",
+            "search_type": "semantic_rag"
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"全局搜索失败: {str(e)}"}
         ) 

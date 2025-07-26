@@ -156,6 +156,12 @@ async def lifespan(app: FastAPI):
         await tool_executor.tool_selector.initialize_tool_knowledge()
         logger.info("✅ Tool knowledge initialized for RAG-based tool selection")
         
+        # 6. 🆕 Initialize Travel Agent (singleton) 
+        logger.info("🧳 Initializing Travel Agent singleton...")
+        from app.agents.travel_agent import get_travel_agent
+        travel_agent = get_travel_agent()
+        logger.info(f"✅ Travel Agent initialized: {travel_agent.name} (singleton pattern)")
+        
         logger.info("🎉 AI Travel Planning Agent successfully started")
         
     except Exception as e:

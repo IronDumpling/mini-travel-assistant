@@ -1,0 +1,533 @@
+[
+  {
+    "test_id": "5e54269a-3978-4d9c-b2e9-8caa64245102",
+    "test_type": "single_session",
+    "session_id": "9dd1ad2e-bac9-4cdd-b7a6-397dd2076a9a",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 7-day trip to London for 2 people with a budget of $3000",
+      "session_id": "9dd1ad2e-bac9-4cdd-b7a6-397dd2076a9a",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to London! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Use an Oyster Card for convenient public transportation\n• Visit free museums like the British Museum and Tate Modern\n• Experience traditional afternoon tea and pub culture\n• Check the weather and pack layers for unpredictable conditions\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for London\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for London",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "9dd1ad2e-bac9-4cdd-b7a6-397dd2076a9a",
+      "refinement_details": null
+    },
+    "total_response_time": 28.298760890960693,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for London",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:14:03.825526",
+    "error_message": null
+  },
+  {
+    "test_id": "42f5cdac-f249-4309-8c81-7eabc290ab7f",
+    "test_type": "single_session",
+    "session_id": "252b7a71-2f94-4d03-8fda-e9d84a7ea226",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a romantic weekend in Paris for 2 people, focusing on fine dining and cultural experiences",
+      "session_id": "252b7a71-2f94-4d03-8fda-e9d84a7ea226",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Paris! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Visit iconic landmarks like the Eiffel Tower and Louvre Museum\n• Try authentic French cuisine and visit local cafés\n• Consider a Seine river cruise for beautiful city views\n• Book popular attractions in advance to avoid long lines\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Paris\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for Paris",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "252b7a71-2f94-4d03-8fda-e9d84a7ea226",
+      "refinement_details": null
+    },
+    "total_response_time": 29.87484574317932,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for Paris",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:14:34.707852",
+    "error_message": null
+  },
+  {
+    "test_id": "5383a935-0df9-4078-bfcd-8c421c4f0954",
+    "test_type": "single_session",
+    "session_id": "6b415e5d-ad9c-4466-90b5-f8525369df9e",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "I need a 3-day business trip to Tokyo with meetings in Shibuya and Shinjuku areas",
+      "session_id": "6b415e5d-ad9c-4466-90b5-f8525369df9e",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Tokyo! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Consider getting a JR Pass for convenient train travel\n• Try local cuisine like sushi, ramen, and tempura\n• Visit during spring (cherry blossoms) or fall (autumn colors)\n• Learn basic Japanese phrases - locals appreciate the effort\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Tokyo\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for Tokyo",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "6b415e5d-ad9c-4466-90b5-f8525369df9e",
+      "refinement_details": null
+    },
+    "total_response_time": 46.9534227848053,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for Tokyo",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:15:22.670291",
+    "error_message": null
+  },
+  {
+    "test_id": "ed1a2fc4-7356-450d-bb58-349540892dd8",
+    "test_type": "single_session",
+    "session_id": "03e1dd1a-271b-44c0-9fc1-fa7a1493ea69",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 5-day family trip to Singapore with 2 adults and 2 children (ages 8 and 12)",
+      "session_id": "03e1dd1a-271b-44c0-9fc1-fa7a1493ea69",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Singapore! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Research local customs and etiquette for Singapore\n• Check visa requirements and travel documentation needed\n• Look into local transportation options and travel cards\n• Try authentic local cuisine and cultural experiences\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Singapore\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for Singapore",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "03e1dd1a-271b-44c0-9fc1-fa7a1493ea69",
+      "refinement_details": null
+    },
+    "total_response_time": 41.45301532745361,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for Singapore",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:16:05.139381",
+    "error_message": null
+  },
+  {
+    "test_id": "628786bc-5ec7-41c7-ac46-15202dee9cb8",
+    "test_type": "single_session",
+    "session_id": "856b22e7-953b-424f-ba34-076cce9b6582",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Create a 14-day backpacking itinerary across Europe for a student with a $1500 budget",
+      "session_id": "856b22e7-953b-424f-ba34-076cce9b6582",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Europe! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Research local customs and etiquette for Europe\n• Check visa requirements and travel documentation needed\n• Look into local transportation options and travel cards\n• Try authentic local cuisine and cultural experiences\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Europe\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for Europe",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "856b22e7-953b-424f-ba34-076cce9b6582",
+      "refinement_details": null
+    },
+    "total_response_time": 59.26559901237488,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for Europe",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:17:05.413989",
+    "error_message": null
+  },
+  {
+    "test_id": "625c0e24-6789-481a-a8c7-33316f148f9b",
+    "test_type": "single_session",
+    "session_id": "18ce4046-be8a-4c85-b9d1-c6ed737e8875",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a luxury 4-day trip to Dubai for celebrating our anniversary, budget is flexible",
+      "session_id": "18ce4046-be8a-4c85-b9d1-c6ed737e8875",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Dubai! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Research local customs and etiquette for Dubai\n• Check visa requirements and travel documentation needed\n• Look into local transportation options and travel cards\n• Try authentic local cuisine and cultural experiences\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Dubai\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for Dubai",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "18ce4046-be8a-4c85-b9d1-c6ed737e8875",
+      "refinement_details": null
+    },
+    "total_response_time": 58.751625061035156,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for Dubai",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:18:05.193005",
+    "error_message": null
+  },
+  {
+    "test_id": "d7887d60-acca-403a-906f-f63b2c6f0ed0",
+    "test_type": "single_session",
+    "session_id": "d7031caa-cfdd-41d1-acde-35525acfe1cf",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "I'm planning a solo trip to Barcelona for 6 days, interested in art, architecture, and nightlife",
+      "session_id": "d7031caa-cfdd-41d1-acde-35525acfe1cf",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Barcelona! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Research local customs and etiquette for Barcelona\n• Check visa requirements and travel documentation needed\n• Look into local transportation options and travel cards\n• Try authentic local cuisine and cultural experiences\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Barcelona\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for Barcelona",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "d7031caa-cfdd-41d1-acde-35525acfe1cf",
+      "refinement_details": null
+    },
+    "total_response_time": 31.110024213790894,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for Barcelona",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:18:37.321871",
+    "error_message": null
+  },
+  {
+    "test_id": "51c5f65b-11b1-403e-b57f-93c92333840f",
+    "test_type": "single_session",
+    "session_id": "09368015-7f80-48d8-b710-7eef9ca3aa67",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 5-day ski trip to the Swiss Alps for 4 people in February",
+      "session_id": "09368015-7f80-48d8-b710-7eef9ca3aa67",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Swiss Alps! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Research local customs and etiquette for Swiss Alps\n• Check visa requirements and travel documentation needed\n• Look into local transportation options and travel cards\n• Try authentic local cuisine and cultural experiences\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Swiss Alps\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for Swiss Alps",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "09368015-7f80-48d8-b710-7eef9ca3aa67",
+      "refinement_details": null
+    },
+    "total_response_time": 29.135547637939453,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for Swiss Alps",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:19:07.463151",
+    "error_message": null
+  },
+  {
+    "test_id": "c8beaf25-d82c-4303-9933-1f59cb920e9b",
+    "test_type": "single_session",
+    "session_id": "a30a5638-9858-4504-a624-6ae4724028a6",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 7-day trip to Berlin and Munich for 2 people with a budget of $7000 in this summer",
+      "session_id": "a30a5638-9858-4504-a624-6ae4724028a6",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Berlin! Here's what I found:\n\n🗺️ **General Travel Advice:**\n• Research local customs and etiquette for Berlin\n• Check visa requirements and travel documentation needed\n• Look into local transportation options and travel cards\n• Try authentic local cuisine and cultural experiences\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Berlin\n• Check weather conditions for your travel dates\n• Consider getting travel insurance",
+      "confidence": 0.75,
+      "actions_taken": [
+        "Analyze travel requirements for Berlin",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "a30a5638-9858-4504-a624-6ae4724028a6",
+      "refinement_details": null
+    },
+    "total_response_time": 29.729066848754883,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.75,
+    "final_actions": [
+      "Analyze travel requirements for Berlin",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-26T09:19:38.201422",
+    "error_message": null
+  }
+]
