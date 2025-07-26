@@ -603,6 +603,10 @@ class TravelAgent(BaseAgent):
                 "information_fusion_strategy", {}
             ),
         }
+        
+        # Add user message to structured analysis for fallback origin extraction
+        if "structured_analysis" in legacy_format:
+            legacy_format["structured_analysis"]["user_message"] = user_message
 
         return legacy_format
 
@@ -1149,6 +1153,56 @@ class TravelAgent(BaseAgent):
             "confidence": 0.7,
         }
 
+    def _convert_city_to_airport_codes(self, city_name: str) -> str:
+        """Convert city name to primary airport code for flight search"""
+        city_to_airport = {
+            'ROME': 'FCO',  # Rome Fiumicino
+            'PARIS': 'CDG',  # Paris Charles de Gaulle
+            'LONDON': 'LHR',  # London Heathrow
+            'BEIJING': 'PEK',  # Beijing Capital
+            'TOKYO': 'NRT',  # Tokyo Narita
+            'NEW YORK': 'JFK',  # New York JFK
+            'BARCELONA': 'BCN',
+            'MADRID': 'MAD',
+            'AMSTERDAM': 'AMS',
+            'BERLIN': 'BER',
+            'MUNICH': 'MUC',
+            'VIENNA': 'VIE',
+            'PRAGUE': 'PRG',
+            'BUDAPEST': 'BUD',
+            'SINGAPORE': 'SIN',
+            'SEOUL': 'ICN',
+            'SHANGHAI': 'PVG',
+            'KYOTO': 'UKB',  # Kyoto uses Osaka Kansai
+        }
+        
+        city_upper = city_name.upper()
+        return city_to_airport.get(city_upper, city_upper)
+
+    def _extract_origin_from_message(self, user_message: str) -> str:
+        """Extract origin city from user message using simple text parsing"""
+        import re
+        
+        # Convert to lowercase for easier matching
+        message_lower = user_message.lower()
+        
+        # Common patterns for origin extraction
+        patterns = [
+            r'from\s+(\w+)\s+to\s+(\w+)',  # "from Paris to Rome"
+            r'(\w+)\s+to\s+(\w+)',  # "Paris to Rome" (if no "from")
+            r'plan\s+a\s+trip\s+from\s+(\w+)\s+to\s+(\w+)',  # "plan a trip from Paris to Rome"
+            r'travel\s+from\s+(\w+)\s+to\s+(\w+)',  # "travel from Paris to Rome"
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, message_lower)
+            if match:
+                origin = match.group(1).title()  # Capitalize first letter
+                return origin
+        
+        # If no pattern matches, return "Unknown"
+        return "Unknown"
+
     async def _extract_parameters_from_intent(
         self, structured_analysis: Dict[str, Any], selected_tools: List[str]
     ) -> Dict[str, Any]:
@@ -1184,8 +1238,23 @@ class TravelAgent(BaseAgent):
                     "travelers": travel_details.get("travelers", 1),
                 }
             elif tool == "flight_search":
+                # Extract origin from the structured analysis
+                origin = structured_analysis.get("origin", {}).get("primary", "Unknown")
+                
+                # Fallback: If origin is "Unknown", try to extract it from the user message
+                if origin == "Unknown":
+                    # Get the original user message from the context
+                    user_message = structured_analysis.get("user_message", "")
+                    if user_message:
+                        origin = self._extract_origin_from_message(user_message)
+                
+                # Convert origin to airport code if it's a city name
+                origin_airport = self._convert_city_to_airport_codes(origin)
+                # Convert destination to airport code for flight search
+                destination_airport = self._convert_city_to_airport_codes(destination)
                 tool_parameters[tool] = {
-                    "destination": destination,
+                    "origin": origin_airport,
+                    "destination": destination_airport,
                     "limit": 5,
                     "travelers": travel_details.get("travelers", 1),
                     "budget_level": travel_details.get("budget", {}).get(
@@ -2061,14 +2130,15 @@ class TravelAgent(BaseAgent):
 
                     elif tool_name == "flight_search":
                         # For flight search, we need proper date handling
+                        from datetime import datetime, timedelta
+                        # Use a future date for the search
+                        future_date = datetime.now() + timedelta(days=30)
                         flight_params = {
-                            "origin": tool_params.get("origin", "unknown"),
+                            "origin": tool_params.get("origin", "PAR"),
                             "destination": tool_params.get("destination", "unknown"),
-                            "start_date": tool_params.get(
-                                "departure_date", "2024-06-01"
-                            ),
-                            "passengers": tool_params.get("passengers", 1),
-                            "class_type": "economy",
+                            "start_date": future_date,
+                            "passengers": tool_params.get("travelers", 1),
+                            "class_type": "ECONOMY",
                         }
                         tool_calls.append(
                             ToolCall(
@@ -2090,95 +2160,18 @@ class TravelAgent(BaseAgent):
                         tool_chain, tool_context
                     )
 
-                    if execution_result.success:
-                        # Process real tool results
-                        processed_results = {}
-                        for tool_name, tool_output in execution_result.results.items():
-                            if tool_output.success:
-                                # Convert tool output to expected format
-                                if tool_name == "attraction_search":
-                                    attractions_data = (
-                                        tool_output.data
-                                        if hasattr(tool_output, "data")
-                                        else {}
-                                    )
-                                    attractions = getattr(
-                                        tool_output, "attractions", []
-                                    )
-                                    processed_results[tool_name] = {
-                                        "attractions": [
-                                            {
-                                                "name": attr.name,
-                                                "rating": attr.rating,
-                                                "description": attr.description,
-                                                "location": attr.location,
-                                                "category": attr.category,
-                                            }
-                                            for attr in attractions
-                                        ],
-                                        "message": f"Found {len(attractions)} real attractions",
-                                    }
-                                elif tool_name == "hotel_search":
-                                    hotels = getattr(tool_output, "hotels", [])
-                                    processed_results[tool_name] = {
-                                        "hotels": [
-                                            {
-                                                "name": hotel.name,
-                                                "price": f"${hotel.price_per_night}/night",
-                                                "rating": hotel.rating,
-                                                "location": hotel.location,
-                                            }
-                                            for hotel in hotels
-                                        ],
-                                        "message": f"Found {len(hotels)} real hotels",
-                                    }
-                                elif tool_name == "flight_search":
-                                    flights = getattr(tool_output, "flights", [])
-                                    processed_results[tool_name] = {
-                                        "flights": [
-                                            {
-                                                "airline": flight.airline,
-                                                "price": f"${flight.price}",
-                                                "duration": f"{flight.duration // 60}h {flight.duration % 60}m",
-                                            }
-                                            for flight in flights
-                                        ],
-                                        "message": f"Found {len(flights)} real flights",
-                                    }
-                                else:
-                                    processed_results[tool_name] = {
-                                        "data": tool_output.data,
-                                        "message": f"Real data from {tool_name}",
-                                    }
-                            else:
-                                processed_results[tool_name] = {
-                                    "error": tool_output.error,
-                                    "message": f"Failed to get data from {tool_name}",
-                                }
+                    # Store tool results
+                    results["results"] = execution_result.results
+                    results["execution_time"] = execution_result.execution_time
 
-                        results["results"] = processed_results
-                        results["tools_used"] = list(execution_result.results.keys())
-                        results["execution_time"] = execution_result.execution_time
-                    else:
+                    if not execution_result.success:
                         results["success"] = False
                         results["error"] = execution_result.error
-                        results["results"] = {
-                            tool_name: {
-                                "error": f"Tool execution failed: {execution_result.error}"
-                            }
-                            for tool_name in plan["tools_to_use"]
-                        }
-                else:
-                    results["success"] = False
-                    results["error"] = "No valid tool calls created"
-            else:
-                results["success"] = True
-                results["message"] = "No tools to execute, using knowledge context only"
 
         except Exception as e:
+            logger.error(f"Error executing action plan: {e}")
             results["success"] = False
             results["error"] = str(e)
-            logger.error(f"Error in _execute_action_plan: {e}")
 
         return results
 
@@ -2343,17 +2336,69 @@ class TravelAgent(BaseAgent):
 
     def _format_tools_for_fusion(self, tool_results: Dict) -> str:
         """Format tool results for information fusion"""
+        logger.info(f"=== FORMATTING TOOL RESULTS ===")
+        logger.info(f"Tool results type: {type(tool_results)}")
+        logger.info(f"Tool results keys: {list(tool_results.keys()) if tool_results else 'None'}")
+        
         if not tool_results:
+            logger.info("No tool results available")
             return "No dynamic tool results available."
 
         tool_parts = []
         for tool_name, result in tool_results.items():
-            if isinstance(result, dict):
+            logger.info(f"Processing tool: {tool_name}")
+            logger.info(f"Result type: {type(result)}")
+            logger.info(f"Result attributes: {dir(result) if hasattr(result, '__dict__') else 'No attributes'}")
+            
+            # Handle ToolOutput objects
+            if hasattr(result, 'success') and hasattr(result, 'data'):
+                logger.info(f"Tool {tool_name} success: {result.success}")
+                if result.success:
+                    if tool_name == "flight_search" and hasattr(result, 'flights'):
+                        flights = result.flights[:3]  # Top 3
+                        logger.info(f"Found {len(flights)} flights for {tool_name}")
+                        if flights:
+                            tool_parts.append(f"**Current Flights ({len(flights)} found)**:")
+                            for flight in flights:
+                                airline = flight.airline
+                                price = f"{flight.price} {flight.currency}"
+                                duration = f"{flight.duration} minutes"
+                                tool_parts.append(f"- {airline}: {price} ({duration})")
+                                logger.info(f"Added flight: {airline} - {price} ({duration})")
+                        else:
+                            tool_parts.append("**Flight Search**: No flights found for the specified route.")
+                            logger.info("No flights found for flight_search")
+                    
+                    elif tool_name == "attraction_search" and hasattr(result, 'attractions'):
+                        attractions = result.attractions[:3]  # Top 3
+                        tool_parts.append(f"**Current Attractions ({len(attractions)} found)**:")
+                        for attr in attractions:
+                            name = attr.get("name", "Unknown")
+                            desc = attr.get("description", "No description")[:100]
+                            rating = attr.get("rating", "No rating")
+                            tool_parts.append(f"- {name} (Rating: {rating}): {desc}")
+
+                    elif tool_name == "hotel_search" and hasattr(result, 'hotels'):
+                        hotels = result.hotels[:3]  # Top 3
+                        tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
+                        for hotel in hotels:
+                            name = hotel.get("name", "Unknown")
+                            price = hotel.get("price", "Price unavailable")
+                            rating = hotel.get("rating", "No rating")
+                            tool_parts.append(f"- {name} (Rating: {rating}): {price}")
+
+                    elif hasattr(result, 'data') and result.data:
+                        tool_parts.append(f"**{tool_name.replace('_', ' ').title()}**: Data available")
+                else:
+                    tool_parts.append(f"**{tool_name.replace('_', ' ').title()}**: Error - {result.error}")
+                    logger.error(f"Tool {tool_name} failed: {result.error}")
+            
+            # Handle dictionary results (fallback)
+            elif isinstance(result, dict):
+                logger.info(f"Processing {tool_name} as dictionary")
                 if tool_name == "attraction_search" and "attractions" in result:
                     attractions = result["attractions"][:3]  # Top 3
-                    tool_parts.append(
-                        f"**Current Attractions ({len(attractions)} found)**:"
-                    )
+                    tool_parts.append(f"**Current Attractions ({len(attractions)} found)**:")
                     for attr in attractions:
                         name = attr.get("name", "Unknown")
                         desc = attr.get("description", "No description")[:100]
@@ -2379,15 +2424,12 @@ class TravelAgent(BaseAgent):
                         tool_parts.append(f"- {airline}: {price} ({duration})")
 
                 elif "message" in result:
-                    tool_parts.append(
-                        f"**{tool_name.replace('_', ' ').title()}**: {result['message']}"
-                    )
+                    tool_parts.append(f"**{tool_name.replace('_', ' ').title()}**: {result['message']}")
 
-        return (
-            "\n".join(tool_parts)
-            if tool_parts
-            else "Tool results available but not formatted."
-        )
+        formatted_result = "\n".join(tool_parts) if tool_parts else "Tool results available but not formatted."
+        logger.info(f"Final formatted tool result: {formatted_result[:200]}...")
+        logger.info(f"=== END FORMATTING TOOL RESULTS ===")
+        return formatted_result
 
     def _format_intent_for_fusion(self, intent: Dict[str, Any]) -> str:
         """Format intent analysis for information fusion"""
