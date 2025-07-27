@@ -138,18 +138,19 @@ class SessionManager:
     def switch_session(self, session_id: str) -> bool:
         """Switch to a different session"""
         if session_id in self.sessions:
-            # Update last activity of previous session
+            # Update status of previous session (but not last_activity)
             if self.current_session_id:
                 prev_session = self.sessions.get(self.current_session_id)
                 if prev_session:
-                    prev_session.last_activity = datetime.now(timezone.utc)
+                    prev_session.status = SessionStatus.INACTIVE
                     self._save_session(prev_session)
             
             # Switch to new session
             self.current_session_id = session_id
             current_session = self.sessions[session_id]
             current_session.status = SessionStatus.ACTIVE
-            current_session.last_activity = datetime.now(timezone.utc)
+            # Don't update last_activity when just switching - only when adding messages
+            # This prevents session list reordering when user clicks on sessions
             self._save_session(current_session)
             
             logger.info(f"Switched to session: {session_id}")
