@@ -217,70 +217,123 @@ class PlanManager:
         agent_response: str, 
         metadata: Dict[str, Any]
     ) -> List[CalendarEvent]:
-        """Extract events using simple heuristics"""
+        """Extract events using simple heuristics with intelligent date placement"""
         events = []
+        
+        # Get trip parameters
+        start_date = self._extract_start_date(user_message) or datetime.now(timezone.utc)
+        duration_days = self._extract_duration_from_message(user_message) or 3
+        destination = metadata.get("destination", "")
         
         # Check if agent mentioned specific attractions/hotels/flights
         response_lower = agent_response.lower()
         
-        # Look for hotel mentions
-        if any(word in response_lower for word in ["hotel", "accommodation", "stay", "check-in"]):
-            base_date = datetime.now(timezone.utc)
-            check_in = base_date.replace(hour=15, minute=0, second=0, microsecond=0)  # 3 PM today
-            check_out = (base_date + timedelta(days=1)).replace(hour=11, minute=0, second=0, microsecond=0)  # 11 AM next day
+        # Look for flight mentions - place at start and end of trip
+        if any(word in response_lower for word in ["flight", "airline", "airport", "departure", "arrival"]):
+            # Outbound flight at start of trip
+            outbound_departure = start_date.replace(hour=10, minute=0, second=0, microsecond=0)
+            outbound_arrival = outbound_departure + timedelta(hours=6)  # Assume 6 hour flight
             
-            event = CalendarEvent(
+            events.append(CalendarEvent(
                 id=f"event_{uuid.uuid4().hex[:8]}",
-                title="Hotel Stay",
-                description="Accommodation for your trip",
+                title=f"Flight to {destination}",
+                description="Outbound flight",
+                event_type=CalendarEventType.FLIGHT,
+                start_time=outbound_departure,
+                end_time=outbound_arrival,
+                location="Airport",
+                confidence=0.7,
+                source="heuristic_extraction"
+            ))
+            
+            # Return flight at end of trip
+            if duration_days > 1:
+                return_date = start_date + timedelta(days=duration_days - 1)
+                return_departure = return_date.replace(hour=16, minute=0, second=0, microsecond=0)
+                return_arrival = return_departure + timedelta(hours=6)
+                
+                events.append(CalendarEvent(
+                    id=f"event_{uuid.uuid4().hex[:8]}",
+                    title=f"Flight from {destination}",
+                    description="Return flight",
+                    event_type=CalendarEventType.FLIGHT,
+                    start_time=return_departure,
+                    end_time=return_arrival,
+                    location="Airport",
+                    confidence=0.7,
+                    source="heuristic_extraction"
+                ))
+        
+        # Look for hotel mentions - create multi-day stay
+        if any(word in response_lower for word in ["hotel", "accommodation", "stay", "check-in"]):
+            arrival_day = start_date
+            if events:  # If we have flights, check in after arrival
+                arrival_day = start_date + timedelta(hours=8)  # 8 hours after start for arrival + travel
+                
+            check_in = arrival_day.replace(hour=15, minute=0, second=0, microsecond=0)
+            check_out = (start_date + timedelta(days=duration_days)).replace(hour=11, minute=0, second=0, microsecond=0)
+            
+            events.append(CalendarEvent(
+                id=f"event_{uuid.uuid4().hex[:8]}",
+                title=f"Hotel Stay in {destination}",
+                description=f"Accommodation for {duration_days} days",
                 event_type=CalendarEventType.HOTEL,
                 start_time=check_in,
                 end_time=check_out,
-                location=metadata.get("destination", ""),
-                confidence=0.6,
+                location=destination,
+                confidence=0.7,
                 source="heuristic_extraction"
-            )
-            events.append(event)
+            ))
         
-        # Look for flight mentions
-        if any(word in response_lower for word in ["flight", "airline", "airport", "departure", "arrival"]):
-            base_date = datetime.now(timezone.utc)
-            departure = base_date.replace(hour=10, minute=0, second=0, microsecond=0)
-            arrival = base_date.replace(hour=14, minute=0, second=0, microsecond=0)
-            
-            event = CalendarEvent(
-                id=f"event_{uuid.uuid4().hex[:8]}",
-                title="Flight",
-                description="Flight for your trip",
-                event_type=CalendarEventType.FLIGHT,
-                start_time=departure,
-                end_time=arrival,
-                location="Airport",
-                confidence=0.6,
-                source="heuristic_extraction"
-            )
-            events.append(event)
-        
-        # Look for attraction mentions
+        # Look for attraction mentions - spread across trip days
         if any(word in response_lower for word in ["visit", "attraction", "museum", "park", "tour", "sightseeing"]):
-            base_date = datetime.now(timezone.utc)
-            visit_start = base_date.replace(hour=9, minute=0, second=0, microsecond=0)
-            visit_end = base_date.replace(hour=12, minute=0, second=0, microsecond=0)
-            
-            event = CalendarEvent(
-                id=f"event_{uuid.uuid4().hex[:8]}",
-                title="Sightseeing",
-                description="Visit attractions and landmarks",
-                event_type=CalendarEventType.ATTRACTION,
-                start_time=visit_start,
-                end_time=visit_end,
-                location=metadata.get("destination", ""),
-                confidence=0.5,
-                source="heuristic_extraction"
-            )
-            events.append(event)
+            # Create attractions for middle days of the trip
+            for day in range(min(duration_days, 3)):  # Max 3 attractions
+                visit_date = start_date + timedelta(days=day)
+                visit_start = visit_date.replace(hour=9 + (day * 2), minute=0, second=0, microsecond=0)  # Stagger times
+                visit_end = visit_start + timedelta(hours=2)  # 2 hour visits
+                
+                attraction_names = ["City Tour", "Local Attractions", "Cultural Sites"]
+                
+                events.append(CalendarEvent(
+                    id=f"event_{uuid.uuid4().hex[:8]}",
+                    title=f"{attraction_names[day % len(attraction_names)]} - {destination}",
+                    description="Visit local attractions and landmarks",
+                    event_type=CalendarEventType.ATTRACTION,
+                    start_time=visit_start,
+                    end_time=visit_end,
+                    location=destination,
+                    confidence=0.6,
+                    source="heuristic_extraction"
+                ))
         
         return events
+    
+    def _extract_duration_from_message(self, user_message: str) -> Optional[int]:
+        """Extract trip duration from user message"""
+        import re
+        
+        user_lower = user_message.lower()
+        
+        # Look for duration patterns
+        duration_patterns = [
+            r'(\d+)\s*days?',
+            r'(\d+)\s*nights?',
+            r'(\d+)\s*weeks?',
+        ]
+        
+        for pattern in duration_patterns:
+            matches = re.findall(pattern, user_lower)
+            for match in matches:
+                try:
+                    days = int(match)
+                    if 'week' in pattern:
+                        days *= 7
+                    return days
+                except ValueError:
+                    continue
+        
+        return None
     
     def _extract_metadata_updates(
         self, 
@@ -319,6 +372,11 @@ class PlanManager:
             if budget_match:
                 updates["budget"] = float(budget_match.group(1).replace(",", ""))
         
+        # Extract travel dates if mentioned
+        start_date = self._extract_start_date(user_message)
+        if start_date:
+            updates["start_date"] = start_date
+        
         # Update completion status based on response content
         if agent_response:
             if any(word in agent_response.lower() for word in ["complete", "finalized", "ready"]):
@@ -330,6 +388,44 @@ class PlanManager:
         updates["last_updated"] = datetime.now(timezone.utc)
         
         return updates
+    
+    def _extract_start_date(self, user_message: str) -> Optional[datetime]:
+        """Extract travel start date from user message"""
+        import re
+        from dateutil import parser
+        
+        user_lower = user_message.lower()
+        
+        # Look for specific date patterns
+        date_patterns = [
+            r'(\w+\s+\d{1,2},?\s+\d{4})',  # "July 26, 2025" or "July 26 2025"
+            r'(\d{1,2}/\d{1,2}/\d{4})',    # "7/26/2025"
+            r'(\d{4}-\d{1,2}-\d{1,2})',    # "2025-07-26"
+            r'(next\s+\w+)',               # "next week", "next month"
+            r'(tomorrow|today)',
+        ]
+        
+        for pattern in date_patterns:
+            matches = re.findall(pattern, user_message, re.IGNORECASE)
+            for match in matches:
+                try:
+                    # Handle relative dates
+                    if 'tomorrow' in match.lower():
+                        return datetime.now(timezone.utc) + timedelta(days=1)
+                    elif 'today' in match.lower():
+                        return datetime.now(timezone.utc)
+                    elif 'next week' in match.lower():
+                        return datetime.now(timezone.utc) + timedelta(weeks=1)
+                    elif 'next month' in match.lower():
+                        return datetime.now(timezone.utc) + timedelta(days=30)
+                    else:
+                        # Try to parse absolute dates
+                        parsed_date = parser.parse(match, fuzzy=True)
+                        return parsed_date.replace(tzinfo=timezone.utc)
+                except Exception:
+                    continue
+        
+        return None
     
     def add_event(self, session_id: str, event: CalendarEvent) -> bool:
         """Add an event to a plan"""

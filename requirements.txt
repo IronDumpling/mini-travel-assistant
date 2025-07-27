@@ -35,6 +35,7 @@ beautifulsoup4>=4.12.0  # For HTML parsing in web scraping
 pandas>=2.0.0
 numpy>=1.24.0
 pyyaml>=6.0.0
+python-dateutil>=2.8.0  # For advanced date parsing
 matplotlib>=3.5.0  # For test metrics visualizations
 seaborn>=0.11.0    # For enhanced plotting in metrics analyzer
 
