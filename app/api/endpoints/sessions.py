@@ -173,7 +173,7 @@ async def delete_session(session_id: str):
                 session_manager.sessions = {k: v for k, v in session_manager.sessions.items() if k != session_id}
             
             # Try to remove session file if it exists
-            data_dir = Path("data/sessions")
+            data_dir = Path(session_manager.storage_path)
             session_file = data_dir / f"{session_id}.json"
             
             if session_file.exists():

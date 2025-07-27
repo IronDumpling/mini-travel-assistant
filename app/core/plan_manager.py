@@ -314,10 +314,10 @@ class PlanManager:
             # If arrival is 3 PM or later, check in at 3 PM next day
             if arrival_day.hour >= 15:  # 3 PM or later
                 check_in_date = arrival_day.date() + timedelta(days=1)
-                check_in = datetime.combine(check_in_date, datetime.min.time()).replace(hour=15, minute=0)
+                check_in = datetime.combine(check_in_date, datetime.min.time()).replace(hour=15, minute=0, tzinfo=start_date.tzinfo)
             else:
                 check_in_date = arrival_day.date()
-                check_in = datetime.combine(check_in_date, datetime.min.time()).replace(hour=15, minute=0)
+                check_in = datetime.combine(check_in_date, datetime.min.time()).replace(hour=15, minute=0, tzinfo=start_date.tzinfo)
                 
             check_out = (start_date + timedelta(days=duration_days)).replace(hour=11, minute=0, second=0, microsecond=0)
             
