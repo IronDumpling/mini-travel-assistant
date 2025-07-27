@@ -15,6 +15,52 @@ interface MessageProps {
   isLoading?: boolean;
 }
 
+interface LoadingMessageProps {
+  processingStartTime: number | null;
+  showDetailedProgress: boolean;
+}
+
+const LoadingMessage: React.FC<LoadingMessageProps> = ({ processingStartTime, showDetailedProgress }) => {
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  useEffect(() => {
+    if (!processingStartTime) return;
+
+    const interval = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - processingStartTime) / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [processingStartTime]);
+
+  const getProgressMessage = () => {
+    if (elapsedTime < 10) return "Analyzing your request...";
+    if (elapsedTime < 30) return "Planning your travel itinerary...";
+    if (elapsedTime < 60) return "Researching destinations and options...";
+    if (elapsedTime < 90) return "Refining recommendations with AI...";
+    return "Finalizing your personalized travel plan...";
+  };
+
+  return (
+    <div className="flex items-start gap-2 text-blue-600">
+      <Loader2 className="w-4 h-4 animate-spin mt-0.5" />
+      <div className="flex-1">
+        <div className="font-medium">{getProgressMessage()}</div>
+        {showDetailedProgress && (
+          <div className="text-sm text-gray-500 mt-1">
+            Processing time: {elapsedTime}s
+            {elapsedTime > 30 && (
+              <div className="text-xs mt-1">
+                ✨ The AI is using advanced refinement to create the best travel plan for you
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ChatMessage: React.FC<MessageProps> = ({ 
   role, 
   content, 
@@ -72,6 +118,8 @@ const ChatMessage: React.FC<MessageProps> = ({
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
+  const [showDetailedProgress, setShowDetailedProgress] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { data: chatHistory, isLoading: historyLoading } = useChatHistory(sessionId);
@@ -92,6 +140,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
     const userMessage = message.trim();
     setMessage('');
     setIsTyping(true);
+    setProcessingStartTime(Date.now());
+    setShowDetailedProgress(false);
+
+    // Show detailed progress after 15 seconds
+    const progressTimer = setTimeout(() => {
+      setShowDetailedProgress(true);
+    }, 15000);
 
     try {
       const chatMessage: ChatMessageType = {
@@ -104,7 +159,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
     } catch (error) {
       console.error('Failed to send message:', error);
     } finally {
+      clearTimeout(progressTimer);
       setIsTyping(false);
+      setProcessingStartTime(null);
+      setShowDetailedProgress(false);
     }
   };
 
@@ -137,7 +195,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
           {sendMessageMutation.isPending && (
             <div className="flex items-center gap-1 text-blue-600">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Processing...</span>
+              <span className="text-sm">
+                {showDetailedProgress ? `Processing (${Math.floor((Date.now() - (processingStartTime || Date.now())) / 1000)}s)` : 'Processing...'}
+              </span>
             </div>
           )}
         </div>
@@ -180,11 +240,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
               />
             ))}
             {isTyping && (
-              <ChatMessage
-                role="assistant"
-                content=""
-                isLoading={true}
-              />
+              <div className="flex gap-3 p-4 bg-gray-50">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-gray-900">Travel Assistant</span>
+                  </div>
+                  <LoadingMessage 
+                    processingStartTime={processingStartTime}
+                    showDetailedProgress={showDetailedProgress}
+                  />
+                </div>
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -218,7 +287,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
           </div>
         </form>
         
-        {sendMessageMutation.isError && (
+        {sendMessageMutation.isError && !isTyping && processingStartTime && (Date.now() - processingStartTime) > 200000 && (
+          <div className="mt-2 flex items-center gap-2 text-orange-600 text-sm">
+            <AlertCircle className="w-4 h-4" />
+            <span>The AI is taking longer than usual. Your request is still being processed...</span>
+          </div>
+        )}
+        {sendMessageMutation.isError && !isTyping && !processingStartTime && (
           <div className="mt-2 flex items-center gap-2 text-red-600 text-sm">
             <AlertCircle className="w-4 h-4" />
             <span>Failed to send message. Please try again.</span>

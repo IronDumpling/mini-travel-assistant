@@ -13,7 +13,7 @@ import type {
 // Configure axios instance
 const api = axios.create({
   baseURL: '/api',
-  timeout: 30000, // 30 second timeout for AI responses
+  timeout: 180000, // 3 minute timeout for AI responses (refinement can take long)
   headers: {
     'Content-Type': 'application/json',
   },

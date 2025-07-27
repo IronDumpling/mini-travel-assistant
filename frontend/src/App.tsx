@@ -12,6 +12,15 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 5, // 5 minutes
       retry: 1,
     },
+    mutations: {
+      retry: 0, // Don't retry failed chat messages
+      onError: (error: any) => {
+        // Only log actual errors, not timeouts
+        if (!error?.code || error.code !== 'ECONNABORTED') {
+          console.error('Mutation error:', error);
+        }
+      },
+    },
   },
 });
 
@@ -21,7 +30,7 @@ const AppContent: React.FC = () => {
 
   // Auto-select first session if none selected
   useEffect(() => {
-    if (!currentSessionId && sessionsData?.sessions?.length > 0) {
+    if (!currentSessionId && sessionsData?.sessions && sessionsData.sessions.length > 0) {
       setCurrentSessionId(sessionsData.current_session || sessionsData.sessions[0].session_id);
     }
   }, [sessionsData, currentSessionId]);

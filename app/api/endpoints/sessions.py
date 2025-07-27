@@ -122,12 +122,80 @@ async def delete_session(session_id: str):
         from app.memory.session_manager import get_session_manager
         session_manager = get_session_manager()
         
-        # TODO: Implement session deletion in session manager
-        return JSONResponse(
-            status_code=501,
-            content={"error": "Session deletion not yet implemented"}
-        )
+        # Check if session exists first
+        sessions = session_manager.list_sessions()
+        session_exists = any(s.session_id == session_id for s in sessions)
+        
+        if not session_exists:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Session not found"}
+            )
+        
+        # Delete the session
+        try:
+            # If this is the current session, we need to handle switching
+            current_session_id = session_manager.current_session_id
+            
+            # Try to delete using session manager
+            success = session_manager.delete_session(session_id)
+            
+            if success:
+                # If we deleted the current session, switch to another one or clear current
+                if current_session_id == session_id:
+                    remaining_sessions = session_manager.list_sessions()
+                    if remaining_sessions:
+                        session_manager.switch_session(remaining_sessions[0].session_id)
+                    else:
+                        session_manager.current_session_id = None
+                
+                return {
+                    "message": f"Session {session_id} deleted successfully",
+                    "deleted_session_id": session_id,
+                    "was_current_session": current_session_id == session_id
+                }
+            else:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "Failed to delete session - deletion operation failed"}
+                )
+                
+        except AttributeError:
+            # If session_manager doesn't have delete_session method, try manual deletion
+            logger.warning("Session manager doesn't have delete_session method, attempting manual deletion")
+            
+            # Try to manually remove from sessions list and files
+            import os
+            from pathlib import Path
+            
+            # Remove from memory
+            if hasattr(session_manager, 'sessions'):
+                session_manager.sessions = {k: v for k, v in session_manager.sessions.items() if k != session_id}
+            
+            # Try to remove session file if it exists
+            data_dir = Path("data/sessions")
+            session_file = data_dir / f"{session_id}.json"
+            
+            if session_file.exists():
+                session_file.unlink()
+                logger.info(f"Deleted session file: {session_file}")
+            
+            # If this was the current session, switch to another one
+            if session_manager.current_session_id == session_id:
+                remaining_sessions = session_manager.list_sessions()
+                if remaining_sessions:
+                    session_manager.switch_session(remaining_sessions[0].session_id)
+                else:
+                    session_manager.current_session_id = None
+            
+            return {
+                "message": f"Session {session_id} deleted successfully (manual deletion)",
+                "deleted_session_id": session_id,
+                "method": "manual_file_deletion"
+            }
+            
     except Exception as e:
+        logger.error(f"Session deletion failed: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={"error": f"Failed to delete session: {str(e)}"}
