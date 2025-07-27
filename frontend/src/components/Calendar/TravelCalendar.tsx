@@ -73,11 +73,51 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     // If travelPlans is a SessionTravelPlan, use its events directly
     if (travelPlans && typeof travelPlans === 'object' && 'events' in travelPlans) {
       const sessionPlan = travelPlans as SessionTravelPlan;
-      return sessionPlan.events.map(event => ({
-        ...event,
-        start: new Date(event.start),
-        end: new Date(event.end)
-      }));
+      return sessionPlan.events
+        .filter(event => {
+          // Handle both backend (start_time/end_time) and frontend (start/end) field names
+          const startField = (event as any).start_time || (event as any).start;
+          const endField = (event as any).end_time || (event as any).end;
+          
+          if (!startField || !endField) {
+            console.warn('Event missing start or end time:', event);
+            return false;
+          }
+          return true;
+        })
+        .map(event => {
+          try {
+            // Handle both backend (start_time/end_time) and frontend (start/end) field names
+            const startField = (event as any).start_time || (event as any).start;
+            const endField = (event as any).end_time || (event as any).end;
+            
+            const startDate = new Date(startField);
+            const endDate = new Date(endField);
+            
+            // Validate that dates are valid
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+              console.warn('Invalid dates for event:', event, {
+                startField,
+                endField,
+                startDate,
+                endDate
+              });
+              return null;
+            }
+            
+            return {
+              ...event,
+              // Standardize to frontend format
+              type: (event as any).event_type || (event as any).type,
+              start: startDate,
+              end: endDate
+            };
+          } catch (error) {
+            console.warn('Error processing event dates:', event, error);
+            return null;
+          }
+        })
+        .filter(event => event !== null) as CalendarEvent[];
     }
 
     // Legacy support for old TravelPlan[] format - cast to any to avoid type issues
@@ -149,8 +189,30 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     }
 
     calendarEvents.forEach((event) => {
-      const startHour = event.start.getHours();
-      eventsByHour[startHour].push(event);
+      try {
+        // Ensure event.start is a valid Date object
+        if (!event.start) {
+          console.warn('Event missing start time:', event);
+          return;
+        }
+        
+        const startDate = event.start instanceof Date ? event.start : new Date(event.start);
+        if (isNaN(startDate.getTime())) {
+          console.warn('Invalid start date for event:', event);
+          return;
+        }
+        
+        const startHour = startDate.getHours();
+        if (startHour >= 0 && startHour < 24) {
+          eventsByHour[startHour].push({
+            ...event,
+            start: startDate,
+            end: event.end instanceof Date ? event.end : new Date(event.end)
+          });
+        }
+      } catch (error) {
+        console.warn('Error processing event:', event, error);
+      }
     });
 
     return eventsByHour;

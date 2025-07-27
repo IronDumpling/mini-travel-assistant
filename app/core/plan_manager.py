@@ -11,7 +11,7 @@ This module handles:
 import uuid
 import json
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from app.api.schemas import SessionTravelPlan, CalendarEvent, TravelPlanMetadata, CalendarEventType
@@ -225,13 +225,17 @@ class PlanManager:
         
         # Look for hotel mentions
         if any(word in response_lower for word in ["hotel", "accommodation", "stay", "check-in"]):
+            base_date = datetime.now(timezone.utc)
+            check_in = base_date.replace(hour=15, minute=0, second=0, microsecond=0)  # 3 PM today
+            check_out = (base_date + timedelta(days=1)).replace(hour=11, minute=0, second=0, microsecond=0)  # 11 AM next day
+            
             event = CalendarEvent(
                 id=f"event_{uuid.uuid4().hex[:8]}",
                 title="Hotel Stay",
                 description="Accommodation for your trip",
                 event_type=CalendarEventType.HOTEL,
-                start_time=datetime.now(timezone.utc).replace(hour=15, minute=0),  # 3 PM
-                end_time=datetime.now(timezone.utc).replace(hour=11, minute=0),   # 11 AM next day
+                start_time=check_in,
+                end_time=check_out,
                 location=metadata.get("destination", ""),
                 confidence=0.6,
                 source="heuristic_extraction"
@@ -240,13 +244,17 @@ class PlanManager:
         
         # Look for flight mentions
         if any(word in response_lower for word in ["flight", "airline", "airport", "departure", "arrival"]):
+            base_date = datetime.now(timezone.utc)
+            departure = base_date.replace(hour=10, minute=0, second=0, microsecond=0)
+            arrival = base_date.replace(hour=14, minute=0, second=0, microsecond=0)
+            
             event = CalendarEvent(
                 id=f"event_{uuid.uuid4().hex[:8]}",
                 title="Flight",
                 description="Flight for your trip",
                 event_type=CalendarEventType.FLIGHT,
-                start_time=datetime.now(timezone.utc).replace(hour=10, minute=0),
-                end_time=datetime.now(timezone.utc).replace(hour=14, minute=0),
+                start_time=departure,
+                end_time=arrival,
                 location="Airport",
                 confidence=0.6,
                 source="heuristic_extraction"
@@ -255,13 +263,17 @@ class PlanManager:
         
         # Look for attraction mentions
         if any(word in response_lower for word in ["visit", "attraction", "museum", "park", "tour", "sightseeing"]):
+            base_date = datetime.now(timezone.utc)
+            visit_start = base_date.replace(hour=9, minute=0, second=0, microsecond=0)
+            visit_end = base_date.replace(hour=12, minute=0, second=0, microsecond=0)
+            
             event = CalendarEvent(
                 id=f"event_{uuid.uuid4().hex[:8]}",
                 title="Sightseeing",
                 description="Visit attractions and landmarks",
                 event_type=CalendarEventType.ATTRACTION,
-                start_time=datetime.now(timezone.utc).replace(hour=9, minute=0),
-                end_time=datetime.now(timezone.utc).replace(hour=12, minute=0),
+                start_time=visit_start,
+                end_time=visit_end,
                 location=metadata.get("destination", ""),
                 confidence=0.5,
                 source="heuristic_extraction"
