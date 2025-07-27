@@ -8,6 +8,8 @@ import type {
   TravelPlan,
   TravelPlanResponse,
   ChatHistory,
+  SessionTravelPlan,
+  PlanResponse,
 } from '../types/api';
 
 // Configure axios instance
@@ -77,6 +79,17 @@ export class ApiService {
     } catch (error) {
       console.warn('No plans found for session:', sessionId);
       return [];
+    }
+  }
+
+  static async getSessionPlan(sessionId: string): Promise<SessionTravelPlan | null> {
+    try {
+      const response = await api.get(`/session-plans/${sessionId}`);
+      const planResponse = response.data as PlanResponse;
+      return planResponse.plan || null;
+    } catch (error) {
+      console.warn('No plan found for session:', sessionId);
+      return null;
     }
   }
 

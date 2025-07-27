@@ -86,7 +86,7 @@ export const useSendMessage = () => {
 export const useTravelPlans = (sessionId: string | null) => {
   return useQuery({
     queryKey: queryKeys.travelPlans(sessionId || ''),
-    queryFn: () => sessionId ? ApiService.getSessionPlans(sessionId) : [],
+    queryFn: () => sessionId ? ApiService.getSessionPlan(sessionId) : null,
     enabled: !!sessionId,
     staleTime: 30000, // 30 seconds
   });

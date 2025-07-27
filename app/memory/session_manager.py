@@ -118,6 +118,15 @@ class SessionManager:
         # Save to disk
         self._save_session(metadata)
         
+        # Create corresponding travel plan
+        try:
+            from app.core.plan_manager import get_plan_manager
+            plan_manager = get_plan_manager()
+            plan_id = plan_manager.create_plan_for_session(session_id)
+            logger.info(f"✅ Created plan {plan_id} for session {session_id}")
+        except Exception as e:
+            logger.warning(f"Failed to create plan for session {session_id}: {e}")
+        
         # Index session for RAG search (async task)
         try:
             loop = asyncio.get_event_loop()
@@ -408,6 +417,17 @@ Summary:"""
             session_file = self.storage_path / f"{session_id}.json"
             if session_file.exists():
                 session_file.unlink()
+            
+            # Delete corresponding travel plan
+            try:
+                from app.core.plan_manager import get_plan_manager
+                plan_manager = get_plan_manager()
+                plan = plan_manager.get_plan_by_session(session_id)
+                if plan:
+                    plan_manager.delete_plan(plan.plan_id)
+                    logger.info(f"✅ Deleted plan for session {session_id}")
+            except Exception as e:
+                logger.warning(f"Failed to delete plan for session {session_id}: {e}")
             
             # Remove from RAG index (async task)
             try:

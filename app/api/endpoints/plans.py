@@ -7,7 +7,10 @@ structured outputs instead of complex parsing.
 
 from fastapi import APIRouter, HTTPException, status
 from typing import List, Optional, Dict, Any
-from app.api.schemas import TravelRequest, TravelPlan, TravelPlanUpdate, TravelPlanResponse
+from app.api.schemas import (
+    TravelRequest, TravelPlan, TravelPlanUpdate, TravelPlanResponse,
+    SessionTravelPlan, CalendarEvent, PlanResponse, PlanUpdateRequest
+)
 from app.agents.travel_agent import get_travel_agent
 from datetime import datetime
 from app.core.logging_config import get_logger
@@ -215,3 +218,154 @@ def _create_default_request() -> TravelRequest:
         interests=["general"],
         additional_requirements="Basic travel planning"
     ) 
+
+# ===== Session Plan Endpoints =====
+
+@router.get("/session-plans/{session_id}", response_model=PlanResponse)
+async def get_session_plan(session_id: str):
+    """Get travel plan for a specific session"""
+    try:
+        from app.core.plan_manager import get_plan_manager
+        plan_manager = get_plan_manager()
+        
+        plan = plan_manager.get_plan_by_session(session_id)
+        if not plan:
+            return PlanResponse(
+                success=False,
+                message="No plan found for this session",
+                events_count=0
+            )
+        
+        return PlanResponse(
+            success=True,
+            plan=plan,
+            message="Plan retrieved successfully",
+            events_count=len(plan.events)
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to get plan for session {session_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve plan: {str(e)}"
+        )
+
+@router.get("/plans", response_model=List[SessionTravelPlan])
+async def get_plans_by_session(session_id: str):
+    """Get plans by session ID (for frontend compatibility)"""
+    try:
+        from app.core.plan_manager import get_plan_manager
+        plan_manager = get_plan_manager()
+        
+        plan = plan_manager.get_plan_by_session(session_id)
+        if not plan:
+            return []
+        
+        return [plan]
+        
+    except Exception as e:
+        logger.error(f"Failed to get plans for session {session_id}: {e}")
+        return []
+
+@router.put("/session-plans/{session_id}", response_model=PlanResponse)
+async def update_session_plan(session_id: str, update_request: PlanUpdateRequest):
+    """Update travel plan for a session"""
+    try:
+        from app.core.plan_manager import get_plan_manager
+        plan_manager = get_plan_manager()
+        
+        plan = plan_manager.get_plan_by_session(session_id)
+        if not plan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Plan not found for this session"
+            )
+        
+        # Apply updates
+        updated = False
+        
+        # Add new events
+        for event in update_request.events_to_add:
+            success = plan_manager.add_event(session_id, event)
+            if success:
+                updated = True
+        
+        # Update existing events
+        for event in update_request.events_to_update:
+            success = plan_manager.update_event(session_id, event)
+            if success:
+                updated = True
+        
+        # Remove events
+        for event_id in update_request.events_to_remove:
+            success = plan_manager.remove_event(session_id, event_id)
+            if success:
+                updated = True
+        
+        # Update metadata if provided
+        if update_request.metadata_updates:
+            for key, value in update_request.metadata_updates.model_dump().items():
+                if value is not None and hasattr(plan.metadata, key):
+                    setattr(plan.metadata, key, value)
+                    updated = True
+        
+        if updated:
+            # Get updated plan
+            updated_plan = plan_manager.get_plan_by_session(session_id)
+            return PlanResponse(
+                success=True,
+                plan=updated_plan,
+                message="Plan updated successfully",
+                events_count=len(updated_plan.events) if updated_plan else 0
+            )
+        else:
+            return PlanResponse(
+                success=False,
+                plan=plan,
+                message="No updates applied",
+                events_count=len(plan.events)
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update plan for session {session_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update plan: {str(e)}"
+        )
+
+@router.delete("/session-plans/{session_id}")
+async def delete_session_plan(session_id: str):
+    """Delete travel plan for a session"""
+    try:
+        from app.core.plan_manager import get_plan_manager
+        plan_manager = get_plan_manager()
+        
+        plan = plan_manager.get_plan_by_session(session_id)
+        if not plan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Plan not found for this session"
+            )
+        
+        success = plan_manager.delete_plan(plan.plan_id)
+        if success:
+            return {
+                "message": f"Plan deleted successfully for session {session_id}",
+                "session_id": session_id
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete plan"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete plan for session {session_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete plan: {str(e)}"
+        )

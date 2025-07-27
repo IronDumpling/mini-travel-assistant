@@ -136,6 +136,38 @@ export interface CalendarEvent {
   start: Date;
   end: Date;
   description?: string;
-  type: 'flight' | 'hotel' | 'attraction' | 'activity';
+  type: 'flight' | 'hotel' | 'attraction' | 'activity' | 'restaurant' | 'transportation' | 'meeting' | 'free_time';
   details?: any;
+  location?: string;
+  confidence?: number;
+  source?: string;
+}
+
+// Session Travel Plan types
+export interface TravelPlanMetadata {
+  destination?: string;
+  duration_days?: number;
+  travelers?: number;
+  budget?: number;
+  budget_currency?: string;
+  interests?: string[];
+  last_updated?: string;
+  confidence?: number;
+  completion_status?: string;
+}
+
+export interface SessionTravelPlan {
+  plan_id: string;
+  session_id: string;
+  events: CalendarEvent[];
+  metadata: TravelPlanMetadata;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanResponse {
+  success: boolean;
+  plan?: SessionTravelPlan;
+  message: string;
+  events_count: number;
 } 
