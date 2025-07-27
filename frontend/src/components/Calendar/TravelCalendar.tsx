@@ -1,26 +1,29 @@
 import React, { useMemo } from 'react';
-import { Calendar, Clock, MapPin, Plane, Hotel, Camera, Star } from 'lucide-react';
-import { format, addHours, startOfDay } from 'date-fns';
+import { Calendar as CalendarIcon, Clock, MapPin, Plane, Hotel, Camera, Star } from 'lucide-react';
+import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay, addDays, startOfDay, addHours } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import { useTravelPlans } from '../../hooks/useApi';
 import type { TravelPlan, CalendarEvent, SessionTravelPlan } from '../../types/api';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 interface TravelCalendarProps {
   sessionId: string | null;
 }
 
-interface TimeSlotProps {
-  hour: number;
-  events: CalendarEvent[];
-}
+// Setup the localizer for react-big-calendar
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales: {
+    'en-US': enUS,
+  },
+});
 
-const TimeSlot: React.FC<TimeSlotProps> = ({ hour, events }) => {
-  const formatHour = (h: number) => {
-    if (h === 0) return '12:00 AM';
-    if (h < 12) return `${h}:00 AM`;
-    if (h === 12) return '12:00 PM';
-    return `${h - 12}:00 PM`;
-  };
-
+// Custom event component to show event details
+const EventComponent = ({ event }: { event: any }) => {
   const getEventIcon = (type: string) => {
     switch (type) {
       case 'flight': return <Plane className="w-3 h-3" />;
@@ -30,36 +33,10 @@ const TimeSlot: React.FC<TimeSlotProps> = ({ hour, events }) => {
     }
   };
 
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case 'flight': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'hotel': return 'bg-green-100 text-green-800 border-green-200';
-      case 'attraction': return 'bg-purple-100 text-purple-800 border-purple-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   return (
-    <div className="flex border-b border-gray-100">
-      <div className="w-20 py-3 px-2 text-xs text-gray-500 font-medium border-r border-gray-100">
-        {formatHour(hour)}
-      </div>
-      <div className="flex-1 p-2 min-h-[60px]">
-        {events.map((event) => (
-          <div
-            key={event.id}
-            className={`mb-1 p-2 rounded border text-xs ${getEventColor(event.type)}`}
-          >
-            <div className="flex items-center gap-1 mb-1">
-              {getEventIcon(event.type)}
-              <span className="font-medium truncate">{event.title}</span>
-            </div>
-            {event.description && (
-              <div className="text-xs opacity-75 truncate">{event.description}</div>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className="flex items-center gap-1 text-xs">
+      {getEventIcon(event.type)}
+      <span className="truncate">{event.title}</span>
     </div>
   );
 };
@@ -106,27 +83,30 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             }
             
             return {
-              ...event,
-              // Standardize to frontend format
-              type: (event as any).event_type || (event as any).type,
+              id: event.id,
+              title: event.title,
               start: startDate,
-              end: endDate
+              end: endDate,
+              type: (event as any).event_type || (event as any).type,
+              location: event.location,
+              description: event.description,
+              resource: event
             };
           } catch (error) {
             console.warn('Error processing event dates:', event, error);
             return null;
           }
         })
-        .filter(event => event !== null) as CalendarEvent[];
+        .filter(event => event !== null);
     }
 
-    // Legacy support for old TravelPlan[] format - cast to any to avoid type issues
-    const plansData = travelPlans as any;
-    if (Array.isArray(plansData)) {
-      const events: CalendarEvent[] = [];
+    // Legacy support for old TravelPlan[] format
+    const plansArray = travelPlans as TravelPlan[];
+    if (Array.isArray(plansArray)) {
+      const events: any[] = [];
       const today = new Date();
 
-      plansData.forEach((plan: TravelPlan) => {
+      plansArray.forEach((plan: TravelPlan) => {
         // Add flights
         plan.flights?.forEach((flight: any, index: number) => {
           const departureTime = new Date(flight.departure_time);
@@ -137,25 +117,25 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             title: `${flight.airline} Flight`,
             start: departureTime,
             end: arrivalTime,
-            description: `${flight.departure_time} - ${flight.arrival_time}`,
             type: 'flight',
-            details: flight,
+            location: 'Airport',
+            description: `${flight.departure_time} - ${flight.arrival_time}`,
           });
         });
 
         // Add hotels (assume check-in at 3 PM, check-out at 11 AM)
         plan.hotels?.forEach((hotel: any, index: number) => {
           const checkIn = addHours(startOfDay(today), 15); // 3 PM
-          const checkOut = addHours(startOfDay(today), 11); // 11 AM next day
+          const checkOut = addHours(startOfDay(addDays(today, 1)), 11); // 11 AM next day
           
           events.push({
             id: `hotel-${plan.id}-${index}`,
             title: hotel.name,
             start: checkIn,
             end: checkOut,
-            description: `$${hotel.price_per_night}/night`,
             type: 'hotel',
-            details: hotel,
+            location: hotel.location,
+            description: `$${hotel.price_per_night}/night`,
           });
         });
 
@@ -168,9 +148,9 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             title: attraction.name,
             start: visitTime,
             end: addHours(visitTime, 2),
-            description: attraction.category,
             type: 'attraction',
-            details: attraction,
+            location: attraction.location,
+            description: attraction.category,
           });
         });
       });
@@ -181,48 +161,45 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     return [];
   }, [travelPlans]);
 
-  const hourlyEvents = useMemo(() => {
-    const eventsByHour: { [hour: number]: CalendarEvent[] } = {};
-    
-    for (let hour = 0; hour < 24; hour++) {
-      eventsByHour[hour] = [];
+  // Custom event style getter
+  const eventStyleGetter = (event: any) => {
+    let backgroundColor = '#3174ad';
+    let color = 'white';
+
+    switch (event.type) {
+      case 'flight':
+        backgroundColor = '#2563eb'; // blue
+        break;
+      case 'hotel':
+        backgroundColor = '#16a34a'; // green
+        break;
+      case 'attraction':
+        backgroundColor = '#9333ea'; // purple
+        break;
+      case 'restaurant':
+        backgroundColor = '#ea580c'; // orange
+        break;
+      default:
+        backgroundColor = '#6b7280'; // gray
     }
 
-    calendarEvents.forEach((event) => {
-      try {
-        // Ensure event.start is a valid Date object
-        if (!event.start) {
-          console.warn('Event missing start time:', event);
-          return;
-        }
-        
-        const startDate = event.start instanceof Date ? event.start : new Date(event.start);
-        if (isNaN(startDate.getTime())) {
-          console.warn('Invalid start date for event:', event);
-          return;
-        }
-        
-        const startHour = startDate.getHours();
-        if (startHour >= 0 && startHour < 24) {
-          eventsByHour[startHour].push({
-            ...event,
-            start: startDate,
-            end: event.end instanceof Date ? event.end : new Date(event.end)
-          });
-        }
-      } catch (error) {
-        console.warn('Error processing event:', event, error);
+    return {
+      style: {
+        backgroundColor,
+        color,
+        border: 'none',
+        borderRadius: '4px',
+        fontSize: '12px',
+        padding: '2px 4px'
       }
-    });
-
-    return eventsByHour;
-  }, [calendarEvents]);
+    };
+  };
 
   if (!sessionId) {
     return (
-      <div className="w-80 bg-gray-50 border-l border-gray-200 flex items-center justify-center">
+      <div className="w-[1000px] bg-gray-50 border-l border-gray-200 flex items-center justify-center">
         <div className="text-center text-gray-500 p-6">
-          <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <h3 className="font-medium mb-2">Travel Calendar</h3>
           <p className="text-sm">Select a session to view travel plans</p>
         </div>
@@ -231,11 +208,11 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
   }
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
+    <div className="w-[1000px] bg-white border-l border-gray-200 flex flex-col h-full">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-gray-200">
         <div className="flex items-center gap-2 mb-3">
-          <Calendar className="w-5 h-5 text-blue-600" />
+          <CalendarIcon className="w-5 h-5 text-blue-600" />
           <h2 className="font-semibold text-gray-900">Travel Schedule</h2>
         </div>
         
@@ -247,15 +224,15 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         <div className="mt-3 space-y-1">
           <div className="flex items-center gap-2 text-xs">
             <div className="flex items-center gap-1">
-              <Plane className="w-3 h-3 text-blue-600" />
+              <div className="w-3 h-3 bg-blue-600 rounded"></div>
               <span>Flights</span>
             </div>
             <div className="flex items-center gap-1">
-              <Hotel className="w-3 h-3 text-green-600" />
+              <div className="w-3 h-3 bg-green-600 rounded"></div>
               <span>Hotels</span>
             </div>
             <div className="flex items-center gap-1">
-              <Camera className="w-3 h-3 text-purple-600" />
+              <div className="w-3 h-3 bg-purple-600 rounded"></div>
               <span>Attractions</span>
             </div>
           </div>
@@ -263,7 +240,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
       </div>
 
       {/* Calendar Body */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500">
@@ -274,7 +251,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         ) : calendarEvents.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500 p-6">
-              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <h3 className="font-medium mb-2">No Plans Yet</h3>
               <p className="text-sm">
                 Start chatting to create your travel itinerary
@@ -282,14 +259,24 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {Array.from({ length: 24 }, (_, hour) => (
-              <TimeSlot
-                key={hour}
-                hour={hour}
-                events={hourlyEvents[hour] || []}
-              />
-            ))}
+          <div className="h-full p-2">
+            <Calendar
+              localizer={localizer}
+              events={calendarEvents}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: '100%' }}
+              views={[Views.WEEK, Views.DAY, Views.AGENDA]}
+              defaultView={Views.WEEK}
+              step={60}
+              showMultiDayTimes
+              components={{
+                event: EventComponent
+              }}
+              eventPropGetter={eventStyleGetter}
+              popup
+              popupOffset={{ x: 30, y: 20 }}
+            />
           </div>
         )}
       </div>
