@@ -4,7 +4,7 @@ Chat Endpoints - Conversational AI interface
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from app.agents.travel_agent import get_travel_agent
 from app.agents.base_agent import AgentMessage
@@ -12,6 +12,7 @@ from app.memory.session_manager import get_session_manager
 from app.memory.conversation_memory import get_conversation_memory
 from app.core.logging_config import get_logger
 from datetime import datetime
+import asyncio
 
 logger = get_logger(__name__)
 
@@ -200,6 +201,16 @@ async def chat_with_agent(message: ChatMessage):
                 "total_iterations": response.metadata.get("total_iterations", response.metadata["refinement_iteration"])
             }
         
+        # Start async plan update after response is ready (fire and forget)
+        asyncio.create_task(
+            _update_plan_async(
+                message.session_id, 
+                message.message, 
+                response.content, 
+                response.metadata
+            )
+        )
+        
         return chat_response
         
     except Exception as e:
@@ -288,3 +299,35 @@ async def clear_chat_history(session_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear chat history: {str(e)}") 
+
+# ===== Helper Functions =====
+
+async def _update_plan_async(
+    session_id: str, 
+    user_message: str, 
+    agent_response: str, 
+    response_metadata: Dict[str, Any]
+) -> None:
+    """
+    Asynchronously update travel plan based on chat response.
+    This runs in the background after the chat response is sent to user.
+    """
+    try:
+        from app.core.plan_manager import get_plan_manager
+        plan_manager = get_plan_manager()
+        
+        success = await plan_manager.update_plan_from_chat_response(
+            session_id=session_id,
+            user_message=user_message,
+            agent_response=agent_response,
+            response_metadata=response_metadata
+        )
+        
+        if success:
+            logger.info(f"✅ Successfully updated plan for session {session_id}")
+        else:
+            logger.debug(f"No plan updates needed for session {session_id}")
+            
+    except Exception as e:
+        logger.error(f"Background plan update failed for session {session_id}: {e}")
+        # Don't raise - this is a background task and shouldn't affect chat response

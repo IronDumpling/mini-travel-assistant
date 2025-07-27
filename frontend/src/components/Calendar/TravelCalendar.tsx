@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Calendar, Clock, MapPin, Plane, Hotel, Camera, Star } from 'lucide-react';
 import { format, addHours, startOfDay } from 'date-fns';
 import { useTravelPlans } from '../../hooks/useApi';
-import type { TravelPlan, CalendarEvent } from '../../types/api';
+import type { TravelPlan, CalendarEvent, SessionTravelPlan } from '../../types/api';
 
 interface TravelCalendarProps {
   sessionId: string | null;
@@ -68,63 +68,77 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
   const { data: travelPlans, isLoading } = useTravelPlans(sessionId);
 
   const calendarEvents = useMemo(() => {
-    if (!travelPlans || travelPlans.length === 0) return [];
+    if (!travelPlans) return [];
 
-    const events: CalendarEvent[] = [];
-    const today = new Date();
+    // If travelPlans is a SessionTravelPlan, use its events directly
+    if (travelPlans && typeof travelPlans === 'object' && 'events' in travelPlans) {
+      const sessionPlan = travelPlans as SessionTravelPlan;
+      return sessionPlan.events.map(event => ({
+        ...event,
+        start: new Date(event.start),
+        end: new Date(event.end)
+      }));
+    }
 
-    travelPlans.forEach((plan: TravelPlan) => {
-      // Generate sample events from travel plan data
-      
-      // Add flights
-      plan.flights.forEach((flight, index) => {
-        const departureTime = new Date(flight.departure_time);
-        const arrivalTime = new Date(flight.arrival_time);
-        
-        events.push({
-          id: `flight-${plan.id}-${index}`,
-          title: `${flight.airline} Flight`,
-          start: departureTime,
-          end: arrivalTime,
-          description: `${flight.departure_time} - ${flight.arrival_time}`,
-          type: 'flight',
-          details: flight,
+    // Legacy support for old TravelPlan[] format - cast to any to avoid type issues
+    const plansData = travelPlans as any;
+    if (Array.isArray(plansData)) {
+      const events: CalendarEvent[] = [];
+      const today = new Date();
+
+      plansData.forEach((plan: TravelPlan) => {
+        // Add flights
+        plan.flights?.forEach((flight: any, index: number) => {
+          const departureTime = new Date(flight.departure_time);
+          const arrivalTime = new Date(flight.arrival_time);
+          
+          events.push({
+            id: `flight-${plan.id}-${index}`,
+            title: `${flight.airline} Flight`,
+            start: departureTime,
+            end: arrivalTime,
+            description: `${flight.departure_time} - ${flight.arrival_time}`,
+            type: 'flight',
+            details: flight,
+          });
+        });
+
+        // Add hotels (assume check-in at 3 PM, check-out at 11 AM)
+        plan.hotels?.forEach((hotel: any, index: number) => {
+          const checkIn = addHours(startOfDay(today), 15); // 3 PM
+          const checkOut = addHours(startOfDay(today), 11); // 11 AM next day
+          
+          events.push({
+            id: `hotel-${plan.id}-${index}`,
+            title: hotel.name,
+            start: checkIn,
+            end: checkOut,
+            description: `$${hotel.price_per_night}/night`,
+            type: 'hotel',
+            details: hotel,
+          });
+        });
+
+        // Add attractions (assume 2-hour visits starting at various times)
+        plan.attractions?.forEach((attraction: any, index: number) => {
+          const visitTime = addHours(startOfDay(today), 9 + (index * 3)); // Starting at 9 AM, 3 hours apart
+          
+          events.push({
+            id: `attraction-${plan.id}-${index}`,
+            title: attraction.name,
+            start: visitTime,
+            end: addHours(visitTime, 2),
+            description: attraction.category,
+            type: 'attraction',
+            details: attraction,
+          });
         });
       });
 
-      // Add hotels (assume check-in at 3 PM, check-out at 11 AM)
-      plan.hotels.forEach((hotel, index) => {
-        const checkIn = addHours(startOfDay(today), 15); // 3 PM
-        const checkOut = addHours(startOfDay(today), 11); // 11 AM next day
-        
-        events.push({
-          id: `hotel-${plan.id}-${index}`,
-          title: hotel.name,
-          start: checkIn,
-          end: checkOut,
-          description: `$${hotel.price_per_night}/night`,
-          type: 'hotel',
-          details: hotel,
-        });
-      });
+      return events;
+    }
 
-      // Add attractions (assume 2-hour visits starting at various times)
-      plan.attractions.forEach((attraction, index) => {
-        const visitTime = addHours(startOfDay(today), 9 + (index * 3)); // Starting at 9 AM, 3 hours apart
-        
-        events.push({
-          id: `attraction-${plan.id}-${index}`,
-          title: attraction.name,
-          start: visitTime,
-          end: addHours(visitTime, 2),
-          description: attraction.category,
-          type: 'attraction',
-          details: attraction,
-        });
-      });
-    });
-
-    return events;
+    return [];
   }, [travelPlans]);
 
   const hourlyEvents = useMemo(() => {
