@@ -187,23 +187,62 @@ class PlanManager:
             )
             
             # Parse response and convert to CalendarEvent objects
-            events_data = json.loads(response.strip())
+            try:
+                events_data = json.loads(response.strip())
+            except json.JSONDecodeError as e:
+                logger.warning(f"LLM response not valid JSON: {e}")
+                return []
+            
             events = []
             
             for event_data in events_data:
-                event = CalendarEvent(
-                    id=f"event_{uuid.uuid4().hex[:8]}",
-                    title=event_data.get("title", "Travel Event"),
-                    description=event_data.get("description"),
-                    event_type=CalendarEventType(event_data.get("type", "activity")),
-                    start_time=datetime.fromisoformat(event_data.get("start_time")),
-                    end_time=datetime.fromisoformat(event_data.get("end_time")),
-                    location=event_data.get("location"),
-                    details=event_data.get("details", {}),
-                    confidence=0.7,
-                    source="llm_extraction"
-                )
-                events.append(event)
+                try:
+                    # Safely parse start_time
+                    start_time_str = event_data.get("start_time")
+                    if not start_time_str:
+                        logger.warning("Event missing start_time, skipping")
+                        continue
+                    try:
+                        start_time = datetime.fromisoformat(start_time_str)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Invalid start_time format '{start_time_str}': {e}")
+                        continue
+                    
+                    # Safely parse end_time
+                    end_time_str = event_data.get("end_time")
+                    if not end_time_str:
+                        logger.warning("Event missing end_time, skipping")
+                        continue
+                    try:
+                        end_time = datetime.fromisoformat(end_time_str)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Invalid end_time format '{end_time_str}': {e}")
+                        continue
+                    
+                    # Safely parse event_type
+                    event_type_str = event_data.get("type", "activity")
+                    try:
+                        event_type = CalendarEventType(event_type_str)
+                    except ValueError:
+                        logger.warning(f"Unknown event type '{event_type_str}', defaulting to activity")
+                        event_type = CalendarEventType.ACTIVITY
+                    
+                    event = CalendarEvent(
+                        id=f"event_{uuid.uuid4().hex[:8]}",
+                        title=event_data.get("title", "Travel Event"),
+                        description=event_data.get("description"),
+                        event_type=event_type,
+                        start_time=start_time,
+                        end_time=end_time,
+                        location=event_data.get("location"),
+                        details=event_data.get("details", {}),
+                        confidence=0.7,
+                        source="llm_extraction"
+                    )
+                    events.append(event)
+                except Exception as e:
+                    logger.warning(f"Error processing event data {event_data}: {e}")
+                    continue
             
             return events
             
@@ -270,7 +309,16 @@ class PlanManager:
             if events:  # If we have flights, check in after arrival
                 arrival_day = start_date + timedelta(hours=8)  # 8 hours after start for arrival + travel
                 
-            check_in = arrival_day.replace(hour=15, minute=0, second=0, microsecond=0)
+            # Calculate appropriate check-in time
+            # If arrival is before 3 PM, check in at 3 PM same day
+            # If arrival is 3 PM or later, check in at 3 PM next day
+            if arrival_day.hour >= 15:  # 3 PM or later
+                check_in_date = arrival_day.date() + timedelta(days=1)
+                check_in = datetime.combine(check_in_date, datetime.min.time()).replace(hour=15, minute=0)
+            else:
+                check_in_date = arrival_day.date()
+                check_in = datetime.combine(check_in_date, datetime.min.time()).replace(hour=15, minute=0)
+                
             check_out = (start_date + timedelta(days=duration_days)).replace(hour=11, minute=0, second=0, microsecond=0)
             
             events.append(CalendarEvent(

@@ -11,7 +11,7 @@ from app.agents.base_agent import AgentMessage
 from app.memory.session_manager import get_session_manager
 from app.memory.conversation_memory import get_conversation_memory
 from app.core.logging_config import get_logger
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 
 logger = get_logger(__name__)
@@ -240,22 +240,26 @@ async def get_chat_history(session_id: str, limit: int = 50):
         # Convert to frontend format
         formatted_messages = []
         for msg in session_messages:
+            # Safely get metadata, ensuring it's never None for unpacking
+            msg_metadata = getattr(msg, 'metadata', {}) or {}
+            
             # Add user message
             formatted_messages.append({
                 "role": "user",
                 "content": msg.user_message,
                 "timestamp": msg.timestamp.isoformat(),
-                "metadata": getattr(msg, 'metadata', {})
+                "metadata": msg_metadata
             })
             
-            # Add assistant response
+            # Add assistant response with a slightly later timestamp to maintain chronological order
+            response_timestamp = msg.timestamp + timedelta(seconds=1)
             formatted_messages.append({
                 "role": "assistant", 
                 "content": msg.agent_response,
-                "timestamp": msg.timestamp.isoformat(),
+                "timestamp": response_timestamp.isoformat(),
                 "metadata": {
                     "confidence": getattr(msg, 'confidence', None),
-                    **(getattr(msg, 'metadata', {}))
+                    **msg_metadata
                 }
             })
         
