@@ -287,13 +287,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
           </div>
         </form>
         
-        {sendMessageMutation.isError && !isTyping && processingStartTime && (Date.now() - processingStartTime) > 200000 && (
+        {sendMessageMutation.isPending && !isTyping && processingStartTime && (Date.now() - processingStartTime) > 200000 && (
           <div className="mt-2 flex items-center gap-2 text-orange-600 text-sm">
             <AlertCircle className="w-4 h-4" />
             <span>The AI is taking longer than usual. Your request is still being processed...</span>
           </div>
         )}
-        {sendMessageMutation.isError && !isTyping && !processingStartTime && (
+        {sendMessageMutation.isError && !isTyping && (
           <div className="mt-2 flex items-center gap-2 text-red-600 text-sm">
             <AlertCircle className="w-4 h-4" />
             <span>Failed to send message. Please try again.</span>

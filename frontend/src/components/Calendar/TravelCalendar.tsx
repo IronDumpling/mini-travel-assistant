@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { Calendar as CalendarIcon, Clock, MapPin, Plane, Hotel, Camera, Star } from 'lucide-react';
-import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
+import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addDays, startOfDay, addHours } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import { useTravelPlans } from '../../hooks/useApi';
-import type { TravelPlan, CalendarEvent, SessionTravelPlan } from '../../types/api';
+import type { TravelPlan, SessionTravelPlan } from '../../types/api';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 interface TravelCalendarProps {
