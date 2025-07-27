@@ -259,7 +259,13 @@ async def get_plans_by_session(session_id: str):
         
         plan = plan_manager.get_plan_by_session(session_id)
         if not plan:
+            logger.info(f"No plan found for session {session_id}")
             return []
+        
+        # Debug: Log the plan data being returned
+        logger.info(f"Returning plan for session {session_id} with {len(plan.events)} events")
+        for event in plan.events:
+            logger.debug(f"Event: {event.title}, start: {event.start_time}, end: {event.end_time}")
         
         return [plan]
         

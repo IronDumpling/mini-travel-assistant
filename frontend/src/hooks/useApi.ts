@@ -86,7 +86,30 @@ export const useSendMessage = () => {
 export const useTravelPlans = (sessionId: string | null) => {
   return useQuery({
     queryKey: queryKeys.travelPlans(sessionId || ''),
-    queryFn: () => sessionId ? ApiService.getSessionPlan(sessionId) : null,
+    queryFn: async () => {
+      if (!sessionId) return null;
+      
+      try {
+        const plan = await ApiService.getSessionPlan(sessionId);
+        console.log('Received travel plan:', plan);
+        
+        if (plan && plan.events) {
+          plan.events.forEach((event: any, index: number) => {
+            console.log(`Event ${index}:`, {
+              title: event.title,
+              start: event.start_time || event.start,
+              end: event.end_time || event.end,
+              type: event.event_type || event.type
+            });
+          });
+        }
+        
+        return plan;
+      } catch (error) {
+        console.error('Error fetching travel plan:', error);
+        return null;
+      }
+    },
     enabled: !!sessionId,
     staleTime: 30000, // 30 seconds
   });
