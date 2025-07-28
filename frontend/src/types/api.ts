@@ -14,6 +14,19 @@ export interface ChatResponse {
   next_steps: string[];
   session_id: string;
   refinement_details?: any;
+  plan_changes?: {
+    success: boolean;
+    changes_made: string[];
+    events_added: number;
+    events_updated: number;
+    events_deleted: number;
+    metadata_updated: boolean;
+    plan_modifications?: {
+      reason: string;
+      impact: string;
+    };
+    error?: string;
+  };
 }
 
 export interface Session {

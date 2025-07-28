@@ -13,6 +13,19 @@ interface MessageProps {
   timestamp?: string;
   confidence?: number;
   isLoading?: boolean;
+  plan_changes?: {
+    success: boolean;
+    changes_made: string[];
+    events_added: number;
+    events_updated: number;
+    events_deleted: number;
+    metadata_updated: boolean;
+    plan_modifications?: {
+      reason: string;
+      impact: string;
+    };
+    error?: string;
+  };
 }
 
 interface LoadingMessageProps {
@@ -66,7 +79,8 @@ const ChatMessage: React.FC<MessageProps> = ({
   content, 
   timestamp, 
   confidence,
-  isLoading = false 
+  isLoading = false,
+  plan_changes  // Add plan_changes parameter
 }) => {
   const formatTimestamp = (ts?: string) => {
     if (!ts) return '';
@@ -110,6 +124,45 @@ const ChatMessage: React.FC<MessageProps> = ({
             <div className="whitespace-pre-wrap text-gray-800">{content}</div>
           )}
         </div>
+
+        {/* Plan Changes Notification */}
+        {role === 'assistant' && plan_changes && plan_changes.success && plan_changes.changes_made.length > 0 && (
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-medium text-blue-800 text-sm mb-1">Travel Plan Updated</div>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  {plan_changes.changes_made.map((change, idx) => (
+                    <li key={idx} className="flex items-center gap-1">
+                      <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
+                      {change}
+                    </li>
+                  ))}
+                </ul>
+                {plan_changes.plan_modifications && (
+                  <div className="mt-2 text-xs text-blue-600">
+                    <div className="font-medium">Impact:</div>
+                    <div>{plan_changes.plan_modifications.impact}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Plan Update Error */}
+        {role === 'assistant' && plan_changes && !plan_changes.success && plan_changes.error && (
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-medium text-yellow-800 text-sm mb-1">Plan Update Issue</div>
+                <div className="text-sm text-yellow-700">{plan_changes.error}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -237,6 +290,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
                 content={msg.content}
                 timestamp={msg.timestamp}
                 confidence={msg.metadata?.confidence}
+                plan_changes={msg.metadata?.plan_changes} // Get plan_changes from metadata
               />
             ))}
             {isTyping && (
