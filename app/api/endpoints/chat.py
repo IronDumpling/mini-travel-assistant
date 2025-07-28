@@ -33,6 +33,7 @@ class ChatResponse(BaseModel):
     next_steps: List[str]
     session_id: str
     refinement_details: Optional[dict] = None
+    plan_changes: Optional[Dict[str, Any]] = None  # New field for plan updates
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_with_agent(message: ChatMessage):
@@ -119,6 +120,29 @@ async def chat_with_agent(message: ChatMessage):
             response = await agent.plan_travel(agent_message, enable_refinement=True)
         else:
             response = await agent.process_message(agent_message)
+
+        # 🆕 NEW: Update plan based on chat response (before storing)
+        plan_update_result = None
+        try:
+            from app.core.plan_manager import get_plan_manager
+            plan_manager = get_plan_manager()
+            
+            plan_update_result = await plan_manager.update_plan_from_chat_response(
+                session_id=message.session_id,
+                user_message=message.message,
+                agent_response=response.content,
+                response_metadata=response.metadata or {}
+            )
+            
+            logger.info(f"Plan update result for session {message.session_id}: {plan_update_result}")
+            
+        except Exception as e:
+            logger.error(f"Failed to update plan from chat response: {e}")
+            plan_update_result = {
+                "success": False,
+                "error": f"Plan update failed: {str(e)}",
+                "changes_made": []
+            }
         
         # 📝 Store conversation in both systems
         # 1. Store in session manager (basic storage)
@@ -128,7 +152,8 @@ async def chat_with_agent(message: ChatMessage):
             metadata={
                 "confidence": response.confidence,
                 "actions_taken": response.actions_taken,
-                "refinement_used": message.enable_refinement
+                "refinement_used": message.enable_refinement,
+                "plan_changes": plan_update_result  # Include plan changes in metadata
             }
         )
         
@@ -158,7 +183,7 @@ async def chat_with_agent(message: ChatMessage):
             
         except Exception as e:
             logger.error(f"Failed to store in conversation memory system: {e}")
-        
+
         # Prepare response
         chat_response = ChatResponse(
             success=response.success,
@@ -166,7 +191,8 @@ async def chat_with_agent(message: ChatMessage):
             confidence=response.confidence,
             actions_taken=response.actions_taken,
             next_steps=response.next_steps,
-            session_id=message.session_id
+            session_id=message.session_id,
+            plan_changes=plan_update_result  # Include plan changes in response
         )
         
         # Add refinement details if available
@@ -200,16 +226,6 @@ async def chat_with_agent(message: ChatMessage):
                 "actual_refinement_loops": actual_refinement_loops,
                 "total_iterations": response.metadata.get("total_iterations", response.metadata["refinement_iteration"])
             }
-        
-        # Start async plan update after response is ready (fire and forget)
-        asyncio.create_task(
-            _update_plan_async(
-                message.session_id, 
-                message.message, 
-                response.content, 
-                response.metadata
-            )
-        )
         
         return chat_response
         

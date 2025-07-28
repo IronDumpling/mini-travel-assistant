@@ -76,54 +76,302 @@ class PlanManager:
         user_message: str, 
         agent_response: str,
         response_metadata: Dict[str, Any]
-    ) -> bool:
+    ) -> Dict[str, Any]:  # Return update summary instead of bool
         """
-        Asynchronously update plan based on chat response
-        This runs after the chat response is sent to user
+        Enhanced plan update with detailed change tracking
         """
         try:
-            # Get or create plan
-            plan = self.get_plan_by_session(session_id)
-            if not plan:
-                logger.warning(f"Could not get/create plan for session {session_id}")
-                return False
+            # Get existing plan
+            existing_plan = self.get_plan_by_session(session_id)
+            if not existing_plan:
+                logger.warning(f"No existing plan found for session {session_id}, creating new plan")
+                self.create_plan_for_session(session_id)
+                existing_plan = self.get_plan_by_session(session_id)
             
-            # Extract events from chat response
-            new_events = await self._extract_events_from_response(
-                user_message, agent_response, response_metadata
+            update_summary = {
+                "success": True,
+                "changes_made": [],
+                "events_added": 0,
+                "events_updated": 0,
+                "events_deleted": 0,
+                "metadata_updated": False,
+                "plan_modifications": {}
+            }
+
+            # Extract modifications using enhanced LLM method
+            modifications = await self._extract_plan_modifications(
+                user_message, agent_response, response_metadata, existing_plan
             )
             
-            # Update plan metadata
-            metadata_updates = self._extract_metadata_updates(
-                user_message, agent_response, response_metadata
-            )
-            
-            # Apply updates
-            updated = False
-            
-            if new_events:
-                plan.events.extend(new_events)
-                updated = True
-                logger.info(f"Added {len(new_events)} events to plan {plan.plan_id}")
-            
+            # Apply modifications
+            if modifications.get("new_events"):
+                existing_plan.events.extend(modifications["new_events"])
+                update_summary["events_added"] = len(modifications["new_events"])
+                update_summary["changes_made"].append(f"Added {len(modifications['new_events'])} new events")
+                logger.info(f"Added {len(modifications['new_events'])} new events to plan {existing_plan.plan_id}")
+
+            if modifications.get("updated_events"):
+                for updated_event in modifications["updated_events"]:
+                    self._update_existing_event(existing_plan, updated_event)
+                update_summary["events_updated"] = len(modifications["updated_events"])
+                update_summary["changes_made"].append(f"Updated {len(modifications['updated_events'])} events")
+                logger.info(f"Updated {len(modifications['updated_events'])} events in plan {existing_plan.plan_id}")
+
+            if modifications.get("deleted_event_ids"):
+                for event_id in modifications["deleted_event_ids"]:
+                    existing_plan.events = [e for e in existing_plan.events if e.id != event_id]
+                update_summary["events_deleted"] = len(modifications["deleted_event_ids"])
+                update_summary["changes_made"].append(f"Deleted {len(modifications['deleted_event_ids'])} events")
+                logger.info(f"Deleted {len(modifications['deleted_event_ids'])} events from plan {existing_plan.plan_id}")
+
+            # Update metadata
+            metadata_updates = self._extract_metadata_updates(user_message, agent_response, response_metadata)
             if metadata_updates:
-                # Update metadata fields
                 for key, value in metadata_updates.items():
-                    if hasattr(plan.metadata, key):
-                        setattr(plan.metadata, key, value)
-                updated = True
-                logger.info(f"Updated plan metadata: {metadata_updates}")
-            
-            if updated:
-                plan.updated_at = datetime.now(timezone.utc)
-                self._save_plan(plan)
-                return True
-            
-            return False
+                    if hasattr(existing_plan.metadata, key):
+                        setattr(existing_plan.metadata, key, value)
+                update_summary["metadata_updated"] = True
+                update_summary["changes_made"].append("Updated plan metadata")
+                logger.info(f"Updated plan metadata: {list(metadata_updates.keys())}")
+
+            # Store modification details
+            update_summary["plan_modifications"] = modifications.get("plan_modifications", {})
+
+            # Save updated plan if any changes were made
+            if update_summary["changes_made"]:
+                existing_plan.updated_at = datetime.now(timezone.utc)
+                self._save_plan(existing_plan)
+                logger.info(f"Plan {existing_plan.plan_id} updated successfully: {update_summary['changes_made']}")
+            else:
+                logger.info(f"No changes needed for plan {existing_plan.plan_id}")
+
+            return update_summary
             
         except Exception as e:
             logger.error(f"Failed to update plan from chat response: {e}")
-            return False
+            return {
+                "success": False, 
+                "error": str(e),
+                "changes_made": [],
+                "events_added": 0,
+                "events_updated": 0,
+                "events_deleted": 0,
+                "metadata_updated": False
+            }
+    
+    async def _extract_plan_modifications(
+        self, 
+        user_message: str, 
+        agent_response: str, 
+        metadata: Dict[str, Any],
+        existing_plan
+    ) -> Dict[str, Any]:
+        """Extract plan modifications using enhanced LLM analysis"""
+        try:
+            from app.core.llm_service import get_llm_service
+            llm_service = get_llm_service()
+            
+            if not llm_service:
+                logger.warning("LLM service not available, falling back to heuristic extraction")
+                return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
+            
+            # Format existing events for LLM context
+            existing_events_context = ""
+            if existing_plan and existing_plan.events:
+                existing_events_context = self._format_existing_events_for_llm(existing_plan.events)
+            
+            prompt = f"""Analyze this travel planning conversation and determine what changes should be made to the existing travel plan.
+
+EXISTING PLAN EVENTS:
+{existing_events_context}
+
+USER REQUEST: {user_message}
+AGENT RESPONSE: {agent_response}
+
+TASK: Determine what modifications should be made to the existing plan based on this conversation.
+
+Analyze for:
+1. NEW events to add (flights, hotels, attractions, restaurants, activities)
+2. UPDATES to existing events (time changes, location changes, details updates)
+3. DELETIONS of existing events (if user wants to remove something)
+4. PLAN METADATA changes (destination, dates, budget, etc.)
+
+For each event, determine:
+- Event type (flight/hotel/attraction/restaurant/activity)
+- Title and description
+- Start and end times (use ISO format: YYYY-MM-DDTHH:MM:SS+00:00)
+- Location
+- Any specific details mentioned
+
+Return ONLY a valid JSON response with this exact structure:
+{{
+    "new_events": [
+        {{
+            "title": "Event Title",
+            "description": "Event description",
+            "event_type": "flight|hotel|attraction|restaurant|activity",
+            "start_time": "2025-07-27T10:00:00+00:00",
+            "end_time": "2025-07-27T16:00:00+00:00",
+            "location": "Location name",
+            "details": {{}}
+        }}
+    ],
+    "updated_events": [
+        {{
+            "id": "existing_event_id",
+            "title": "Updated Title",
+            "start_time": "2025-07-27T11:00:00+00:00",
+            "end_time": "2025-07-27T17:00:00+00:00"
+        }}
+    ],
+    "deleted_event_ids": ["event_id_to_delete"],
+    "plan_modifications": {{
+        "reason": "Why these changes were made",
+        "impact": "How this affects the overall plan"
+    }}
+}}
+
+If no changes are needed, return empty arrays for each section."""
+
+            response = await llm_service.generate_completion(
+                [{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=1000
+            )
+            
+            try:
+                modifications = json.loads(response.strip())
+                
+                # Convert new events to CalendarEvent objects
+                new_events = []
+                for event_data in modifications.get("new_events", []):
+                    try:
+                        event = self._create_calendar_event_from_data(event_data)
+                        if event:
+                            new_events.append(event)
+                    except Exception as e:
+                        logger.warning(f"Error creating event from data {event_data}: {e}")
+                        continue
+                
+                modifications["new_events"] = new_events
+                return modifications
+                
+            except json.JSONDecodeError as e:
+                logger.warning(f"LLM response not valid JSON: {e}")
+                return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
+                
+        except Exception as e:
+            logger.error(f"Error in LLM plan modification extraction: {e}")
+            return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
+    
+    def _format_existing_events_for_llm(self, events: List) -> str:
+        """Format existing events for LLM context"""
+        if not events:
+            return "No existing events"
+        
+        event_lines = []
+        for event in events:
+            event_lines.append(
+                f"- {event.id}: {event.title} ({event.event_type}) "
+                f"from {event.start_time} to {event.end_time} at {event.location or 'TBD'}"
+            )
+        
+        return "\n".join(event_lines)
+    
+    def _create_calendar_event_from_data(self, event_data: Dict[str, Any]):
+        """Create CalendarEvent from LLM-generated data with validation"""
+        try:
+            # Validate required fields
+            required_fields = ["title", "event_type", "start_time", "end_time"]
+            for field in required_fields:
+                if not event_data.get(field):
+                    logger.warning(f"Event missing required field '{field}': {event_data}")
+                    return None
+            
+            # Parse and validate event type
+            event_type_str = event_data.get("event_type", "activity")
+            try:
+                event_type = CalendarEventType(event_type_str)
+            except ValueError:
+                logger.warning(f"Unknown event type '{event_type_str}', defaulting to activity")
+                event_type = CalendarEventType.ACTIVITY
+            
+            # Parse and validate datetime fields
+            try:
+                start_time = datetime.fromisoformat(event_data["start_time"])
+                end_time = datetime.fromisoformat(event_data["end_time"])
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Invalid datetime format in event {event_data}: {e}")
+                return None
+            
+            event = CalendarEvent(
+                id=f"event_{uuid.uuid4().hex[:8]}",
+                title=event_data.get("title", "Travel Event"),
+                description=event_data.get("description"),
+                event_type=event_type,
+                start_time=start_time,
+                end_time=end_time,
+                location=event_data.get("location"),
+                details=event_data.get("details", {}),
+                confidence=0.8,
+                source="llm_plan_modification"
+            )
+            return event
+            
+        except Exception as e:
+            logger.warning(f"Error creating calendar event from data {event_data}: {e}")
+            return None
+    
+    async def _fallback_extract_modifications(
+        self, user_message: str, agent_response: str, metadata: Dict[str, Any], existing_plan
+    ) -> Dict[str, Any]:
+        """Fallback plan modification extraction using heuristics"""
+        # Use existing heuristic method but format as modifications
+        new_events = self._heuristic_extract_events(user_message, agent_response, metadata)
+        
+        return {
+            "new_events": new_events,
+            "updated_events": [],
+            "deleted_event_ids": [],
+            "plan_modifications": {
+                "reason": "Heuristic extraction used due to LLM unavailability",
+                "impact": "Added events based on conversation analysis"
+            }
+        }
+    
+    def _update_existing_event(self, plan, updated_event_data: Dict[str, Any]):
+        """Update an existing event in the plan"""
+        event_id = updated_event_data.get("id")
+        if not event_id:
+            logger.warning("Cannot update event without ID")
+            return
+        
+        for i, existing_event in enumerate(plan.events):
+            if existing_event.id == event_id:
+                # Update fields that are provided
+                if "title" in updated_event_data:
+                    existing_event.title = updated_event_data["title"]
+                if "description" in updated_event_data:
+                    existing_event.description = updated_event_data["description"]
+                if "start_time" in updated_event_data:
+                    try:
+                        existing_event.start_time = datetime.fromisoformat(updated_event_data["start_time"])
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Invalid start_time for update: {e}")
+                if "end_time" in updated_event_data:
+                    try:
+                        existing_event.end_time = datetime.fromisoformat(updated_event_data["end_time"])
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Invalid end_time for update: {e}")
+                if "location" in updated_event_data:
+                    existing_event.location = updated_event_data["location"]
+                if "details" in updated_event_data:
+                    existing_event.details = updated_event_data["details"]
+                
+                logger.info(f"Updated event {event_id}: {existing_event.title}")
+                return
+        
+        logger.warning(f"Event with ID {event_id} not found for update")
     
     async def _extract_events_from_response(
         self, 

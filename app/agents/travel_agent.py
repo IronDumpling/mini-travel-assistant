@@ -482,6 +482,7 @@ class TravelAgent(BaseAgent):
             execution_context = {
                 **message.metadata,
                 "original_message": message.content,
+                "session_id": session_id,  # Add session_id to context
             }
             result = await self._execute_action_plan(action_plan, execution_context)
 
@@ -1029,53 +1030,202 @@ Please analyze the current message considering the conversation history for bett
             return "english"
 
     async def _retrieve_knowledge_context(
-        self, query: str, structured_intent: Optional[Dict[str, Any]] = None
+        self, query: str, structured_intent: Optional[Dict[str, Any]] = None,
+        session_id: Optional[str] = None  # Add session_id parameter
     ) -> Dict[str, Any]:
-        """Retrieve knowledge context with enhanced multi-destination support"""
+        """
+        Retrieve knowledge context for the query, including existing plan context
+        """
         try:
-            # Use RAG engine to retrieve relevant knowledge with structured intent
-            if structured_intent:
-                # Pass structured intent to RAG engine for intelligent destination handling
-                result = await self.rag_engine.retrieve(
-                    query=query, top_k=5, structured_intent=structured_intent
-                )
-            else:
-                result = await self.rag_engine.retrieve(query, top_k=5)
-
-            # Process retrieved documents
-            contexts = []
-            for i, doc in enumerate(result.documents):
-                contexts.append(
-                    {
-                        "id": doc.id,
-                        "content": doc.content[:500] + "..."
-                        if len(doc.content) > 500
-                        else doc.content,
-                        "metadata": doc.metadata,
-                    }
-                )
-
-            full_context = "\n\n".join([doc.content for doc in result.documents])
-
-            return {
-                "relevant_docs": contexts,
-                "context": full_context,
-                "total_results": result.total_results,
-                "scores": result.scores,
-                "multi_destination_analysis": structured_intent.get("destination", {})
-                if structured_intent
-                else None,
+            context = {
+                "relevant_docs": [],
+                "search_results": [],
+                "total_docs": 0,
+                "search_strategy": "none",
+                "plan_context": {},
+                "has_existing_plan": False
             }
+
+            if not self.rag_engine:
+                logger.warning("RAG engine not available for knowledge retrieval")
+                return context
+
+            # Determine search strategy
+            search_strategy = "standard"
+            if structured_intent:
+                info_fusion = structured_intent.get("information_fusion", {})
+                search_strategy = info_fusion.get("knowledge_priority", "standard")
+
+            # Retrieve relevant documents
+            if search_strategy == "comprehensive":
+                docs_limit = 8
+                confidence_threshold = 0.5
+            elif search_strategy == "focused":
+                docs_limit = 5
+                confidence_threshold = 0.7
+            else:  # standard
+                docs_limit = 6
+                confidence_threshold = 0.6
+
+            relevant_docs = await self.rag_engine.search_documents(
+                query, limit=docs_limit, confidence_threshold=confidence_threshold
+            )
+
+            context.update({
+                "relevant_docs": relevant_docs,
+                "total_docs": len(relevant_docs),
+                "search_strategy": search_strategy,
+                "confidence_threshold": confidence_threshold,
+            })
+
+            # NEW: Add plan context retrieval
+            plan_context = await self._retrieve_plan_context(session_id, query, structured_intent)
+            context.update({
+                "plan_context": plan_context,
+                "has_existing_plan": plan_context.get("has_plan", False),
+                "plan_events": plan_context.get("events", []),
+                "plan_metadata": plan_context.get("metadata", {})
+            })
+
+            logger.info(f"Retrieved {len(relevant_docs)} docs with {search_strategy} strategy, plan context: {plan_context.get('has_plan', False)}")
+            return context
 
         except Exception as e:
-            logger.error(f"Error in knowledge context retrieval: {str(e)}")
-
+            logger.error(f"Error retrieving knowledge context: {e}")
             return {
                 "relevant_docs": [],
-                "context": f"Error retrieving context: {str(e)}",
-                "error": str(e),
-                "multi_destination_analysis": None,
+                "search_results": [],
+                "total_docs": 0,
+                "search_strategy": "error",
+                "plan_context": {},
+                "has_existing_plan": False
             }
+
+    async def _retrieve_plan_context(
+        self, session_id: str, query: str, intent: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Retrieve existing plan context for the session"""
+        if not session_id:
+            return {"has_plan": False}
+        
+        try:
+            from app.core.plan_manager import get_plan_manager
+            plan_manager = get_plan_manager()
+            
+            existing_plan = plan_manager.get_plan_by_session(session_id)
+            if not existing_plan or not existing_plan.events:
+                return {"has_plan": False}
+            
+            # Analyze plan relevance to current query
+            relevant_events = self._filter_relevant_events(existing_plan.events, query, intent)
+            
+            return {
+                "has_plan": True,
+                "plan_id": existing_plan.plan_id,
+                "events": [event.model_dump() for event in relevant_events],
+                "metadata": existing_plan.metadata.model_dump(),
+                "last_updated": existing_plan.updated_at,
+                "event_summary": self._summarize_plan_events(existing_plan.events),
+                "gaps_identified": self._identify_plan_gaps(existing_plan, intent)
+            }
+        
+        except Exception as e:
+            logger.error(f"Error retrieving plan context: {e}")
+            return {"has_plan": False}
+
+    def _filter_relevant_events(
+        self, events: List, query: str, intent: Optional[Dict[str, Any]]
+    ) -> List:
+        """Filter events relevant to current query"""
+        if not events:
+            return []
+        
+        query_lower = query.lower()
+        relevant_events = []
+        
+        # Check for date-related queries
+        date_keywords = ["today", "tomorrow", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        time_keywords = ["morning", "afternoon", "evening", "night"]
+        
+        # Check for activity-related queries
+        activity_keywords = ["flight", "hotel", "attraction", "restaurant", "visit", "tour"]
+        
+        for event in events:
+            is_relevant = False
+            
+            # Check if query mentions specific event types
+            if intent and intent.get("type") == "specific_query":
+                for keyword in activity_keywords:
+                    if keyword in query_lower and keyword in str(event.event_type).lower():
+                        is_relevant = True
+                        break
+            
+            # Check if query mentions location in event
+            if event.location and any(word in query_lower for word in event.location.lower().split()):
+                is_relevant = True
+            
+            # Check if query mentions event title
+            if event.title and any(word in query_lower for word in event.title.lower().split()):
+                is_relevant = True
+            
+            # If no specific filters match, include recent events
+            if not is_relevant and len(relevant_events) < 5:
+                is_relevant = True
+            
+            if is_relevant:
+                relevant_events.append(event)
+        
+        return relevant_events[:10]  # Limit to 10 most relevant events
+
+    def _summarize_plan_events(self, events: List) -> str:
+        """Create human-readable summary of plan events"""
+        if not events:
+            return "No events scheduled"
+        
+        summary_parts = []
+        event_types = {}
+        
+        for event in events:
+            event_type = str(event.event_type).lower()
+            if event_type not in event_types:
+                event_types[event_type] = 0
+            event_types[event_type] += 1
+        
+        for event_type, count in event_types.items():
+            if count == 1:
+                summary_parts.append(f"1 {event_type}")
+            else:
+                summary_parts.append(f"{count} {event_type}s")
+        
+        return f"Current plan includes: {', '.join(summary_parts)}"
+
+    def _identify_plan_gaps(
+        self, plan, intent: Optional[Dict[str, Any]]
+    ) -> List[str]:
+        """Identify missing elements in the plan"""
+        gaps = []
+        
+        if not plan.events:
+            return ["No events scheduled"]
+        
+        # Check for common travel components
+        event_types = [str(event.event_type).lower() for event in plan.events]
+        
+        essential_types = ["flight", "hotel"]
+        recommended_types = ["attraction", "restaurant"]
+        
+        for essential in essential_types:
+            if essential not in event_types:
+                gaps.append(f"Missing {essential} arrangements")
+        
+        for recommended in recommended_types:
+            if recommended not in event_types:
+                gaps.append(f"Could add {recommended} recommendations")
+        
+        # Check for timeline gaps (more than 8 hours between events on same day)
+        # This would need more sophisticated date analysis
+        
+        return gaps
 
     async def _create_action_plan(
         self, intent: Dict[str, Any], context: Dict[str, Any]
@@ -2068,12 +2218,13 @@ Please analyze the current message considering the conversation history for bett
         try:
             # First, always retrieve knowledge context for any travel query
             query = context.get("original_message", "travel information")
+            session_id = context.get("session_id")
             # Use destination from plan for better knowledge retrieval
             destination = plan.get("destination", "unknown")
             if destination != "unknown":
                 query = f"{query} {destination}"
             
-            knowledge_context = await self._retrieve_knowledge_context(query)
+            knowledge_context = await self._retrieve_knowledge_context(query, session_id=session_id)
             results["knowledge_context"] = knowledge_context
             
             # Add planning context to results
@@ -2269,7 +2420,7 @@ Please analyze the current message considering the conversation history for bett
     async def _generate_response(
         self, execution_result: Dict[str, Any], intent: Dict[str, Any]
     ) -> str:
-        """Generate response content using intelligent information fusion"""
+        """Generate response content using intelligent information fusion with plan awareness"""
 
         logger.info(f"=== INTELLIGENT RESPONSE GENERATION START ===")
         logger.info(
@@ -2282,6 +2433,10 @@ Please analyze the current message considering the conversation history for bett
             knowledge_context = execution_result.get("knowledge_context", {})
             tool_results = execution_result.get("results", {})
             user_message = execution_result.get("original_message", "")
+            
+            # NEW: Extract plan context
+            plan_context = knowledge_context.get("plan_context", {})
+            has_existing_plan = plan_context.get("has_plan", False)
 
             logger.info(f"Information Sources Summary:")
             logger.info(
@@ -2289,6 +2444,10 @@ Please analyze the current message considering the conversation history for bett
             )
             logger.info(f"  - Tool results: {list(tool_results.keys())}")
             logger.info(f"  - Intent type: {intent.get('type', 'unknown')}")
+            logger.info(f"  - Has existing plan: {has_existing_plan}")
+            if has_existing_plan:
+                logger.info(f"  - Plan events: {len(plan_context.get('events', []))}")
+                logger.info(f"  - Plan summary: {plan_context.get('event_summary', 'N/A')}")
 
             if execution_result["success"]:
                 # Try intelligent information fusion using LLM
@@ -2302,14 +2461,21 @@ Please analyze the current message considering the conversation history for bett
                         formatted_tools = self._format_tools_for_fusion(tool_results)
                         formatted_intent = self._format_intent_for_fusion(intent)
 
-                        # Use information fusion template from prompt manager
-                        fusion_prompt = prompt_manager.get_prompt(
-                            PromptType.INFORMATION_FUSION,
-                            user_message=user_message,
-                            knowledge_context=formatted_knowledge,
-                            tool_results=formatted_tools,
-                            intent_analysis=formatted_intent,
-                        )
+                        # NEW: Choose fusion prompt based on plan context
+                        if has_existing_plan:
+                            fusion_prompt = self._create_plan_aware_fusion_prompt(
+                                user_message, formatted_knowledge, formatted_tools, 
+                                formatted_intent, plan_context
+                            )
+                        else:
+                            # Use information fusion template from prompt manager
+                            fusion_prompt = prompt_manager.get_prompt(
+                                PromptType.INFORMATION_FUSION,
+                                user_message=user_message,
+                                knowledge_context=formatted_knowledge,
+                                tool_results=formatted_tools,
+                                intent_analysis=formatted_intent,
+                            )
 
                         logger.info(
                             f"Generated fusion prompt (first 300 chars): {fusion_prompt[:300]}..."
@@ -3975,6 +4141,54 @@ This will help me provide you with the most relevant travel guidance possible.""
             # Return original structured response if enhancement fails
             structured_response.metadata["enhancement_failed"] = str(e)
             return structured_response
+
+    def _create_plan_aware_fusion_prompt(
+        self, user_message: str, formatted_knowledge: str, formatted_tools: str,
+        formatted_intent: str, plan_context: Dict[str, Any]
+    ) -> str:
+        """Create fusion prompt that considers existing plan"""
+        
+        existing_events = plan_context.get("event_summary", "")
+        plan_gaps = plan_context.get("gaps_identified", [])
+        last_updated = plan_context.get("last_updated", "Unknown")
+        
+        prompt = f"""You are a travel planning assistant with access to an existing travel plan. Generate a helpful response that considers both the current plan and new information.
+
+EXISTING TRAVEL PLAN CONTEXT:
+Current plan events: {existing_events}
+Identified gaps: {', '.join(plan_gaps) if plan_gaps else 'None'}
+Last updated: {last_updated}
+
+USER REQUEST: {user_message}
+
+TRAVEL INTENT ANALYSIS:
+{formatted_intent}
+
+NEW INFORMATION FROM TOOLS:
+{formatted_tools}
+
+KNOWLEDGE BASE INSIGHTS:
+{formatted_knowledge}
+
+INSTRUCTIONS:
+1. Acknowledge the user's existing plan when relevant
+2. Identify any conflicts with existing events and suggest resolutions
+3. Fill gaps in the current plan based on user's request
+4. Suggest specific updates or additions to improve the plan
+5. Maintain travel plan continuity and logical flow
+6. Be specific about timing, locations, and practical details
+7. If suggesting changes, explain why they improve the overall plan
+
+RESPONSE REQUIREMENTS:
+- Start by acknowledging relevant existing plan elements
+- Integrate new findings with current plan
+- Suggest specific, actionable updates
+- Maintain helpful, travel-focused tone
+- Provide practical, implementable advice
+
+Generate a comprehensive response that helps the user optimize their travel plan:"""
+        
+        return prompt
 
 
 # Global travel agent instance (singleton pattern)
