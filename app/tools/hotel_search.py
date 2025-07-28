@@ -62,7 +62,6 @@ class HotelSearchTool(BaseTool):
             description="Search for hotel accommodation information using AMADEUS API, with multiple filtering conditions",
             category="accommodation",
             tags=["hotel", "accommodation", "search", "booking", "amadeus"],
-            tags=["hotel", "accommodation", "search", "booking", "amadeus"],
             timeout=30
         )
         super().__init__(metadata)
