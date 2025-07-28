@@ -44,6 +44,46 @@ const EventComponent = ({ event }: { event: any }) => {
 export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => {
   const { data: travelPlans, isLoading } = useTravelPlans(sessionId);
 
+  // Add custom styles for hover effects
+  const customStyles = `
+    .rbc-calendar .rbc-event:hover {
+      cursor: pointer !important;
+    }
+    
+    .rbc-calendar .rbc-event.travel-calendar-event[style*="background-color: rgb(37, 99, 235)"]:hover {
+      background-color: #1d4ed8 !important; /* darker blue for flights */
+    }
+    
+    .rbc-calendar .rbc-event.travel-calendar-event[style*="background-color: rgb(22, 163, 74)"]:hover {
+      background-color: #15803d !important; /* darker green for hotels */
+    }
+    
+    .rbc-calendar .rbc-event.travel-calendar-event[style*="background-color: rgb(147, 51, 234)"]:hover {
+      background-color: #7c3aed !important; /* darker purple for attractions */
+    }
+    
+    .rbc-calendar .rbc-event.travel-calendar-event[style*="background-color: rgb(234, 88, 12)"]:hover {
+      background-color: #dc2626 !important; /* red for restaurants */
+    }
+    
+    .rbc-calendar .rbc-event.travel-calendar-event[style*="background-color: rgb(107, 114, 128)"]:hover {
+      background-color: #4b5563 !important; /* darker gray for default */
+    }
+    
+    /* Disable click/selection styling */
+    .rbc-calendar .rbc-event.rbc-selected {
+      background-color: inherit !important;
+      border: inherit !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    
+    .rbc-calendar .rbc-event:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  `;
+
   const calendarEvents = useMemo(() => {
     if (!travelPlans) return [];
 
@@ -165,22 +205,28 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
   const eventStyleGetter = (event: any) => {
     let backgroundColor = '#3174ad';
     let color = 'white';
+    let hoverColor; // Default hover color (gray-700)
 
     switch (event.type) {
       case 'flight':
         backgroundColor = '#2563eb'; // blue
+        hoverColor = '#1d4ed8'; // darker blue on hover
         break;
       case 'hotel':
         backgroundColor = '#16a34a'; // green
+        hoverColor = '#15803d'; // darker green on hover
         break;
       case 'attraction':
         backgroundColor = '#9333ea'; // purple
+        hoverColor = '#7c3aed'; // darker purple on hover
         break;
       case 'restaurant':
         backgroundColor = '#ea580c'; // orange
+        hoverColor = '#dc2626'; // red on hover
         break;
       default:
         backgroundColor = '#6b7280'; // gray
+        hoverColor = '#4b5563'; // darker gray on hover
     }
 
     return {
@@ -190,8 +236,14 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         border: 'none',
         borderRadius: '4px',
         fontSize: '12px',
-        padding: '2px 4px'
-      }
+        padding: '2px 4px',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s ease',
+        // Override react-big-calendar's default selection styling
+        outline: 'none !important',
+        boxShadow: 'none !important'
+      },
+      className: 'travel-calendar-event'
     };
   };
 
@@ -209,6 +261,8 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
 
   return (
     <div className="w-[1000px] bg-white border-l border-gray-200 flex flex-col h-full">
+      <style>{customStyles}</style>
+      
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-gray-200">
         <div className="flex items-center gap-2 mb-3">
@@ -276,6 +330,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               eventPropGetter={eventStyleGetter}
               popup
               popupOffset={{ x: 30, y: 20 }}
+              onSelectEvent={() => {}} // Disable click selection
             />
           </div>
         )}
