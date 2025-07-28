@@ -1067,9 +1067,21 @@ Please analyze the current message considering the conversation history for bett
                 docs_limit = 6
                 confidence_threshold = 0.6
 
-            relevant_docs = await self.rag_engine.search_documents(
-                query, limit=docs_limit, confidence_threshold=confidence_threshold
+            # Use RAG engine's retrieve method
+            retrieval_result = await self.rag_engine.retrieve(
+                query, top_k=docs_limit, structured_intent=structured_intent
             )
+            
+            # Extract documents from retrieval result
+            relevant_docs = []
+            if retrieval_result and hasattr(retrieval_result, 'documents'):
+                for doc in retrieval_result.documents:
+                    relevant_docs.append({
+                        "id": getattr(doc, 'id', 'unknown'),
+                        "content": getattr(doc, 'content', ''),
+                        "metadata": getattr(doc, 'metadata', {}),
+                        "score": getattr(doc, 'score', 0.0)
+                    })
 
             context.update({
                 "relevant_docs": relevant_docs,

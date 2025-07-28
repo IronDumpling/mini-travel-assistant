@@ -88,6 +88,11 @@ class PlanManager:
                 self.create_plan_for_session(session_id)
                 existing_plan = self.get_plan_by_session(session_id)
             
+            logger.info(f"Starting plan update for session {session_id}:")
+            logger.info(f"  - Existing plan has {len(existing_plan.events) if existing_plan.events else 0} events")
+            logger.info(f"  - User message: {user_message[:150]}{'...' if len(user_message) > 150 else ''}")
+            logger.info(f"  - Agent response length: {len(agent_response)} characters")
+            
             update_summary = {
                 "success": True,
                 "changes_made": [],
@@ -99,9 +104,16 @@ class PlanManager:
             }
 
             # Extract modifications using enhanced LLM method
+            logger.info(f"Attempting to extract plan modifications...")
             modifications = await self._extract_plan_modifications(
                 user_message, agent_response, response_metadata, existing_plan
             )
+            
+            logger.info(f"Plan modification extraction result:")
+            logger.info(f"  - New events: {len(modifications.get('new_events', []))}")
+            logger.info(f"  - Updated events: {len(modifications.get('updated_events', []))}")
+            logger.info(f"  - Deleted events: {len(modifications.get('deleted_event_ids', []))}")
+            logger.info(f"  - Modification reason: {modifications.get('plan_modifications', {}).get('reason', 'Unknown')}")
             
             # Apply modifications
             if modifications.get("new_events"):
@@ -167,6 +179,8 @@ class PlanManager:
         existing_plan
     ) -> Dict[str, Any]:
         """Extract plan modifications using enhanced LLM analysis"""
+        logger.info(f"Starting LLM-based plan modification extraction")
+        
         try:
             from app.core.llm_service import get_llm_service
             llm_service = get_llm_service()
@@ -175,10 +189,15 @@ class PlanManager:
                 logger.warning("LLM service not available, falling back to heuristic extraction")
                 return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
             
+            logger.info(f"LLM service available: {type(llm_service).__name__}")
+            
             # Format existing events for LLM context
             existing_events_context = ""
             if existing_plan and existing_plan.events:
                 existing_events_context = self._format_existing_events_for_llm(existing_plan.events)
+                logger.info(f"Formatted {len(existing_plan.events)} existing events for LLM context")
+            else:
+                logger.info("No existing events to format for LLM context")
             
             prompt = f"""Analyze this travel planning conversation and determine what changes should be made to the existing travel plan.
 
@@ -233,14 +252,18 @@ Return ONLY a valid JSON response with this exact structure:
 
 If no changes are needed, return empty arrays for each section."""
 
-            response = await llm_service.generate_completion(
+            response = await llm_service.chat_completion(
                 [{"role": "user", "content": prompt}],
                 temperature=0.2,
                 max_tokens=1000
             )
             
             try:
-                modifications = json.loads(response.strip())
+                # Extract content from LLMResponse object
+                response_content = response.content if hasattr(response, 'content') else str(response)
+                modifications = json.loads(response_content.strip())
+                
+                logger.info(f"LLM plan modification extraction successful: {len(modifications.get('new_events', []))} new events, {len(modifications.get('updated_events', []))} updates, {len(modifications.get('deleted_event_ids', []))} deletions")
                 
                 # Convert new events to CalendarEvent objects
                 new_events = []
@@ -254,6 +277,7 @@ If no changes are needed, return empty arrays for each section."""
                         continue
                 
                 modifications["new_events"] = new_events
+                logger.info(f"Successfully converted {len(new_events)} events from LLM response")
                 return modifications
                 
             except json.JSONDecodeError as e:
@@ -325,19 +349,96 @@ If no changes are needed, return empty arrays for each section."""
     async def _fallback_extract_modifications(
         self, user_message: str, agent_response: str, metadata: Dict[str, Any], existing_plan
     ) -> Dict[str, Any]:
-        """Fallback plan modification extraction using heuristics"""
-        # Use existing heuristic method but format as modifications
-        new_events = self._heuristic_extract_events(user_message, agent_response, metadata)
+        """Fallback plan modification extraction using heuristics - now plan-aware"""
+        logger.info(f"Using fallback heuristic extraction for plan modifications")
         
-        return {
-            "new_events": new_events,
+        # Analyze user intent for modifications
+        user_lower = user_message.lower()
+        response_lower = agent_response.lower()
+        
+        modifications = {
+            "new_events": [],
             "updated_events": [],
             "deleted_event_ids": [],
             "plan_modifications": {
                 "reason": "Heuristic extraction used due to LLM unavailability",
-                "impact": "Added events based on conversation analysis"
+                "impact": "Analyzed conversation for plan modifications"
             }
         }
+        
+        # Check if user is asking for modifications vs new events
+        modification_keywords = ["change", "update", "modify", "adjust", "move", "reschedule", "cancel", "remove", "delete"]
+        is_modification_request = any(keyword in user_lower for keyword in modification_keywords)
+        
+        if is_modification_request:
+            logger.info(f"Detected modification request in user message: {user_message[:100]}...")
+            
+            # For modifications, be conservative and don't add new events
+            # Instead, log what we would need to analyze
+            logger.warning(f"Modification request detected but LLM analysis failed. Manual review may be needed.")
+            modifications["plan_modifications"]["impact"] = "Modification request detected but could not be processed automatically"
+            
+        else:
+            # Only add new events if this seems like a request for additional activities
+            new_activity_keywords = ["add", "include", "also", "visit", "see", "go to", "book", "reserve"]
+            is_addition_request = any(keyword in user_lower for keyword in new_activity_keywords)
+            
+            if is_addition_request or not existing_plan or not existing_plan.events:
+                logger.info(f"Detected addition request or empty plan, using heuristic extraction")
+                # Use existing heuristic method but be more careful
+                new_events = self._heuristic_extract_events(user_message, agent_response, metadata)
+                
+                # Filter out events that might duplicate existing ones
+                if existing_plan and existing_plan.events:
+                    filtered_events = self._filter_duplicate_events(new_events, existing_plan.events)
+                    logger.info(f"Filtered {len(new_events) - len(filtered_events)} potential duplicate events")
+                    modifications["new_events"] = filtered_events
+                else:
+                    modifications["new_events"] = new_events
+                    
+                modifications["plan_modifications"]["impact"] = f"Added {len(modifications['new_events'])} new events based on conversation analysis"
+            else:
+                logger.info(f"No clear addition request detected and plan exists, not adding events")
+                modifications["plan_modifications"]["impact"] = "No clear plan modifications detected in conversation"
+        
+        return modifications
+    
+    def _filter_duplicate_events(self, new_events: List, existing_events: List) -> List:
+        """Filter out events that might be duplicates of existing ones"""
+        filtered_events = []
+        
+        for new_event in new_events:
+            is_duplicate = False
+            
+            for existing_event in existing_events:
+                # Check for similar titles, types, and overlapping times
+                if (existing_event.event_type == new_event.event_type and
+                    self._events_are_similar(existing_event, new_event)):
+                    logger.info(f"Filtering potential duplicate: {new_event.title} (similar to existing {existing_event.title})")
+                    is_duplicate = True
+                    break
+            
+            if not is_duplicate:
+                filtered_events.append(new_event)
+        
+        return filtered_events
+    
+    def _events_are_similar(self, event1, event2) -> bool:
+        """Check if two events are similar enough to be considered duplicates"""
+        # Check title similarity
+        title1_words = set(event1.title.lower().split())
+        title2_words = set(event2.title.lower().split())
+        title_overlap = len(title1_words.intersection(title2_words)) / max(len(title1_words), len(title2_words), 1)
+        
+        # Check time overlap (same day or overlapping times)
+        time_overlap = False
+        if event1.start_time and event2.start_time:
+            # Check if they're on the same day
+            if event1.start_time.date() == event2.start_time.date():
+                time_overlap = True
+        
+        # Consider similar if significant title overlap and same day
+        return title_overlap > 0.4 and time_overlap
     
     def _update_existing_event(self, plan, updated_event_data: Dict[str, Any]):
         """Update an existing event in the plan"""
