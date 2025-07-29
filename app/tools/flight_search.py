@@ -95,6 +95,28 @@ class FlightSearchTool(BaseTool):
     async def _execute(self, input_data: FlightSearchInput, context: ToolExecutionContext) -> FlightSearchOutput:
         """Execute flight search using Amadeus API or Inspiration Search API"""
         try:
+            # Validate input parameters
+            if not input_data.origin or input_data.origin.lower() in ['unknown', '']:
+                return FlightSearchOutput(
+                    success=False,
+                    error="Invalid origin: origin is required and cannot be 'unknown'",
+                    flights=[]
+                )
+            
+            if not input_data.inspiration_search and (not input_data.destination or input_data.destination.lower() in ['unknown', '']):
+                return FlightSearchOutput(
+                    success=False,
+                    error="Invalid destination: destination is required for flight offers search and cannot be 'unknown'",
+                    flights=[]
+                )
+            
+            # Validate that origin and destination are 3-letter codes or valid city names
+            if len(input_data.origin) != 3 or not input_data.origin.isalpha():
+                logger.warning(f"Origin '{input_data.origin}' may not be a valid IATA code")
+            
+            if input_data.destination and (len(input_data.destination) != 3 or not input_data.destination.isalpha()):
+                logger.warning(f"Destination '{input_data.destination}' may not be a valid IATA code")
+            
             token = await self._get_access_token()
             if input_data.inspiration_search:
                 flights = await self._search_flight_destinations(input_data, token)

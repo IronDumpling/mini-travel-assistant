@@ -123,6 +123,21 @@ class HotelSearchTool(BaseTool):
     async def _execute(self, input_data: HotelSearchInput, context: ToolExecutionContext) -> HotelSearchOutput:
         """Execute hotel search using AMADEUS API"""
         try:
+            # Validate input parameters
+            if not input_data.location or input_data.location.lower() in ['unknown', '']:
+                return HotelSearchOutput(
+                    success=False,
+                    error="Invalid location: location is required and cannot be 'unknown'",
+                    hotels=[]
+                )
+            
+            # Validate that location is a 3-letter code
+            if len(input_data.location) != 3 or not input_data.location.isalpha():
+                return HotelSearchOutput(
+                    success=False,
+                    error=f"Invalid location format: '{input_data.location}' must be a 3-letter IATA city code",
+                    hotels=[]
+                )
 
             logger.info(f"🏨 Starting hotel search for location: {input_data.location}")
             logger.info(f"📅 Check-in: {input_data.check_in}, Check-out: {input_data.check_out}")

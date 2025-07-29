@@ -1288,10 +1288,42 @@ Please analyze the current message considering the conversation history for bett
             'SEOUL': 'ICN',
             'SHANGHAI': 'PVG',
             'KYOTO': 'UKB',  # Kyoto uses Osaka Kansai
+            'OSAKA': 'KIX',
+            'BANGKOK': 'BKK',
+            'SYDNEY': 'SYD',
+            'MELBOURNE': 'MEL',
+            'ATHENS': 'ATH',
+            'DUBAI': 'DXB',
+            'ISTANBUL': 'IST',
         }
         
+        # Handle "Unknown" case
+        if city_name == "Unknown":
+            return "Unknown"
+        
+        # Convert to uppercase for lookup
         city_upper = city_name.upper()
-        return city_to_airport.get(city_upper, city_upper)
+        
+        # Add debugging
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"🔍 Converting city '{city_name}' (uppercase: '{city_upper}') to IATA code")
+        
+        # Try exact match first
+        if city_upper in city_to_airport:
+            result = city_to_airport[city_upper]
+            logger.info(f"✅ Found exact match: '{city_upper}' -> '{result}'")
+            return result
+        
+        # Try partial matches for multi-word cities
+        for key, value in city_to_airport.items():
+            if city_upper in key or key in city_upper:
+                logger.info(f"✅ Found partial match: '{city_upper}' matches '{key}' -> '{value}'")
+                return value
+        
+        # If no match found, return the original (should be a valid IATA code already)
+        logger.warning(f"⚠️ No IATA code found for '{city_name}', returning '{city_upper}'")
+        return city_upper
 
     def _extract_origin_from_message(self, user_message: str) -> str:
         """Extract origin city from user message using simple text parsing"""
@@ -1300,19 +1332,34 @@ Please analyze the current message considering the conversation history for bett
         # Convert to lowercase for easier matching
         message_lower = user_message.lower()
         
+        # Common destinations that could be origins
+        cities = [
+            "tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", 
+            "shanghai", "rome", "barcelona", "amsterdam", "vienna", "prague", 
+            "budapest", "berlin", "bangkok", "singapore", "seoul", "sydney", 
+            "melbourne", "munich", "madrid", "athens", "dubai", "istanbul"
+        ]
+        
         # Common patterns for origin extraction
         patterns = [
             r'from\s+(\w+)\s+to\s+(\w+)',  # "from Paris to Rome"
             r'(\w+)\s+to\s+(\w+)',  # "Paris to Rome" (if no "from")
             r'plan\s+a\s+trip\s+from\s+(\w+)\s+to\s+(\w+)',  # "plan a trip from Paris to Rome"
             r'travel\s+from\s+(\w+)\s+to\s+(\w+)',  # "travel from Paris to Rome"
+            r'flying\s+from\s+(\w+)',  # "flying from Paris"
+            r'departing\s+from\s+(\w+)',  # "departing from Paris"
         ]
         
         for pattern in patterns:
             match = re.search(pattern, message_lower)
             if match:
-                origin = match.group(1).title()  # Capitalize first letter
-                return origin
+                origin = match.group(1).strip().lower()
+                # Check if it's a known city
+                if origin in cities:
+                    return origin.title()  # Capitalize first letter
+                # If not in our list but looks like a city name, return it
+                if len(origin) > 2 and origin.isalpha():
+                    return origin.title()
         
         # If no pattern matches, return "Unknown"
         return "Unknown"
@@ -1350,56 +1397,77 @@ Please analyze the current message considering the conversation history for bett
         origin = structured_analysis.get("origin", {}).get(
             "primary", "Unknown"
         )
+        
+        # If destination is still "Unknown", try to extract it from the user message
+        if destination == "Unknown":
+            user_message = structured_analysis.get("user_message", "")
+            if user_message:
+                # Try to extract destination from message
+                destination = self._extract_destination_from_message(user_message)
+        
+        # If origin is still "Unknown", try to extract it from the user message
+        if origin == "Unknown":
+            user_message = structured_analysis.get("user_message", "")
+            if user_message:
+                # Try to extract origin from message
+                origin = self._extract_origin_from_message(user_message)
+        
+        # Convert to proper airport codes for flight search
+        destination_airport = self._convert_city_to_airport_codes(destination)
+        origin_airport = self._convert_city_to_airport_codes(origin)
+        
+        # Add logging to debug the conversion
+        from app.core.logging_config import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"🌍 City conversion: destination='{destination}' -> '{destination_airport}', origin='{origin}' -> '{origin_airport}'")
+        logger.info(f"🌍 Final tool parameters will be: origin='{origin_airport}', destination='{destination_airport}'")
         travel_details = structured_analysis.get("travel_details", {})
         preferences = structured_analysis.get("preferences", {})
 
         for tool in selected_tools:
             if tool == "attraction_search":
-                tool_parameters[tool] = {
-                    "destination": destination,
-                    "limit": 10,
-                    "interests": preferences.get("interests", []),
-                    "travel_style": preferences.get("travel_style", "mid-range"),
-                }
+                # Only add attraction search if we have a valid destination
+                if destination != "Unknown":
+                    tool_parameters[tool] = {
+                        "destination": destination,
+                        "limit": 10,
+                        "interests": preferences.get("interests", []),
+                        "travel_style": preferences.get("travel_style", "mid-range"),
+                    }
             elif tool == "hotel_search":
-                tool_parameters[tool] = {
-                    "destination": destination,
-                    "limit": 8,
-                    "accommodation_type": preferences.get(
-                        "accommodation_type", "hotel"
-                    ),
-                    "budget_level": travel_details.get("budget", {}).get(
-                        "level", "mid-range"
-                    ),
-                    "travelers": travel_details.get("travelers", 1),
-                }
+                # Only add hotel search if we have a valid destination
+                if destination != "Unknown":
+                    # Convert destination to IATA code for hotel search
+                    destination_iata = self._convert_city_to_airport_codes(destination)
+                    tool_parameters[tool] = {
+                        "destination": destination_iata,
+                        "limit": 8,
+                        "accommodation_type": preferences.get(
+                            "accommodation_type", "hotel"
+                        ),
+                        "budget_level": travel_details.get("budget", {}).get(
+                            "level", "mid-range"
+                        ),
+                        "travelers": travel_details.get("travelers", 1),
+                    }
             elif tool == "flight_search":
-                # Extract origin from the structured analysis
-                origin = structured_analysis.get("origin", {}).get("primary", "Unknown")
-                
-                # Fallback: If origin is "Unknown", try to extract it from the user message
-                if origin == "Unknown":
-                    # Get the original user message from the context
-                    user_message = structured_analysis.get("user_message", "")
-                    if user_message:
-                        origin = self._extract_origin_from_message(user_message)
-                
-                # Convert origin to airport code if it's a city name
-                origin_airport = self._convert_city_to_airport_codes(origin)
-                # Convert destination to airport code for flight search
-                destination_airport = self._convert_city_to_airport_codes(destination)
-                tool_parameters[tool] = {
-                    "origin": origin_airport,
-                    "destination": destination_airport,
-                    "limit": 5,
-                    "travelers": travel_details.get("travelers", 1),
-                    "budget_level": travel_details.get("budget", {}).get(
-                        "level", "mid-range"
-                    ),
-                    "flexibility": travel_details.get("dates", {}).get(
-                        "flexibility", "flexible"
-                    ),
-                }
+                # Only add flight search if we have valid origin and destination
+                if origin_airport != "Unknown" and destination_airport != "Unknown":
+                    logger.info(f"✈️ Adding flight search with origin='{origin_airport}' and destination='{destination_airport}'")
+                    tool_parameters[tool] = {
+                        "origin": origin_airport,
+                        "destination": destination_airport,
+                        "limit": 5,
+                        "travelers": travel_details.get("travelers", 1),
+                        "budget_level": travel_details.get("budget", {}).get(
+                            "level", "mid-range"
+                        ),
+                        "flexibility": travel_details.get("dates", {}).get(
+                            "flexibility", "flexible"
+                        ),
+                    }
+                else:
+                    logger.warning(f"✈️ Skipping flight search: origin='{origin_airport}', destination='{destination_airport}'")
 
         return tool_parameters
 
@@ -2245,9 +2313,9 @@ Please analyze the current message considering the conversation history for bett
                     if tool_name == "attraction_search":
                         # Convert travel agent parameters to AttractionSearchInput format
                         attraction_params = {
-                            "location": tool_params.get("destination", "unknown"),
+                            "location": tool_params.get("location", "unknown"),  # attraction_search uses "location" key
                             "query": None,  # Let the tool use location-based search
-                            "max_results": tool_params.get("limit", 10),
+                            "max_results": tool_params.get("max_results", 10),
                             "include_photos": True,
                             "min_rating": 4.0,
                             "radius_meters": 10000,
@@ -2264,7 +2332,7 @@ Please analyze the current message considering the conversation history for bett
                         # For hotel search, we need proper date handling
                         # Since we don't have specific dates, we'll provide basic search
                         # Convert destination to IATA code for AMADEUS API
-                        destination = tool_params.get("destination", "unknown")
+                        destination = tool_params.get("location", "unknown")  # hotel_search uses "location" key
                         iata_code = self._convert_city_to_iata_code(destination)
                         
                         hotel_params = {
@@ -2298,19 +2366,18 @@ Please analyze the current message considering the conversation history for bett
                         from datetime import datetime, timedelta
                         # Use a future date for the search
                         future_date = datetime.now() + timedelta(days=30)
+                        
+                        # Convert destination to IATA code for AMADEUS API
+                        destination = tool_params.get("destination", "unknown")
+                        destination_iata = self._convert_city_to_iata_code(destination)
+                        
                         flight_params = {
                             "origin": tool_params.get("origin", "PAR"),
-                            "destination": tool_params.get("destination", "unknown"),
-<<<<<<< HEAD
-                            "start_date": tool_params.get(
-                                "departure_date", "2024-06-01"
-                            ),
-                            "passengers": tool_params.get("passengers", 1),
-                            "class_type": "economy",
-                            "budget_level": tool_params.get("budget_level", "mid-range"),
+                            "destination": destination_iata,  # Use IATA code for AMADEUS API
                             "start_date": future_date,
-                            "passengers": tool_params.get("travelers", 1),
+                            "passengers": tool_params.get("passengers", 1),  # flight_search uses "passengers" key
                             "class_type": "ECONOMY",
+                            "budget_level": tool_params.get("budget_level", "mid-range"),
                         }
                         tool_calls.append(
                             ToolCall(
@@ -2332,9 +2399,17 @@ Please analyze the current message considering the conversation history for bett
                         tool_chain, tool_context
                     )
 
-                    # Store tool results
+                    # Store tool results and track which tools were used
                     results["results"] = execution_result.results
                     results["execution_time"] = execution_result.execution_time
+                    
+                    # Populate tools_used list with the names of tools that were executed
+                    for tool_call in tool_calls:
+                        tool_name = tool_call.tool_name
+                        if tool_name in execution_result.results:
+                            results["tools_used"].append(tool_name)
+                    
+                    logger.info(f"Tools executed and added to tools_used: {results['tools_used']}")
 
                     if not execution_result.success:
                         results["success"] = False
@@ -2516,6 +2591,22 @@ Please analyze the current message considering the conversation history for bett
             logger.info("No tool results available")
             return "No dynamic tool results available."
 
+        # Debug: Log each tool result in detail
+        for tool_name, result in tool_results.items():
+            logger.info(f"=== TOOL: {tool_name} ===")
+            logger.info(f"Result type: {type(result)}")
+            logger.info(f"Result success: {getattr(result, 'success', 'N/A')}")
+            if hasattr(result, 'hotels'):
+                logger.info(f"Hotels count: {len(result.hotels) if result.hotels else 0}")
+                if result.hotels:
+                    logger.info(f"First hotel: {result.hotels[0] if result.hotels else 'None'}")
+            if hasattr(result, 'flights'):
+                logger.info(f"Flights count: {len(result.flights) if result.flights else 0}")
+                if result.flights:
+                    logger.info(f"First flight: {result.flights[0] if result.flights else 'None'}")
+            logger.info(f"Result data: {getattr(result, 'data', 'N/A')}")
+            logger.info(f"Result error: {getattr(result, 'error', 'N/A')}")
+
         tool_parts = []
         for tool_name, result in tool_results.items():
             logger.info(f"Processing tool: {tool_name}")
@@ -2552,12 +2643,20 @@ Please analyze the current message considering the conversation history for bett
 
                     elif tool_name == "hotel_search" and hasattr(result, 'hotels'):
                         hotels = result.hotels[:3]  # Top 3
-                        tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
-                        for hotel in hotels:
-                            name = hotel.get("name", "Unknown")
-                            price = hotel.get("price", "Price unavailable")
-                            rating = hotel.get("rating", "No rating")
-                            tool_parts.append(f"- {name} (Rating: {rating}): {price}")
+                        logger.info(f"Found {len(hotels)} hotels for {tool_name}")
+                        if hotels:
+                            tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
+                            for hotel in hotels:
+                                name = getattr(hotel, 'name', 'Unknown')
+                                price = getattr(hotel, 'price_per_night', 'Price unavailable')
+                                rating = getattr(hotel, 'rating', 'No rating')
+                                currency = getattr(hotel, 'currency', '')
+                                price_str = f"{price} {currency}" if price and price != 'Price unavailable' else 'Price unavailable'
+                                tool_parts.append(f"- {name} (Rating: {rating}): {price_str}")
+                                logger.info(f"Added hotel: {name} - Rating: {rating}, Price: {price_str}")
+                        else:
+                            tool_parts.append("**Hotel Search**: No hotels found for the specified location.")
+                            logger.info("No hotels found for hotel_search")
 
                     elif hasattr(result, 'data') and result.data:
                         tool_parts.append(f"**{tool_name.replace('_', ' ').title()}**: Data available")
@@ -2579,12 +2678,20 @@ Please analyze the current message considering the conversation history for bett
 
                 elif tool_name == "hotel_search" and "hotels" in result:
                     hotels = result["hotels"][:3]  # Top 3
-                    tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
-                    for hotel in hotels:
-                        name = hotel.get("name", "Unknown")
-                        price = hotel.get("price", "Price unavailable")
-                        rating = hotel.get("rating", "No rating")
-                        tool_parts.append(f"- {name} (Rating: {rating}): {price}")
+                    logger.info(f"Found {len(hotels)} hotels for {tool_name} (dict format)")
+                    if hotels:
+                        tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
+                        for hotel in hotels:
+                            name = hotel.get("name", "Unknown")
+                            price = hotel.get("price_per_night", "Price unavailable")
+                            rating = hotel.get("rating", "No rating")
+                            currency = hotel.get("currency", "")
+                            price_str = f"{price} {currency}" if price and price != 'Price unavailable' else 'Price unavailable'
+                            tool_parts.append(f"- {name} (Rating: {rating}): {price_str}")
+                            logger.info(f"Added hotel (dict): {name} - Rating: {rating}, Price: {price_str}")
+                    else:
+                        tool_parts.append("**Hotel Search**: No hotels found for the specified location.")
+                        logger.info("No hotels found for hotel_search (dict format)")
 
                 elif tool_name == "flight_search" and "flights" in result:
                     flights = result["flights"][:3]  # Top 3
@@ -2600,6 +2707,8 @@ Please analyze the current message considering the conversation history for bett
 
         formatted_result = "\n".join(tool_parts) if tool_parts else "Tool results available but not formatted."
         logger.info(f"Final formatted tool result: {formatted_result[:200]}...")
+        logger.info(f"Tool parts count: {len(tool_parts)}")
+        logger.info(f"Tool parts: {tool_parts}")
         logger.info(f"=== END FORMATTING TOOL RESULTS ===")
         return formatted_result
 
@@ -3175,6 +3284,11 @@ This will help me provide you with the most relevant travel guidance possible.""
         logger = get_logger(__name__)
         logger.info(f"🌍 Converting city to IATA code - Input: '{city_name}'")
         
+        # Handle unknown/empty destination case - return empty string to indicate invalid destination
+        if not city_name or city_name.lower() in ['unknown', '']:
+            logger.error(f"❌ Invalid destination '{city_name}' - cannot convert to IATA code")
+            return ''  # Return empty string to indicate invalid destination
+        
         # City to IATA code mapping based on the provided list
         city_to_iata = {
             'amsterdam': 'AMS',
@@ -3193,6 +3307,200 @@ This will help me provide you with the most relevant travel guidance possible.""
             'singapore': 'SIN',
             'tokyo': 'TYO',
             'vienna': 'VIE',
+            'osaka': 'ITM',
+            'new york': 'JFK',
+            'los angeles': 'LAX',
+            'chicago': 'ORD',
+            'miami': 'MIA',
+            'san francisco': 'SFO',
+            'toronto': 'YYZ',
+            'vancouver': 'YVR',
+            'montreal': 'YUL',
+            'sydney': 'SYD',
+            'melbourne': 'MEL',
+            'brisbane': 'BNE',
+            'perth': 'PER',
+            'adelaide': 'ADL',
+            'auckland': 'AKL',
+            'wellington': 'WLG',
+            'cape town': 'CPT',
+            'johannesburg': 'JNB',
+            'nairobi': 'NBO',
+            'cairo': 'CAI',
+            'marrakech': 'RAK',
+            'casablanca': 'CMN',
+            'mumbai': 'BOM',
+            'delhi': 'DEL',
+            'bangalore': 'BLR',
+            'chennai': 'MAA',
+            'kolkata': 'CCU',
+            'hyderabad': 'HYD',
+            'pune': 'PNQ',
+            'mexico city': 'MEX',
+            'guadalajara': 'GDL',
+            'monterrey': 'MTY',
+            'rio de janeiro': 'GIG',
+            'sao paulo': 'GRU',
+            'buenos aires': 'EZE',
+            'santiago': 'SCL',
+            'lima': 'LIM',
+            'bogota': 'BOG',
+            'medellin': 'MDE',
+            'caracas': 'CCS',
+            'moscow': 'SVO',
+            'st petersburg': 'LED',
+            'kiev': 'KBP',
+            'warsaw': 'WAW',
+            'krakow': 'KRK',
+            'bratislava': 'BTS',
+            'ljubljana': 'LJU',
+            'zagreb': 'ZAG',
+            'belgrade': 'BEG',
+            'sofia': 'SOF',
+            'bucharest': 'OTP',
+            'tallinn': 'TLL',
+            'riga': 'RIX',
+            'vilnius': 'VNO',
+            'helsinki': 'HEL',
+            'stockholm': 'ARN',
+            'oslo': 'OSL',
+            'copenhagen': 'CPH',
+            'reykjavik': 'KEF',
+            'dublin': 'DUB',
+            'glasgow': 'GLA',
+            'edinburgh': 'EDI',
+            'manchester': 'MAN',
+            'birmingham': 'BHX',
+            'leeds': 'LBA',
+            'liverpool': 'LPL',
+            'newcastle': 'NCL',
+            'cardiff': 'CWL',
+            'belfast': 'BFS',
+            'brussels': 'BRU',
+            'antwerp': 'ANR',
+            'rotterdam': 'RTM',
+            'the hague': 'AMS',  # No airport, using Amsterdam
+            'utrecht': 'AMS',    # No airport, using Amsterdam
+            'luxembourg': 'LUX',
+            'geneva': 'GVA',
+            'zurich': 'ZRH',
+            'bern': 'BRN',
+            'basel': 'BSL',
+            'lucerne': 'ZRH',    # No airport, using Zurich
+            'milan': 'MXP',
+            'florence': 'FLR',
+            'venice': 'VCE',
+            'naples': 'NAP',
+            'palermo': 'PMO',
+            'catania': 'CTA',
+            'bologna': 'BLQ',
+            'turin': 'TRN',
+            'genoa': 'GOA',
+            'bari': 'BRI',
+            'lisbon': 'LIS',
+            'porto': 'OPO',
+            'faro': 'FAO',
+            'funchal': 'FNC',
+            'pontadelgada': 'PDL',
+            'valencia': 'VLC',
+            'bilbao': 'BIO',
+            'seville': 'SVQ',
+            'granada': 'GRX',
+            'malaga': 'AGP',
+            'alicante': 'ALC',
+            'palma': 'PMI',
+            'ibiza': 'IBZ',
+            'tenerife': 'TFS',
+            'las palmas': 'LPA',
+            'fes': 'FEZ',
+            'tangier': 'TNG',
+            'agadir': 'AGA',
+            'rabat': 'RBA',
+            'tunis': 'TUN',
+            'algiers': 'ALG',
+            'alexandria': 'HBE',
+            'giza': 'CAI',       # No airport, using Cairo
+            'luxor': 'LXR',
+            'aswan': 'ASW',
+            'sharm el sheikh': 'SSH',
+            'hurghada': 'HRG',
+            'tel aviv': 'TLV',
+            'jerusalem': 'JRS',  # Limited flights
+            'haifa': 'HFA',
+            'beer sheva': 'TLV', # No airport, using Tel Aviv
+            'amman': 'AMM',
+            'petra': 'AMM',      # No airport, using Amman
+            'aqaba': 'AQJ',
+            'damascus': 'DAM',
+            'beirut': 'BEY',
+            'baghdad': 'BGW',
+            'basra': 'BSR',
+            'erbil': 'EBL',
+            'sulaymaniyah': 'ISU',
+            'tehran': 'IKA',
+            'mashhad': 'MHD',
+            'isfahan': 'IFN',
+            'shiraz': 'SYZ',
+            'tabriz': 'TBZ',
+            'kerman': 'KER',
+            'yazd': 'AZD',
+            'kabul': 'KBL',
+            'kandahar': 'KDH',
+            'herat': 'HEA',
+            'mazar e sharif': 'MZR',
+            'jalalabad': 'JAA',
+            'kunduz': 'UND',
+            'peshawar': 'PEW',
+            'lahore': 'LHE',
+            'karachi': 'KHI',
+            'islamabad': 'ISB',
+            'rawalpindi': 'ISB', # Same as Islamabad
+            'faisalabad': 'LYP',
+            'multan': 'MUX',
+            'gujranwala': 'GRW',
+            'sialkot': 'SKT',
+            'quetta': 'UET',
+            'abbottabad': 'ISB', # No airport, using Islamabad
+            'murree': 'ISB',     # No airport, using Islamabad
+            'gilgit': 'GIL',
+            'skardu': 'KDU',
+            'chitral': 'CJL',
+            'swat': 'ISB',       # No airport, using Islamabad
+            'hunza': 'GIL',      # No airport, using Gilgit
+            'kashmir': 'SXR',
+            'srinagar': 'SXR',
+            'leh': 'IXL',
+            'manali': 'DEL',     # No airport, using Delhi
+            'shimla': 'DEL',     # No airport, using Delhi
+            'mussoorie': 'DEL',  # No airport, using Delhi
+            'nainital': 'DEL',   # No airport, using Delhi
+            'ranikhet': 'DEL',   # No airport, using Delhi
+            'almora': 'DEL',     # No airport, using Delhi
+            'pithoragarh': 'DEL', # No airport, using Delhi
+            'chamoli': 'DEL',    # No airport, using Delhi
+            'rudraprayag': 'DEL', # No airport, using Delhi
+            'tehri': 'DEL',      # No airport, using Delhi
+            'uttarkashi': 'DEL', # No airport, using Delhi
+            'dehradun': 'DED',
+            'haridwar': 'DEL',   # No airport, using Delhi
+            'rishikesh': 'DEL',  # No airport, using Delhi
+            'kedarnath': 'DEL',  # No airport, using Delhi
+            'badrinath': 'DEL',  # No airport, using Delhi
+            'gangotri': 'DEL',   # No airport, using Delhi
+            'yamunotri': 'DEL',  # No airport, using Delhi
+            'hemkund': 'DEL',    # No airport, using Delhi
+            'valley of flowers': 'DEL', # No airport, using Delhi
+            'auli': 'DEL',       # No airport, using Delhi
+            'joshimath': 'DEL',  # No airport, using Delhi
+            'karnaprayag': 'DEL', # No airport, using Delhi
+            'gauchar': 'DEL',    # No airport, using Delhi
+            'karanprayag': 'DEL', # No airport, using Delhi
+            'hong kong': 'HKG',
+            'hongkong': 'HKG',
+            'dubai': 'DXB',
+            'istanbul': 'IST',
+            'madrid': 'MAD',
+            'athens': 'ATH',
             # Country codes (using major cities)
             'australia': 'SYD',  # Sydney
             'brazil': 'SAO',     # Sao Paulo
@@ -3219,8 +3527,6 @@ This will help me provide you with the most relevant travel guidance possible.""
         iata_code = city_to_iata.get(normalized_city)
         
         # Add debugging information
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.info(f"🌍 Normalized city: '{normalized_city}'")
         logger.info(f"🌍 Found IATA code: '{iata_code}'")
         
@@ -3231,10 +3537,9 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.info(f"✅ Clean IATA code: '{clean_iata}'")
             return clean_iata
         else:
-            # If not found, return the original city name (will be handled by API)
-            fallback_code = city_name.upper()[:3] if len(city_name) >= 3 else city_name.upper()
-            logger.warning(f"⚠️ No IATA code found for '{city_name}', using fallback: '{fallback_code}'")
-            return fallback_code
+            # If not found, return empty string to indicate invalid destination
+            logger.error(f"❌ No IATA code found for '{city_name}' - invalid destination")
+            return ''  # Return empty string to indicate invalid destination
 
     def _extract_destination_from_message(self, message: str) -> str:
         """Extract destination from user message"""
@@ -3245,58 +3550,121 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         message_lower = message.lower()
 
-        # Common destinations
+        # Common destinations with more comprehensive list
         destinations = [
-            "tokyo",
-            "kyoto",
-            "osaka",
-            "paris",
-            "london",
-            "new york",
-            "beijing",
-            "shanghai",
-            "rome",
-            "barcelona",
-            "amsterdam",
-            "vienna",
-            "prague",
-            "budapest",
-            "berlin",
-            "bangkok",
-            "singapore",
-            "seoul",
-            "sydney",
-            "melbourne",
+            "tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", 
+            "shanghai", "rome", "barcelona", "amsterdam", "vienna", "prague", 
+            "budapest", "berlin", "bangkok", "singapore", "seoul", "sydney", 
+            "melbourne", "munich", "madrid", "athens", "dubai", "istanbul",
+            "hong kong", "hongkong", "san francisco", "los angeles", "chicago",
+            "miami", "toronto", "vancouver", "montreal", "sydney", "melbourne",
+            "brisbane", "perth", "adelaide", "auckland", "wellington", "cape town",
+            "johannesburg", "nairobi", "cairo", "marrakech", "casablanca", "mumbai",
+            "delhi", "bangalore", "chennai", "kolkata", "hyderabad", "pune",
+            "mexico city", "guadalajara", "monterrey", "rio de janeiro", "sao paulo",
+            "buenos aires", "santiago", "lima", "bogota", "medellin", "caracas",
+            "moscow", "st petersburg", "kiev", "warsaw", "krakow", "bratislava",
+            "ljubljana", "zagreb", "belgrade", "sofia", "bucharest", "budapest",
+            "tallinn", "riga", "vilnius", "helsinki", "stockholm", "oslo", "copenhagen",
+            "reykjavik", "dublin", "glasgow", "edinburgh", "manchester", "birmingham",
+            "leeds", "liverpool", "newcastle", "cardiff", "belfast", "brussels",
+            "antwerp", "rotterdam", "the hague", "utrecht", "luxembourg", "geneva",
+            "zurich", "bern", "basel", "lucerne", "milan", "florence", "venice",
+            "naples", "palermo", "catania", "bologna", "turin", "genoa", "bari",
+            "lisbon", "porto", "faro", "funchal", "pontadelgada", "valencia",
+            "bilbao", "seville", "granada", "malaga", "alicante", "palma",
+            "ibiza", "tenerife", "las palmas", "marrakech", "fes", "tangier",
+            "agadir", "rabat", "casablanca", "tunis", "algiers", "cairo",
+            "alexandria", "giza", "luxor", "aswan", "sharm el sheikh", "hurghada",
+            "tel aviv", "jerusalem", "haifa", "beer sheva", "amman", "petra",
+            "aqaba", "damascus", "beirut", "baghdad", "basra", "erbil", "sulaymaniyah",
+            "tehran", "mashhad", "isfahan", "shiraz", "tabriz", "kerman", "yazd",
+            "kabul", "kandahar", "herat", "mazar e sharif", "jalalabad", "kunduz",
+            "peshawar", "lahore", "karachi", "islamabad", "rawalpindi", "faisalabad",
+            "multan", "gujranwala", "sialkot", "quetta", "peshawar", "abbottabad",
+            "murree", "gilgit", "skardu", "chitral", "swat", "hunza", "kashmir",
+            "srinagar", "leh", "manali", "shimla", "mussoorie", "nainital",
+            "ranikhet", "almora", "pithoragarh", "chamoli", "rudraprayag", "tehri",
+            "uttarkashi", "dehradun", "haridwar", "rishikesh", "kedarnath", "badrinath",
+            "gangotri", "yamunotri", "kedarnath", "badrinath", "hemkund", "valley of flowers",
+            "auli", "joshimath", "karnaprayag", "gauchar", "karanprayag", "rudraprayag",
+            "srinagar", "uttarkashi", "tehri", "chamoli", "pithoragarh", "almora",
+            "ranikhet", "nainital", "mussoorie", "shimla", "manali", "leh",
+            "kashmir", "hunza", "swat", "chitral", "skardu", "gilgit", "murree",
+            "abbottabad", "peshawar", "quetta", "sialkot", "gujranwala", "multan",
+            "faisalabad", "rawalpindi", "islamabad", "karachi", "lahore", "peshawar",
+            "kunduz", "jalalabad", "mazar e sharif", "herat", "kandahar", "kabul",
+            "yazd", "kerman", "tabriz", "shiraz", "isfahan", "mashhad", "tehran",
+            "sulaymaniyah", "erbil", "basra", "baghdad", "beirut", "damascus",
+            "aqaba", "petra", "amman", "beer sheva", "haifa", "jerusalem", "tel aviv",
+            "hurghada", "sharm el sheikh", "aswan", "luxor", "giza", "alexandria",
+            "cairo", "algiers", "tunis", "casablanca", "rabat", "agadir", "tangier",
+            "fes", "marrakech", "las palmas", "tenerife", "ibiza", "palma",
+            "alicante", "malaga", "granada", "seville", "bilbao", "valencia",
+            "pontadelgada", "funchal", "faro", "porto", "lisbon", "genoa",
+            "turin", "bologna", "catania", "palermo", "naples", "venice", "florence",
+            "milan", "lucerne", "basel", "bern", "zurich", "geneva", "luxembourg",
+            "utrecht", "the hague", "rotterdam", "antwerp", "brussels", "belfast",
+            "cardiff", "newcastle", "liverpool", "leeds", "birmingham", "manchester",
+            "edinburgh", "glasgow", "dublin", "reykjavik", "copenhagen", "oslo",
+            "stockholm", "helsinki", "vilnius", "riga", "tallinn", "budapest",
+            "bucharest", "sofia", "belgrade", "zagreb", "ljubljana", "bratislava",
+            "krakow", "warsaw", "kiev", "st petersburg", "moscow", "caracas",
+            "medellin", "bogota", "lima", "santiago", "buenos aires", "sao paulo",
+            "rio de janeiro", "monterrey", "guadalajara", "mexico city", "pune",
+            "hyderabad", "kolkata", "chennai", "bangalore", "delhi", "mumbai",
+            "casablanca", "marrakech", "cairo", "nairobi", "johannesburg", "cape town",
+            "wellington", "auckland", "adelaide", "perth", "brisbane", "melbourne",
+            "sydney", "montreal", "vancouver", "toronto", "miami", "chicago",
+            "los angeles", "san francisco", "hongkong", "hong kong", "istanbul",
+            "dubai", "athens", "madrid", "munich", "melbourne", "sydney", "seoul",
+            "singapore", "bangkok", "berlin", "prague", "vienna", "amsterdam",
+            "barcelona", "rome", "shanghai", "beijing", "new york", "london",
+            "paris", "osaka", "kyoto", "tokyo"
         ]
 
+        # First, try exact destination matching
         for dest in destinations:
             if dest in message_lower:
-                logger.info(f"🌍 Found destination '{dest}' in message")
-                # Return lowercase to match the IATA mapping
-                result = dest.lower()
-                logger.info(f"🌍 Returning destination: '{result}'")
-                return result
+                logger.info(f"🌍 Found destination '{dest}' in message using exact match")
+                return dest.title()  # Return title case for consistency
 
         # Try to find destination with common patterns
         import re
 
         patterns = [
-            r"to\s+([a-zA-Z\s]+)",
-            r"in\s+([a-zA-Z\s]+)",
-            r"visit\s+([a-zA-Z\s]+)",
-            r"travel\s+to\s+([a-zA-Z\s]+)",
+            r"to\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",  # "to Beijing" - improved to stop at word boundaries
+            r"from\s+[a-zA-Z\s]+\s+to\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",  # "from Singapore to Beijing"
+            r"in\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"visit\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"travel\s+to\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"going\s+to\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"planning\s+to\s+visit\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"plan\s+a\s+trip\s+to\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"plan\s+a\s+trip\s+from\s+[a-zA-Z\s]+\s+to\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"hotels?\s+in\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"accommodation\s+in\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"stay\s+in\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
+            r"lodging\s+in\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",
         ]
 
         for pattern in patterns:
             match = re.search(pattern, message_lower)
             if match:
                 location = match.group(1).strip()
-                if len(location) < 30:  # Reasonable destination name
-                    # Return lowercase to match the IATA mapping
-                    return location.lower()
+                if len(location) < 30 and len(location) > 0:  # Reasonable destination name
+                    logger.info(f"🌍 Found destination '{location}' using pattern '{pattern}'")
+                    return location.title()  # Return title case for consistency
 
-        logger.warning(f"🌍 No destination found in message, returning 'Unknown Destination'")
-        return "Unknown Destination"
+        # If still no match, try to find any known destination in the message
+        # This is a fallback for cases where the pattern matching fails
+        for dest in destinations:
+            if dest in message_lower:
+                logger.info(f"🌍 Found destination '{dest}' in message using fallback search")
+                return dest.title()
+
+        logger.warning(f"🌍 No destination found in message, returning 'Unknown'")
+        return "Unknown"
 
     def configure_refinement(
         self,
@@ -3496,8 +3864,16 @@ This will help me provide you with the most relevant travel guidance possible.""
                 if departure_date in ["unknown", "", None]:
                     departure_date = default_departure
                 
+                # Extract origin from user message
+                origin = self._extract_origin_from_message(user_message)
+                if origin == "Unknown":
+                    origin = "Singapore"  # Default fallback for Singapore
+                
+                # Convert origin to IATA code
+                origin_iata = self._convert_city_to_iata_code(origin)
+                
                 tool_parameters[tool_name] = {
-                    "origin": "JFK",  # Use realistic default airport code
+                    "origin": origin_iata,  # Use extracted origin converted to IATA code
                     "destination": destination if destination != "unknown" else "Tokyo",
                     "start_date": departure_date,
                     "passengers": max(travel_details.get("travelers", 1), 1),
@@ -3668,6 +4044,12 @@ This will help me provide you with the most relevant travel guidance possible.""
     ) -> str:
         """Build response content using structured templates"""
         
+        logger.info(f"=== BUILDING STRUCTURED CONTENT ===")
+        logger.info(f"Intent type: {intent_type}")
+        logger.info(f"Destination: {destination}")
+        logger.info(f"Tools used: {tools_used}")
+        logger.info(f"Tool results keys: {list(tool_results.keys())}")
+        
         content_parts = []
         
         # Add greeting/acknowledgment based on intent
@@ -3676,10 +4058,17 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         # Add tool-specific content sections
         for tool_name in tools_used:
+            logger.info(f"Processing tool: {tool_name}")
             if tool_name in tool_results:
+                logger.info(f"Tool {tool_name} found in results")
                 tool_content = self._format_tool_results(tool_name, tool_results[tool_name], destination)
                 if tool_content:
+                    logger.info(f"Tool {tool_name} content generated: {len(tool_content)} chars")
                     content_parts.append(tool_content)
+                else:
+                    logger.info(f"Tool {tool_name} content is empty")
+            else:
+                logger.info(f"Tool {tool_name} NOT found in results")
         
         # Add recommendations and next steps
         recommendations = self._generate_template_recommendations(intent_type, destination, tools_used)
@@ -3687,7 +4076,10 @@ This will help me provide you with the most relevant travel guidance possible.""
             content_parts.append(recommendations)
         
         # Join all parts with proper spacing
-        return "\n\n".join(content_parts)
+        final_content = "\n\n".join(content_parts)
+        logger.info(f"Final content length: {len(final_content)} chars")
+        logger.info(f"=== END BUILDING STRUCTURED CONTENT ===")
+        return final_content
 
     def _get_intent_greeting(self, intent_type: str, destination: str) -> str:
         """Get appropriate greeting based on intent type"""
@@ -3705,29 +4097,65 @@ This will help me provide you with the most relevant travel guidance possible.""
     def _format_tool_results(self, tool_name: str, tool_result: Dict[str, Any], destination: str) -> str:
         """Format individual tool results using templates"""
         
-        if not tool_result or "error" in tool_result:
+        logger.info(f"=== FORMATTING TOOL: {tool_name} ===")
+        logger.info(f"Tool result type: {type(tool_result)}")
+        logger.info(f"Tool result success: {getattr(tool_result, 'success', 'N/A')}")
+        logger.info(f"Tool result error: {getattr(tool_result, 'error', 'N/A')}")
+        
+        # Handle both Pydantic models and dictionaries for error checking
+        has_error = False
+        if not tool_result:
+            has_error = True
+        elif hasattr(tool_result, 'error') and tool_result.error:
+            has_error = True
+        elif isinstance(tool_result, dict) and "error" in tool_result:
+            has_error = True
+        
+        if has_error:
+            logger.info(f"Tool {tool_name} has error or is empty")
             return f"I had trouble finding {tool_name.replace('_', ' ')} information, but I can still help with general advice about {destination}."
         
         if tool_name == "attraction_search":
+            logger.info(f"Formatting attraction search results")
             return self._format_attraction_results(tool_result, destination)
         elif tool_name == "hotel_search":
+            logger.info(f"Formatting hotel search results")
             return self._format_hotel_results(tool_result, destination)
         elif tool_name == "flight_search":
+            logger.info(f"Formatting flight search results")
             return self._format_flight_results(tool_result, destination)
         else:
+            logger.info(f"Unknown tool: {tool_name}")
             return f"Found information from {tool_name.replace('_', ' ')} search."
 
-    def _format_attraction_results(self, result: Dict[str, Any], destination: str) -> str:
+    def _format_attraction_results(self, result: Any, destination: str) -> str:
         """Format attraction search results"""
         
         content = f"🎯 **Top Attractions in {destination}**\n"
         
-        attractions = result.get("attractions", [])
+        # Handle both ToolOutput objects and dictionaries
+        if hasattr(result, 'attractions'):
+            attractions = result.attractions
+        else:
+            attractions = result.get("attractions", []) if isinstance(result, dict) else []
+        
         if attractions:
             for i, attraction in enumerate(attractions[:5], 1):  # Top 5
-                name = attraction.get("name", "Unknown Attraction")
-                rating = attraction.get("rating", "No rating")
-                description = attraction.get("description", "")[:100] + "..." if len(attraction.get("description", "")) > 100 else attraction.get("description", "")
+                # Handle both Pydantic models and dictionaries
+                if hasattr(attraction, 'name'):
+                    # Pydantic model
+                    name = getattr(attraction, 'name', 'Unknown Attraction')
+                    rating = getattr(attraction, 'rating', 'No rating')
+                    description = getattr(attraction, 'description', '')
+                else:
+                    # Dictionary
+                    name = attraction.get("name", "Unknown Attraction")
+                    rating = attraction.get("rating", "No rating")
+                    description = attraction.get("description", "")
+                
+                # Truncate description if too long
+                if len(description) > 100:
+                    description = description[:100] + "..."
                 
                 content += f"{i}. **{name}** (Rating: {rating})\n   {description}\n"
         else:
@@ -3741,15 +4169,34 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         content = f"🏨 **Accommodation Options in {destination}**\n"
         
-        hotels = result.get("hotels", [])
+        # Handle both ToolOutput objects and dictionaries
+        if hasattr(result, 'hotels'):
+            hotels = result.hotels
+        else:
+            hotels = result.get("hotels", [])
+        
         if hotels:
             for i, hotel in enumerate(hotels[:5], 1):  # Top 5
-                name = hotel.get("name", "Unknown Hotel")
-                price = hotel.get("price_per_night", hotel.get("price", "Price available"))
-                rating = hotel.get("rating", "No rating")
-                location = hotel.get("location", destination)
+                # Handle both Pydantic models and dictionaries
+                if hasattr(hotel, 'name'):
+                    # Pydantic model
+                    name = getattr(hotel, 'name', 'Unknown Hotel')
+                    price = getattr(hotel, 'price_per_night', 'Price available')
+                    rating = getattr(hotel, 'rating', 'No rating')
+                    location = getattr(hotel, 'location', destination)
+                    currency = getattr(hotel, 'currency', '')
+                else:
+                    # Dictionary
+                    name = hotel.get("name", "Unknown Hotel")
+                    price = hotel.get("price_per_night", hotel.get("price", "Price available"))
+                    rating = hotel.get("rating", "No rating")
+                    location = hotel.get("location", destination)
+                    currency = hotel.get("currency", "")
                 
-                content += f"{i}. **{name}** (Rating: {rating})\n   Location: {location} | Price: {price}\n"
+                # Format price with currency
+                price_str = f"{price} {currency}".strip() if price and price != 'Price available' else 'Price available'
+                
+                content += f"{i}. **{name}** (Rating: {rating})\n   Location: {location} | Price: {price_str}\n"
         else:
             content += f"There are good accommodation options available in {destination}. "
             content += "I recommend booking in advance for better rates and availability."
@@ -3761,14 +4208,32 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         content = f"✈️ **Flight Information to {destination}**\n"
         
-        flights = result.get("flights", [])
+        # Handle both ToolOutput objects and dictionaries
+        if hasattr(result, 'flights'):
+            flights = result.flights
+        else:
+            flights = result.get("flights", [])
+        
         if flights:
             for i, flight in enumerate(flights[:3], 1):  # Top 3
-                airline = flight.get("airline", "Unknown Airline")
-                price = flight.get("price", "Price available")
-                duration = flight.get("duration", "Duration varies")
+                # Handle both Pydantic models and dictionaries
+                if hasattr(flight, 'airline'):
+                    # Pydantic model
+                    airline = getattr(flight, 'airline', 'Unknown Airline')
+                    price = getattr(flight, 'price', 'Price available')
+                    duration = getattr(flight, 'duration', 'Duration varies')
+                    currency = getattr(flight, 'currency', '')
+                else:
+                    # Dictionary
+                    airline = flight.get("airline", "Unknown Airline")
+                    price = flight.get("price", "Price available")
+                    duration = flight.get("duration", "Duration varies")
+                    currency = flight.get("currency", "")
                 
-                content += f"{i}. **{airline}** | Price: {price} | Duration: {duration}\n"
+                # Format price with currency
+                price_str = f"{price} {currency}".strip() if price and price != 'Price available' else 'Price available'
+                
+                content += f"{i}. **{airline}** | Price: {price_str} | Duration: {duration}\n"
         else:
             content += f"Flight options are available to {destination}. "
             content += "I recommend comparing prices across different booking platforms and being flexible with dates."
