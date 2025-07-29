@@ -2645,8 +2645,8 @@ Please analyze the current message considering the conversation history for bett
                         hotels = result.hotels[:3]  # Top 3
                         logger.info(f"Found {len(hotels)} hotels for {tool_name}")
                         if hotels:
-                            tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
-                            for hotel in hotels:
+                        tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
+                        for hotel in hotels:
                                 name = getattr(hotel, 'name', 'Unknown')
                                 price = getattr(hotel, 'price_per_night', 'Price unavailable')
                                 rating = getattr(hotel, 'rating', 'No rating')
@@ -2680,11 +2680,11 @@ Please analyze the current message considering the conversation history for bett
                     hotels = result["hotels"][:3]  # Top 3
                     logger.info(f"Found {len(hotels)} hotels for {tool_name} (dict format)")
                     if hotels:
-                        tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
-                        for hotel in hotels:
-                            name = hotel.get("name", "Unknown")
+                    tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
+                    for hotel in hotels:
+                        name = hotel.get("name", "Unknown")
                             price = hotel.get("price_per_night", "Price unavailable")
-                            rating = hotel.get("rating", "No rating")
+                        rating = hotel.get("rating", "No rating")
                             currency = hotel.get("currency", "")
                             price_str = f"{price} {currency}" if price and price != 'Price unavailable' else 'Price unavailable'
                             tool_parts.append(f"- {name} (Rating: {rating}): {price_str}")
@@ -4149,8 +4149,8 @@ This will help me provide you with the most relevant travel guidance possible.""
                     description = getattr(attraction, 'description', '')
                 else:
                     # Dictionary
-                    name = attraction.get("name", "Unknown Attraction")
-                    rating = attraction.get("rating", "No rating")
+                name = attraction.get("name", "Unknown Attraction")
+                rating = attraction.get("rating", "No rating")
                     description = attraction.get("description", "")
                 
                 # Truncate description if too long
@@ -4173,7 +4173,7 @@ This will help me provide you with the most relevant travel guidance possible.""
         if hasattr(result, 'hotels'):
             hotels = result.hotels
         else:
-            hotels = result.get("hotels", [])
+        hotels = result.get("hotels", [])
         
         if hotels:
             for i, hotel in enumerate(hotels[:5], 1):  # Top 5
@@ -4187,10 +4187,10 @@ This will help me provide you with the most relevant travel guidance possible.""
                     currency = getattr(hotel, 'currency', '')
                 else:
                     # Dictionary
-                    name = hotel.get("name", "Unknown Hotel")
-                    price = hotel.get("price_per_night", hotel.get("price", "Price available"))
-                    rating = hotel.get("rating", "No rating")
-                    location = hotel.get("location", destination)
+                name = hotel.get("name", "Unknown Hotel")
+                price = hotel.get("price_per_night", hotel.get("price", "Price available"))
+                rating = hotel.get("rating", "No rating")
+                location = hotel.get("location", destination)
                     currency = hotel.get("currency", "")
                 
                 # Format price with currency
@@ -4212,7 +4212,7 @@ This will help me provide you with the most relevant travel guidance possible.""
         if hasattr(result, 'flights'):
             flights = result.flights
         else:
-            flights = result.get("flights", [])
+        flights = result.get("flights", [])
         
         if flights:
             for i, flight in enumerate(flights[:3], 1):  # Top 3
@@ -4225,9 +4225,9 @@ This will help me provide you with the most relevant travel guidance possible.""
                     currency = getattr(flight, 'currency', '')
                 else:
                     # Dictionary
-                    airline = flight.get("airline", "Unknown Airline")
-                    price = flight.get("price", "Price available")
-                    duration = flight.get("duration", "Duration varies")
+                airline = flight.get("airline", "Unknown Airline")
+                price = flight.get("price", "Price available")
+                duration = flight.get("duration", "Duration varies")
                     currency = flight.get("currency", "")
                 
                 # Format price with currency
