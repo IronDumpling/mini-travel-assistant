@@ -15,6 +15,9 @@ from datetime import datetime
 import aiohttp
 from pydantic import BaseModel, Field
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class Flight(BaseModel):
     airline: Optional[str] = None
@@ -121,6 +124,7 @@ class FlightSearchTool(BaseTool):
                     }
                 )
         except Exception as e:
+            logger.error(f"Flight search failed: {e}")
             return FlightSearchOutput(
                 success=False,
                 error=str(e),
@@ -147,6 +151,9 @@ class FlightSearchTool(BaseTool):
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json"
             }
+            
+            logger.debug(f"Calling flight search API with params: {params}")
+            
             async with session.get(
                 f"{self.base_url}/shopping/flight-offers",
                 params=params,

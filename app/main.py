@@ -36,7 +36,10 @@ def setup_environment_if_needed():
         "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
         "CHROMA_DB_PATH": "./data/chroma_db",
         "FORCE_REBUILD_INDEX": "true",
-        "INDEX_BATCH_SIZE": "100"
+        "INDEX_BATCH_SIZE": "100",
+        # AMADEUS Hotel API Configuration
+        "HOTEL_SEARCH_API_KEY": "LK0JRwGPOAvWODplITUUWdE69boG0GqW",
+        "HOTEL_SEARCH_API_SECRET": "Uzc6BEywKTA1VTIk"
     }
     
     # Check if any required variables are missing
@@ -86,6 +89,8 @@ def setup_environment_if_needed():
         logger.info(f"   API Key: {os.environ.get('LLM_API_KEY')[:20]}...")
         logger.info(f"   Temperature: {os.environ.get('LLM_TEMPERATURE')}")
         logger.info(f"   Max Tokens: {os.environ.get('LLM_MAX_TOKENS')}")
+        logger.info(f"   AMADEUS API Key: {os.environ.get('HOTEL_SEARCH_API_KEY')[:20]}...")
+        logger.info(f"   AMADEUS API Secret: {os.environ.get('HOTEL_SEARCH_API_SECRET')[:10]}...")
     else:
         logger.info("✅ All required environment variables are already set")
 
@@ -155,6 +160,12 @@ async def lifespan(app: FastAPI):
         tool_executor = get_tool_executor()
         await tool_executor.tool_selector.initialize_tool_knowledge()
         logger.info("✅ Tool knowledge initialized for RAG-based tool selection")
+        
+        # 6. 🆕 Initialize Travel Agent (singleton) 
+        logger.info("🧳 Initializing Travel Agent singleton...")
+        from app.agents.travel_agent import get_travel_agent
+        travel_agent = get_travel_agent()
+        logger.info(f"✅ Travel Agent initialized: {travel_agent.name} (singleton pattern)")
         
         logger.info("🎉 AI Travel Planning Agent successfully started")
         

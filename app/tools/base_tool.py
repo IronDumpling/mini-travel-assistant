@@ -17,6 +17,9 @@ from enum import Enum
 import asyncio
 import time
 from datetime import datetime
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class ToolStatus(str, Enum):
@@ -93,21 +96,23 @@ class BaseTool(ABC):
         input_data: ToolInput, 
         context: Optional[ToolExecutionContext] = None
     ) -> ToolOutput:
-        """Execute the tool (with error handling and monitoring)"""
+        """Execute the tool with enhanced error handling and monitoring"""
         if context is None:
             context = ToolExecutionContext(request_id=f"req_{int(time.time())}")
         
         start_time = time.time()
         self.status = ToolStatus.RUNNING
         
+        logger.debug(f"Starting execution of {self.metadata.name} tool")
+        
         try:
-            # TODO: Implement rate limit check
+            # Check rate limit
             await self._check_rate_limit()
             
-            # TODO: Implement input validation
+            # Validate input
             await self._validate_input(input_data)
 
-            # Execute the tool logic
+            # Execute the tool logic with timeout
             result = await asyncio.wait_for(
                 self._execute(input_data, context),
                 timeout=self.metadata.timeout
@@ -120,28 +125,66 @@ class BaseTool(ABC):
             self.last_execution_time = datetime.utcnow()
             self.execution_count += 1
             
-            # TODO: Record execution log
-            await self._log_execution(input_data, result, context)
+            logger.info(f"Tool {self.metadata.name} executed successfully in {execution_time:.2f}s")
             
             return result
             
         except asyncio.TimeoutError:
             self.status = ToolStatus.TIMEOUT
             self.error_count += 1
-            return ToolOutput(
-                success=False,
-                error=f"Tool execution timeout ({self.metadata.timeout} seconds)",
-                execution_time=time.time() - start_time
-            )
+            execution_time = time.time() - start_time
+            
+            logger.warning(f"Tool {self.metadata.name} timed out after {self.metadata.timeout}s")
+            
+            # Try to provide a useful response even on timeout
+            fallback_result = await self._generate_timeout_fallback(input_data, context)
+            fallback_result.execution_time = execution_time
+            fallback_result.error = f"Tool execution timeout ({self.metadata.timeout} seconds)"
+            
+            return fallback_result
             
         except Exception as e:
             self.status = ToolStatus.FAILED
             self.error_count += 1
-            return ToolOutput(
-                success=False,
-                error=str(e),
-                execution_time=time.time() - start_time
-            )
+            execution_time = time.time() - start_time
+            
+            logger.error(f"Tool {self.metadata.name} failed after {execution_time:.2f}s: {e}")
+            
+            # Try to provide a useful response even on error
+            fallback_result = await self._generate_error_fallback(input_data, context, str(e))
+            fallback_result.execution_time = execution_time
+            fallback_result.error = str(e)
+            
+            return fallback_result
+
+    async def _generate_timeout_fallback(
+        self, input_data: ToolInput, context: ToolExecutionContext
+    ) -> ToolOutput:
+        """Generate a fallback response when tool times out"""
+        return ToolOutput(
+            success=False,
+            data={
+                "message": f"The {self.metadata.name} service is currently slow. Please try again later.",
+                "fallback_advice": f"You can manually search for {self.metadata.category} information using alternative sources.",
+                "tool_name": self.metadata.name
+            },
+            error=f"Timeout after {self.metadata.timeout} seconds"
+        )
+
+    async def _generate_error_fallback(
+        self, input_data: ToolInput, context: ToolExecutionContext, error_msg: str
+    ) -> ToolOutput:
+        """Generate a fallback response when tool encounters an error"""
+        return ToolOutput(
+            success=False,
+            data={
+                "message": f"The {self.metadata.name} service encountered an issue.",
+                "fallback_advice": f"Please check your input parameters or try again later.",
+                "tool_name": self.metadata.name,
+                "error_type": "execution_error"
+            },
+            error=error_msg
+        )
     
     async def _check_rate_limit(self):
         """Check rate limit"""
@@ -153,15 +196,7 @@ class BaseTool(ABC):
         # TODO: Implement input validation logic
         pass
     
-    async def _log_execution(
-        self, 
-        input_data: ToolInput, 
-        output: ToolOutput, 
-        context: ToolExecutionContext
-    ):
-        """Record execution log"""
-        # TODO: 实现日志记录逻辑
-        pass
+
     
     def get_status(self) -> Dict[str, Any]:
         """Get tool status information"""
@@ -186,11 +221,13 @@ class ToolRegistry:
         """Register tool"""
         self._tools[tool.metadata.name] = tool
         
-        # 按分类组织工具
+        # Organize tools by category
         category = tool.metadata.category
         if category not in self._categories:
             self._categories[category] = []
         self._categories[category].append(tool.metadata.name)
+        
+        logger.info(f"Registered tool: {tool.metadata.name} (category: {category})")
     
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """Get tool"""
@@ -225,5 +262,5 @@ class ToolRegistry:
         }
 
 
-# 全局工具注册表
+# Global tool registry
 tool_registry = ToolRegistry() 

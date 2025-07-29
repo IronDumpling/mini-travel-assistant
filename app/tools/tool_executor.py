@@ -410,21 +410,9 @@ Example Queries:
         user_request_lower = user_request.lower()
         params = {}
 
-        # Extract destination
-        destinations = [
-            "tokyo",
-            "kyoto",
-            "osaka",
-            "paris",
-            "london",
-            "new york",
-            "beijing",
-            "shanghai",
-        ]
-        for dest in destinations:
-            if dest in user_request_lower:
-                params["destination"] = dest
-                break
+        # Do not extract destination here - let travel agent handle IATA code conversion
+        # The travel agent should provide the location parameter with IATA code
+        pass
 
         # Extract dates information
         if any(word in user_request_lower for word in ["day", "days", "date", "dates"]):
@@ -454,15 +442,19 @@ Example Queries:
                 }
             )
         elif tool_name == "hotel_search":
+            # For hotel search, only set parameters that are not provided by travel agent
+            # The travel agent should provide: location (IATA code), check_in, check_out, guests
             params.update(
                 {
-                    "destination": params.get("destination", "unknown"),
                     "check_in": params.get("check_in", "flexible"),
                     "check_out": params.get("check_out", "flexible"),
                     "guests": params.get("guests", 1),
                     "room_type": params.get("room_type", "standard"),
                 }
             )
+            # Do not override location - let travel agent provide the IATA code
+            logger.info(f"🔧 Tool executor - Hotel search params after update: {params}")
+            logger.info(f"🔧 Tool executor - Location from travel agent: '{params.get('location')}'")
         elif tool_name == "attraction_search":
             params.update(
                 {
@@ -507,39 +499,89 @@ class ToolExecutor:
         input_data: Dict[str, Any],
         context: Optional[ToolExecutionContext] = None,
     ) -> ToolOutput:
-        """Execute a single tool"""
-        tool = tool_registry.get_tool(tool_name)
-        if not tool:
-            return ToolOutput(success=False, error=f"Tool '{tool_name}' not found")
+        """Execute a single tool with enhanced error handling"""
+        start_time = asyncio.get_event_loop().time()
+        
+        try:
+            tool = tool_registry.get_tool(tool_name)
+            if not tool:
+                logger.error(f"Tool '{tool_name}' not found in registry")
+                return ToolOutput(
+                    success=False, 
+                    error=f"Tool '{tool_name}' not found",
+                    execution_time=0.0
+                )
 
-        # Convert input data to tool input object
-        tool_input = self._create_tool_input(tool, input_data)
+            # Convert input data to tool input object with error handling
+            try:
+                tool_input = self._create_tool_input(tool, input_data)
+            except Exception as e:
+                logger.error(f"Failed to create tool-specific input for {tool_name}: {e}")
+                execution_time = asyncio.get_event_loop().time() - start_time
+                return ToolOutput(
+                    success=False,
+                    error=f"Invalid input parameters for {tool_name}: {str(e)}",
+                    execution_time=execution_time,
+                    data={"tool_name": tool_name, "error_type": "input_validation"}
+                )
 
-        return await tool.execute(tool_input, context)
+            # Execute the tool
+            result = await tool.execute(tool_input, context)
+            
+            if not result.success:
+                logger.warning(f"Tool {tool_name} execution failed: {result.error}")
+            else:
+                logger.info(f"Tool {tool_name} executed successfully")
+
+            return result
+            
+        except Exception as e:
+            execution_time = asyncio.get_event_loop().time() - start_time
+            logger.error(f"Unexpected error executing tool {tool_name}: {e}")
+            return ToolOutput(
+                success=False,
+                error=f"Execution error: {str(e)}",
+                execution_time=execution_time,
+                data={"tool_name": tool_name, "error_type": "execution_error"}
+            )
 
     async def execute_chain(
         self, chain: ToolChain, context: Optional[ToolExecutionContext] = None
     ) -> ExecutionResult:
-        """Execute tool chain"""
+        """
+        Execute tool chain with optimized performance
+        Defaults to parallel execution for better speed
+        """
         start_time = asyncio.get_event_loop().time()
         results = {}
 
         try:
-            if chain.strategy == "sequential":
+            # Optimize execution strategy for performance
+            if chain.strategy == "sequential" or len(chain.calls) == 1:
                 results = await self._execute_sequential(chain.calls, context)
             elif chain.strategy == "parallel":
                 results = await self._execute_parallel(chain.calls, context)
             else:
-                raise ValueError(f"Unsupported execution strategy: {chain.strategy}")
+                # Default to parallel for better performance
+                logger.info(f"Unknown strategy '{chain.strategy}', defaulting to parallel")
+                results = await self._execute_parallel(chain.calls, context)
 
             execution_time = asyncio.get_event_loop().time() - start_time
 
+            # Allow partial success for better performance and user experience
+            success_count = sum(1 for result in results.values() if result.success)
+            total_count = len(results)
+            success = success_count > 0  # At least one tool succeeded
+            
+            logger.info(f"Tool chain execution: {success_count}/{total_count} tools succeeded in {execution_time:.2f}s")
+
             return ExecutionResult(
-                success=True, results=results, execution_time=execution_time
+                success=success, results=results, execution_time=execution_time
             )
 
         except Exception as e:
             execution_time = asyncio.get_event_loop().time() - start_time
+            logger.error(f"Tool chain execution failed: {e}")
             return ExecutionResult(
                 success=False,
                 results=results,
@@ -1010,6 +1052,10 @@ class ToolExecutor:
             elif tool_name == "hotel_search":
                 from app.tools.hotel_search import HotelSearchInput
                 from datetime import datetime
+                from app.core.logging_config import get_logger
+                
+                logger = get_logger(__name__)
+                logger.info(f"🔧 Tool executor - Creating hotel search input with data: {input_data}")
 
                 # Map travel agent parameters to hotel search parameters and convert dates
                 check_in_str = input_data.get("check_in", "2024-06-01")
@@ -1041,6 +1087,8 @@ class ToolExecutor:
                 }
                 # Remove None values
                 cleaned_data = {k: v for k, v in cleaned_data.items() if v is not None}
+                logger.info(f"🔧 Tool executor - Cleaned data for hotel search: {cleaned_data}")
+                logger.info(f"🔧 Tool executor - Location being passed: '{cleaned_data.get('location')}'")
                 return HotelSearchInput(**cleaned_data)
 
             elif tool_name == "flight_search":
