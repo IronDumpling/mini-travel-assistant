@@ -11,7 +11,9 @@ import aiohttp
 import json
 from pydantic import BaseModel
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
+from app.core.logging_config import get_logger
 
+logger = get_logger(__name__)
 class Flight(BaseModel):
     airline: str
     flight_number: str
@@ -55,8 +57,8 @@ class FlightSearchTool(BaseTool):
         
         # Amadeus API credentials - read from environment or use defaults
         import os
-        self.api_key = os.getenv("AMADEUS_API_KEY", "Kh68GhxPfbkDhFWFgBBc1ASBS6ptw0Ck")
-        self.api_secret = os.getenv("AMADEUS_API_SECRET", "XhzA3QEJ7ZWvADos")
+        self.api_key = os.getenv("AMADEUS_API_KEY", "GWY1ifYiXAfeF5alfhaOCVBc0DmKElZL")
+        self.api_secret = os.getenv("AMADEUS_API_SECRET", "S03PNzgrbfMNOVz7")
         self.base_url = os.getenv("AMADEUS_BASE_URL", "https://test.api.amadeus.com/v2")  # Updated to v2
         self.auth_url = "https://test.api.amadeus.com/v1/security/oauth2/token"  # Auth still uses v1
         self.access_token = None
