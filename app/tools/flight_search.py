@@ -14,7 +14,6 @@ from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionCo
 from app.core.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 class Flight(BaseModel):
     airline: Optional[str] = None
     flight_number: Optional[str] = None
@@ -57,11 +56,13 @@ class FlightSearchTool(BaseTool):
             timeout=30
         )
         super().__init__(metadata)
-        self.api_key = None
-        self.api_secret = None
+        
+        # Amadeus API credentials - read from environment or use defaults
+        self.api_key = os.getenv("AMADEUS_API_KEY", "GWY1ifYiXAfeF5alfhaOCVBc0DmKElZL")
+        self.api_secret = os.getenv("AMADEUS_API_SECRET", "S03PNzgrbfMNOVz7")
+        self.base_url = os.getenv("AMADEUS_BASE_URL", "https://test.api.amadeus.com/v2")  # Updated to v2
+        self.auth_url = "https://test.api.amadeus.com/v1/security/oauth2/token"  # Auth still uses v1
         self.access_token = None
-        self.base_url = "https://test.api.amadeus.com/v2"  # Amadeus Self-Service API base
-        self.auth_url = "https://test.api.amadeus.com/v1/security/oauth2/token"
 
     def _ensure_api_key(self) -> None:
         """Ensure API key and secret are available, checking environment if not already loaded."""
