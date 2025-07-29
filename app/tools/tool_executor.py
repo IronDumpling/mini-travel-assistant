@@ -476,13 +476,25 @@ Example Queries:
         self, tool: BaseTool, input_data: Dict[str, Any]
     ) -> ToolInput:
         """Create tool input object"""
-        # TODO: Create input object based on tool input schema
-        # For now, create a basic ToolInput object
-        return ToolInput(
-            data=input_data,
-            metadata=input_data.get("user_context", {}),
-            validation_required=True,
-        )
+        # Import the specific tool input classes
+        from app.tools.flight_search import FlightSearchInput
+        from app.tools.hotel_search import HotelSearchInput
+        from app.tools.attraction_search import AttractionSearchInput
+        
+        # Create the appropriate input object based on tool name
+        if tool.metadata.name == "flight_search":
+            return FlightSearchInput(**input_data)
+        elif tool.metadata.name == "hotel_search":
+            return HotelSearchInput(**input_data)
+        elif tool.metadata.name == "attraction_search":
+            return AttractionSearchInput(**input_data)
+        else:
+            # Fallback to generic ToolInput for unknown tools
+            return ToolInput(
+                data=input_data,
+                metadata=input_data.get("user_context", {}),
+                validation_required=True,
+            )
 
 
 class ToolExecutor:
@@ -1036,7 +1048,7 @@ class ToolExecutor:
 
                 # Remove non-relevant fields and ensure proper parameter mapping
                 cleaned_data = {
-                    "location": input_data.get("location", "unknown"),
+                    "location": input_data.get("destination", input_data.get("location", "unknown")),
                     "query": input_data.get("query"),
                     "category": input_data.get("category"),
                     "radius_meters": input_data.get("radius_meters", 5000),
@@ -1074,7 +1086,7 @@ class ToolExecutor:
                 )
 
                 cleaned_data = {
-                    "location": input_data.get("location", "unknown"),
+                    "location": input_data.get("destination", input_data.get("location", "unknown")),
                     "check_in": check_in,
                     "check_out": check_out,
                     "guests": input_data.get("guests", 1),
@@ -1094,6 +1106,10 @@ class ToolExecutor:
             elif tool_name == "flight_search":
                 from app.tools.flight_search import FlightSearchInput
                 from datetime import datetime
+                from app.core.logging_config import get_logger
+                
+                logger = get_logger(__name__)
+                logger.info(f"✈️ Tool executor - Creating flight search input with data: {input_data}")
 
                 # Map travel agent parameters to flight search parameters and convert dates
                 start_date_str = input_data.get("start_date", "2024-06-01")
@@ -1124,6 +1140,9 @@ class ToolExecutor:
                 }
                 # Remove None values
                 cleaned_data = {k: v for k, v in cleaned_data.items() if v is not None}
+                logger.info(f"✈️ Tool executor - Cleaned data for flight search: {cleaned_data}")
+                logger.info(f"✈️ Tool executor - Origin being passed: '{cleaned_data.get('origin')}'")
+                logger.info(f"✈️ Tool executor - Destination being passed: '{cleaned_data.get('destination')}'")
                 return FlightSearchInput(**cleaned_data)
 
             else:

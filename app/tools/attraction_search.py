@@ -123,6 +123,16 @@ class AttractionSearchTool(BaseTool):
     ) -> AttractionSearchOutput:
         """Execute attraction search using Google Places API (New)"""
         try:
+            # Validate input parameters
+            if not input_data.location or input_data.location.lower() in ['unknown', '']:
+                return AttractionSearchOutput(
+                    success=False,
+                    error="Invalid location: location is required and cannot be 'unknown'",
+                    attractions=[],
+                    total_results=0,
+                    search_location=input_data.location or "unknown"
+                )
+            
             logger.info(f"Searching attractions in {input_data.location}, query: {input_data.query or 'nearby search'}")
             
             # Ensure API key is available before proceeding

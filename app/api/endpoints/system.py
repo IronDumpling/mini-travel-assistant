@@ -2,11 +2,12 @@
 System Endpoints - Health checks and system status
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from app.tools.base_tool import tool_registry
 from app.agents.base_agent import agent_manager
 from datetime import datetime
+from app.tools.flight_search import FlightSearchInput, FlightSearchOutput
 
 router = APIRouter()
 
@@ -188,3 +189,20 @@ async def search_chromadb(query: str, collection_name: str = "travel_knowledge",
             status_code=500,
             content={"error": f"Failed to search ChromaDB: {str(e)}"}
         ) 
+
+@router.post("/api/tools/flight_search", response_model=FlightSearchOutput)
+async def run_flight_search(request: Request):
+    """Directly invoke the flight_search tool with input payload."""
+    try:
+        payload = await request.json()
+        tool = tool_registry.get_tool("flight_search")
+        if not tool:
+            raise HTTPException(status_code=404, detail="flight_search tool not found")
+        input_data = FlightSearchInput(**payload)
+        # Use a dummy context for now
+        from app.tools.base_tool import ToolExecutionContext
+        context = ToolExecutionContext(request_id="api_flight_search")
+        result = await tool.execute(input_data, context)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Flight search failed: {str(e)}") 

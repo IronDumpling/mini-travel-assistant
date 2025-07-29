@@ -1,0 +1,1514 @@
+[
+  {
+    "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+    "session_title": "Detailed Tokyo Trip Planning",
+    "session_description": "Comprehensive planning for a Tokyo trip with multiple detailed questions",
+    "queries": [
+      "I'm planning a 7-day trip to Tokyo in March with my partner. We're interested in traditional culture, modern attractions, and great food. Budget is around $4000 total.",
+      "What are the best neighborhoods to stay in Tokyo for easy access to both traditional sites and modern attractions?",
+      "Can you recommend specific restaurants for authentic Japanese cuisine? We want to try sushi, ramen, tempura, and kaiseki.",
+      "What's the best way to get around Tokyo? Should we get a JR Pass?",
+      "Can you create a day-by-day itinerary that balances temples, museums, shopping, and food experiences?",
+      "What should we pack for Tokyo in March? Any cultural etiquette we should be aware of?",
+      "Are there any day trips from Tokyo you'd recommend? Maybe to Mount Fuji or nearby cities?"
+    ],
+    "session_created_at": "2025-07-29T16:44:21.317250",
+    "metrics": [
+      {
+        "test_id": "3a84059b-10ab-4e31-bce2-74cc4db8f959",
+        "test_type": "multi_session",
+        "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+        "query_index": 0,
+        "test_name": "multi_session_query_0",
+        "request_data": {
+          "message": "I'm planning a 7-day trip to Tokyo in March with my partner. We're interested in traditional culture, modern attractions, and great food. Budget is around $4000 total.",
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your planning request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "refinement_details": null
+        },
+        "total_response_time": 28.650196313858032,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:44:49.967447",
+        "error_message": null
+      },
+      {
+        "test_id": "f3cd3c60-7db8-44bb-a93c-a578302bc75d",
+        "test_type": "multi_session",
+        "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+        "query_index": 1,
+        "test_name": "multi_session_query_1",
+        "request_data": {
+          "message": "What are the best neighborhoods to stay in Tokyo for easy access to both traditional sites and modern attractions?",
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your recommendation request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "refinement_details": null
+        },
+        "total_response_time": 17.38825297355652,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:45:07.863151",
+        "error_message": null
+      },
+      {
+        "test_id": "72c8778b-ef62-48d5-8a54-9d3e8d509057",
+        "test_type": "multi_session",
+        "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+        "query_index": 2,
+        "test_name": "multi_session_query_2",
+        "request_data": {
+          "message": "Can you recommend specific restaurants for authentic Japanese cuisine? We want to try sushi, ramen, tempura, and kaiseki.",
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "refinement_details": null
+        },
+        "total_response_time": 27.859678983688354,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:45:36.224459",
+        "error_message": null
+      },
+      {
+        "test_id": "d0f172c4-88fc-48df-9ef0-2e7f0195165b",
+        "test_type": "multi_session",
+        "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+        "query_index": 3,
+        "test_name": "multi_session_query_3",
+        "request_data": {
+          "message": "What's the best way to get around Tokyo? Should we get a JR Pass?",
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your query request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "refinement_details": null
+        },
+        "total_response_time": 17.699988842010498,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:45:54.433523",
+        "error_message": null
+      },
+      {
+        "test_id": "440112a5-63a8-481a-9433-7c3c2207ccb4",
+        "test_type": "multi_session",
+        "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+        "query_index": 4,
+        "test_name": "multi_session_query_4",
+        "request_data": {
+          "message": "Can you create a day-by-day itinerary that balances temples, museums, shopping, and food experiences?",
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "I'll help you plan your trip to Tokyo! Here's what I found:\n\nI had trouble finding attraction search information, but I can still help with general advice about Tokyo.\n\n🏨 **Accommodation Options in Tokyo**\n1. **HOTEL SUNROUTE AKASAKA** (Rating: None)\n   Location: TOKYO | Price: Price available\n2. **METROPOLITAN EDMONT** (Rating: None)\n   Location: TOKYO | Price: Price available\n3. **SUNROUTE SHINAGAWA SEASIDE HTL** (Rating: None)\n   Location: TOKYO | Price: Price available\n4. **NEW OTANI TOKYO THE MAIN** (Rating: None)\n   Location: TOKYO | Price: Price available\n5. **CERULEAN TOWER TOKYU HOTEL** (Rating: None)\n   Location: TOKYO | Price: Price available\n\n\n✈️ **Flight Information to Tokyo**\n1. **TW** | Price: 206.6 USD | Duration: 390\n2. **SL** | Price: 261.0 USD | Duration: 155\n3. **TW** | Price: 261.6 USD | Duration: 390\n\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Tokyo\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Analyze travel requirements for Tokyo",
+            "Search for comprehensive travel options",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Review the travel plan and let me know your preferences",
+            "I can help create a detailed day-by-day itinerary",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "refinement_details": null
+        },
+        "total_response_time": 32.89139008522034,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Analyze travel requirements for Tokyo",
+          "Search for comprehensive travel options",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Review the travel plan and let me know your preferences",
+          "I can help create a detailed day-by-day itinerary",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:46:27.825703",
+        "error_message": null
+      },
+      {
+        "test_id": "9dc4f929-51bf-479f-850f-d0f7e948ba1a",
+        "test_type": "multi_session",
+        "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+        "query_index": 5,
+        "test_name": "multi_session_query_5",
+        "request_data": {
+          "message": "What should we pack for Tokyo in March? Any cultural etiquette we should be aware of?",
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "Here's information about Tokyo:\n\nI had trouble finding attraction search information, but I can still help with general advice about Tokyo.\n\nI had trouble finding hotel search information, but I can still help with general advice about Tokyo.\n\n✈️ **Flight Information to Tokyo**\n1. **TW** | Price: 413.2 USD | Duration: 390\n2. **SL** | Price: 522.0 USD | Duration: 155\n3. **TW** | Price: 523.2 USD | Duration: 390\n\n\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Search for information about Tokyo",
+            "Provide relevant details",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Let me know if you need more specific information",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "refinement_details": null
+        },
+        "total_response_time": 22.486183404922485,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Search for information about Tokyo",
+          "Provide relevant details",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Let me know if you need more specific information",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:46:50.820404",
+        "error_message": null
+      },
+      {
+        "test_id": "cbf3a0bf-73d9-4a19-9c4d-56f6d691dbcd",
+        "test_type": "multi_session",
+        "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+        "query_index": 6,
+        "test_name": "multi_session_query_6",
+        "request_data": {
+          "message": "Are there any day trips from Tokyo you'd recommend? Maybe to Mount Fuji or nearby cities?",
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "ad3f5de4-9529-4732-824b-236a191f42f1",
+          "refinement_details": null
+        },
+        "total_response_time": 26.582138299942017,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:47:17.908767",
+        "error_message": null
+      }
+    ]
+  },
+  {
+    "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+    "session_title": "European Multi-City Adventure",
+    "session_description": "Planning a comprehensive European trip across multiple cities",
+    "queries": [
+      "I want to plan a 21-day European trip visiting Paris, Amsterdam, Berlin, Prague, and Vienna. Budget is $6000 for 2 people.",
+      "How should I organize the order of cities to minimize travel time and costs?",
+      "What's the best transportation method between these cities? Train vs flights?",
+      "Can you suggest 3-4 days worth of activities for each city, focusing on history, art, and local culture?",
+      "What are the accommodation recommendations for each city? Mix of budget and mid-range options.",
+      "How much should I budget for food in each city? Any must-try local specialties?",
+      "What's the best time of year for this trip considering weather and tourist crowds?"
+    ],
+    "session_created_at": "2025-07-29T16:47:20.461216",
+    "metrics": [
+      {
+        "test_id": "e657148f-1832-4ca6-a9dd-5ece29d39b10",
+        "test_type": "multi_session",
+        "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+        "query_index": 0,
+        "test_name": "multi_session_query_0",
+        "request_data": {
+          "message": "I want to plan a 21-day European trip visiting Paris, Amsterdam, Berlin, Prague, and Vienna. Budget is $6000 for 2 people.",
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "I'll help you plan your trip to Paris! Here's what I found:\n\nI had trouble finding attraction search information, but I can still help with general advice about Paris.\n\n🏨 **Accommodation Options in Paris**\n1. **IBIS PARIS TOUR MONTPARNASSE** (Rating: None)\n   Location: PARIS | Price: Price available\n2. **DIAMOND HOTEL** (Rating: None)\n   Location: Paris | Price: Price available\n3. **BW PREMIER FAUBOURG 88** (Rating: None)\n   Location: PARIS | Price: Price available\n4. **MERCURE PARIS TOUR EIFFEL 4*** (Rating: None)\n   Location: PARIS | Price: Price available\n5. **HOTEL PRINCE ALBERT LOUVRE** (Rating: None)\n   Location: PARIS | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about Paris.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Paris\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Analyze travel requirements for Paris",
+            "Search for comprehensive travel options",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Review the travel plan and let me know your preferences",
+            "I can help create a detailed day-by-day itinerary",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "refinement_details": null
+        },
+        "total_response_time": 29.96530556678772,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Analyze travel requirements for Paris",
+          "Search for comprehensive travel options",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Review the travel plan and let me know your preferences",
+          "I can help create a detailed day-by-day itinerary",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:47:50.426522",
+        "error_message": null
+      },
+      {
+        "test_id": "312005b1-41ed-4e6e-b225-8d175aa446e2",
+        "test_type": "multi_session",
+        "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+        "query_index": 1,
+        "test_name": "multi_session_query_1",
+        "request_data": {
+          "message": "How should I organize the order of cities to minimize travel time and costs?",
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "I'll help you plan your trip to Paris! Here's what I found:\n\n🏨 **Accommodation Options in Paris**\n1. **BEST WESTERN GAILLON OPERA** (Rating: None)\n   Location: PARIS | Price: Price available\n2. **DIAMOND HOTEL** (Rating: None)\n   Location: Paris | Price: Price available\n3. **HOTEL PRINCE ALBERT LOUVRE** (Rating: None)\n   Location: PARIS | Price: Price available\n4. **IBIS PARIS TOUR MONTPARNASSE** (Rating: None)\n   Location: PARIS | Price: Price available\n5. **BW PREMIER FAUBOURG 88** (Rating: None)\n   Location: PARIS | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about Paris.\n\nI had trouble finding attraction search information, but I can still help with general advice about Paris.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Paris\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Analyze travel requirements for Paris",
+            "Search for comprehensive travel options",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Search for attractions and activities",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Review the travel plan and let me know your preferences",
+            "I can help create a detailed day-by-day itinerary",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "refinement_details": null
+        },
+        "total_response_time": 19.501834392547607,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Analyze travel requirements for Paris",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Review the travel plan and let me know your preferences",
+          "I can help create a detailed day-by-day itinerary",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:48:10.430719",
+        "error_message": null
+      },
+      {
+        "test_id": "94bf257f-b2ac-4190-ac3e-481992b28fde",
+        "test_type": "multi_session",
+        "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+        "query_index": 2,
+        "test_name": "multi_session_query_2",
+        "request_data": {
+          "message": "What's the best transportation method between these cities? Train vs flights?",
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "refinement_details": null
+        },
+        "total_response_time": 31.970834493637085,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:48:42.913019",
+        "error_message": null
+      },
+      {
+        "test_id": "c7849e24-085c-43e5-adff-33dcb5530d6d",
+        "test_type": "multi_session",
+        "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+        "query_index": 3,
+        "test_name": "multi_session_query_3",
+        "request_data": {
+          "message": "Can you suggest 3-4 days worth of activities for each city, focusing on history, art, and local culture?",
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "refinement_details": null
+        },
+        "total_response_time": 18.99205732345581,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:49:02.417902",
+        "error_message": null
+      },
+      {
+        "test_id": "22761d59-2260-425e-868e-b3c4ba8f32ae",
+        "test_type": "multi_session",
+        "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+        "query_index": 4,
+        "test_name": "multi_session_query_4",
+        "request_data": {
+          "message": "What are the accommodation recommendations for each city? Mix of budget and mid-range options.",
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "Here are my top recommendations for Paris:\n\nI had trouble finding attraction search information, but I can still help with general advice about Paris.\n\n🏨 **Accommodation Options in Paris**\n1. **HN TEST PROPERTY1 FOR E2E TESTING** (Rating: None)\n   Location: Paris | Price: Price available\n2. **MERCURE PARIS TOUR EIFFEL 4*** (Rating: None)\n   Location: PARIS | Price: Price available\n3. **BEST WESTERN GAILLON OPERA** (Rating: None)\n   Location: PARIS | Price: Price available\n4. **DIAMOND HOTEL** (Rating: None)\n   Location: Paris | Price: Price available\n5. **HOTEL PRINCE ALBERT LOUVRE** (Rating: None)\n   Location: PARIS | Price: Price available\n\n\n💡 **Additional Suggestions:**\n• Check opening hours and seasonal availability\n• Read recent reviews from other travelers\n• Consider booking popular attractions in advance\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Find top recommendations for Paris",
+            "Analyze user preferences",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Let me know which recommendations interest you most",
+            "I can provide more details about specific attractions",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "refinement_details": null
+        },
+        "total_response_time": 27.98357057571411,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Find top recommendations for Paris",
+          "Analyze user preferences",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Let me know which recommendations interest you most",
+          "I can provide more details about specific attractions",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:49:30.903759",
+        "error_message": null
+      },
+      {
+        "test_id": "19597b9d-d777-47d2-8224-19730f5111db",
+        "test_type": "multi_session",
+        "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+        "query_index": 5,
+        "test_name": "multi_session_query_5",
+        "request_data": {
+          "message": "How much should I budget for food in each city? Any must-try local specialties?",
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "Here's information about Paris:\n\nI had trouble finding attraction search information, but I can still help with general advice about Paris.\n\n🏨 **Accommodation Options in Paris**\n1. **RENAISSANCE PARIS VENDOME** (Rating: None)\n   Location: PARIS | Price: Price available\n2. **HN TEST PROPERTY1 FOR E2E TESTING** (Rating: None)\n   Location: Paris | Price: Price available\n3. **HOTEL PRINCE ALBERT LOUVRE** (Rating: None)\n   Location: PARIS | Price: Price available\n4. **DIAMOND HOTEL** (Rating: None)\n   Location: Paris | Price: Price available\n5. **BEST WESTERN GAILLON OPERA** (Rating: None)\n   Location: PARIS | Price: Price available\n\n\n✈️ **Flight Information to Paris**\n1. **TW** | Price: 785.4 USD | Duration: 390\n2. **AI** | Price: 831.4 USD | Duration: 360\n3. **AI** | Price: 831.4 USD | Duration: 360\n\n\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Search for information about Paris",
+            "Provide relevant details",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Let me know if you need more specific information",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "refinement_details": null
+        },
+        "total_response_time": 23.745203971862793,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Search for information about Paris",
+          "Provide relevant details",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Let me know if you need more specific information",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:49:55.165072",
+        "error_message": null
+      },
+      {
+        "test_id": "4b43c948-af41-48fb-8195-4bba73ca18c7",
+        "test_type": "multi_session",
+        "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+        "query_index": 6,
+        "test_name": "multi_session_query_6",
+        "request_data": {
+          "message": "What's the best time of year for this trip considering weather and tourist crowds?",
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "Here's information about Paris:\n\nI had trouble finding attraction search information, but I can still help with general advice about Paris.\n\n🏨 **Accommodation Options in Paris**\n1. **RENAISSANCE PARIS VENDOME** (Rating: None)\n   Location: PARIS | Price: Price available\n2. **MERCURE PARIS LAFAYETTE** (Rating: None)\n   Location: PARIS | Price: Price available\n3. **MERCURE PARIS TOUR EIFFEL 4*** (Rating: None)\n   Location: PARIS | Price: Price available\n4. **DIAMOND HOTEL** (Rating: None)\n   Location: Paris | Price: Price available\n5. **HN TEST PROPERTY1 FOR E2E TESTING** (Rating: None)\n   Location: Paris | Price: Price available\n\n\n✈️ **Flight Information to Paris**\n1. **TW** | Price: 392.7 USD | Duration: 390\n2. **AI** | Price: 415.7 USD | Duration: 360\n3. **AI** | Price: 415.7 USD | Duration: 360\n\n\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Search for information about Paris",
+            "Provide relevant details",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Let me know if you need more specific information",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "407a940b-0d3a-4ed8-b93e-6c8ef273bdb8",
+          "refinement_details": null
+        },
+        "total_response_time": 31.312843799591064,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Search for information about Paris",
+          "Provide relevant details",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Let me know if you need more specific information",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:50:26.990651",
+        "error_message": null
+      }
+    ]
+  },
+  {
+    "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+    "session_title": "Family Beach Vacation Planning",
+    "session_description": "Detailed planning for a family beach vacation with children",
+    "queries": [
+      "Plan a 10-day beach vacation for a family of 4 (2 adults, kids aged 6 and 10) in the Caribbean, budget $5000.",
+      "Which Caribbean island would be best for families with young children?",
+      "What kind of accommodation should we book? Resort vs vacation rental pros and cons?",
+      "What activities and excursions are suitable for children these ages?",
+      "How do we handle meals with picky eaters? Resort meal plans vs cooking?",
+      "What should we pack for a Caribbean trip with kids? Any safety considerations?",
+      "Can you create a sample daily schedule that balances beach time, activities, and rest?"
+    ],
+    "session_created_at": "2025-07-29T16:50:29.533080",
+    "metrics": [
+      {
+        "test_id": "0bcd902e-3526-413c-b309-34a8022a4600",
+        "test_type": "multi_session",
+        "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+        "query_index": 0,
+        "test_name": "multi_session_query_0",
+        "request_data": {
+          "message": "Plan a 10-day beach vacation for a family of 4 (2 adults, kids aged 6 and 10) in the Caribbean, budget $5000.",
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your planning request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "refinement_details": null
+        },
+        "total_response_time": 28.195196390151978,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:50:57.729273",
+        "error_message": null
+      },
+      {
+        "test_id": "d3ca849c-7d5c-45fc-8b09-1f0e790710e1",
+        "test_type": "multi_session",
+        "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+        "query_index": 1,
+        "test_name": "multi_session_query_1",
+        "request_data": {
+          "message": "Which Caribbean island would be best for families with young children?",
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "refinement_details": null
+        },
+        "total_response_time": 18.031118154525757,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:51:16.275872",
+        "error_message": null
+      },
+      {
+        "test_id": "ffec2762-e28b-442d-aec8-bb3d2944ad04",
+        "test_type": "multi_session",
+        "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+        "query_index": 2,
+        "test_name": "multi_session_query_2",
+        "request_data": {
+          "message": "What kind of accommodation should we book? Resort vs vacation rental pros and cons?",
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your recommendation request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "refinement_details": null
+        },
+        "total_response_time": 24.435768604278564,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:51:41.219984",
+        "error_message": null
+      },
+      {
+        "test_id": "3d1fd9af-03df-4c37-bcca-b8a398e6d713",
+        "test_type": "multi_session",
+        "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+        "query_index": 3,
+        "test_name": "multi_session_query_3",
+        "request_data": {
+          "message": "What activities and excursions are suitable for children these ages?",
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "refinement_details": null
+        },
+        "total_response_time": 17.364221811294556,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:51:59.088724",
+        "error_message": null
+      },
+      {
+        "test_id": "c9dcb15e-cc18-4c97-95a0-4e038f4aaa88",
+        "test_type": "multi_session",
+        "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+        "query_index": 4,
+        "test_name": "multi_session_query_4",
+        "request_data": {
+          "message": "How do we handle meals with picky eaters? Resort meal plans vs cooking?",
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "refinement_details": null
+        },
+        "total_response_time": 26.458712100982666,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:52:26.050998",
+        "error_message": null
+      },
+      {
+        "test_id": "99d8d1e1-863c-4d05-a18e-efa845dcbd29",
+        "test_type": "multi_session",
+        "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+        "query_index": 5,
+        "test_name": "multi_session_query_5",
+        "request_data": {
+          "message": "What should we pack for a Caribbean trip with kids? Any safety considerations?",
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your query request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "refinement_details": null
+        },
+        "total_response_time": 16.960960388183594,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:52:43.523616",
+        "error_message": null
+      },
+      {
+        "test_id": "bdb8f9f3-31b4-4ca8-876b-38efbd25276b",
+        "test_type": "multi_session",
+        "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+        "query_index": 6,
+        "test_name": "multi_session_query_6",
+        "request_data": {
+          "message": "Can you create a sample daily schedule that balances beach time, activities, and rest?",
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your planning request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "0e32a694-bf4f-414b-a45f-abdc47d267db",
+          "refinement_details": null
+        },
+        "total_response_time": 24.29749321937561,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:53:08.332112",
+        "error_message": null
+      }
+    ]
+  },
+  {
+    "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+    "session_title": "Business Travel Optimization",
+    "session_description": "Optimizing a complex business travel schedule",
+    "queries": [
+      "I need to plan business travel to New York, Chicago, and Los Angeles with meetings scheduled. The trip is 2 weeks long.",
+      "What's the most efficient flight routing to minimize travel time and jet lag?",
+      "Recommend business hotels near major business districts in each city.",
+      "What are the best transportation options from airports to city centers in each location?",
+      "Can you suggest some quick networking dinner spots and business lunch venues?",
+      "How should I schedule the cities to optimize for meeting efficiency?",
+      "Any tips for maintaining productivity during extended business travel?"
+    ],
+    "session_created_at": "2025-07-29T16:53:10.880051",
+    "metrics": [
+      {
+        "test_id": "3985eadb-a55d-4d00-a46a-50fa3cfceb0c",
+        "test_type": "multi_session",
+        "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+        "query_index": 0,
+        "test_name": "multi_session_query_0",
+        "request_data": {
+          "message": "I need to plan business travel to New York, Chicago, and Los Angeles with meetings scheduled. The trip is 2 weeks long.",
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "I'll help you plan your trip to New York! Here's what I found:\n\n🏨 **Accommodation Options in New York**\n1. **ROCKVILLE CENTRE INN** (Rating: None)\n   Location: LYNBROOK | Price: Price available\n2. **EUROSTARS WALL STREET** (Rating: None)\n   Location: NEW YORK | Price: Price available\n3. **BRIDGE INN** (Rating: None)\n   Location: BRIDGEHAMPTON | Price: Price available\n4. **SLEEP INN JFK AIRPORT** (Rating: None)\n   Location: JAMAICA | Price: Price available\n5. **HOLIDAY INN EXPRESS LYNBROOK** (Rating: None)\n   Location: LYNBROOK | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about New York.\n\nI had trouble finding attraction search information, but I can still help with general advice about New York.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for New York\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Analyze travel requirements for New York",
+            "Search for comprehensive travel options",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Search for attractions and activities",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Review the travel plan and let me know your preferences",
+            "I can help create a detailed day-by-day itinerary",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "refinement_details": null
+        },
+        "total_response_time": 28.491039514541626,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Analyze travel requirements for New York",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Review the travel plan and let me know your preferences",
+          "I can help create a detailed day-by-day itinerary",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:53:39.371090",
+        "error_message": null
+      },
+      {
+        "test_id": "efa74896-079c-40ac-b41a-fac24071d798",
+        "test_type": "multi_session",
+        "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+        "query_index": 1,
+        "test_name": "multi_session_query_1",
+        "request_data": {
+          "message": "What's the most efficient flight routing to minimize travel time and jet lag?",
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "Here's information about New York:\n\nI had trouble finding attraction search information, but I can still help with general advice about New York.\n\nI had trouble finding flight search information, but I can still help with general advice about New York.\n\n🏨 **Accommodation Options in New York**\n1. **PARIS SUITES NYC** (Rating: None)\n   Location: FLUSHING | Price: Price available\n2. **LA QUINTA INN STE JFK AIRPORT** (Rating: None)\n   Location: SOUTH OZONE PARK | Price: Price available\n3. **COURTYARD JFK AIRPORT MARRIOTT** (Rating: None)\n   Location: JAMAICA | Price: Price available\n4. **HOTEL PTR 14995388 ** (Rating: None)\n   Location: NEW YORK | Price: Price available\n5. **SUPER 8 JFK AIRPORT NYC** (Rating: None)\n   Location: JAMAICA | Price: Price available\n\n\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Search for information about New York",
+            "Provide relevant details",
+            "Search for attractions and activities",
+            "Search for flight information",
+            "Search for accommodation options",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Let me know if you need more specific information",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "refinement_details": null
+        },
+        "total_response_time": 18.90455675125122,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Search for information about New York",
+          "Provide relevant details",
+          "Search for attractions and activities",
+          "Search for flight information",
+          "Search for accommodation options",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Let me know if you need more specific information",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:53:58.790246",
+        "error_message": null
+      },
+      {
+        "test_id": "d24cb35b-69a7-484b-ae5f-a23f997f2c2e",
+        "test_type": "multi_session",
+        "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+        "query_index": 2,
+        "test_name": "multi_session_query_2",
+        "request_data": {
+          "message": "Recommend business hotels near major business districts in each city.",
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "Here are my top recommendations for New York:\n\nI had trouble finding attraction search information, but I can still help with general advice about New York.\n\n🏨 **Accommodation Options in New York**\n1. **EXTENDED STAY AMERICA BETHPAGE** (Rating: None)\n   Location: HICKSVILLE | Price: Price available\n2. **FLORAL PARK MOTOR LODGE** (Rating: None)\n   Location: FLORAL PARK | Price: Price available\n3. **BRIDGE INN** (Rating: None)\n   Location: BRIDGEHAMPTON | Price: Price available\n4. **SLEEP INN BROOKLYN** (Rating: None)\n   Location: BROOKLYN | Price: Price available\n5. **RAMADA ROCKVILLE CENTRE** (Rating: None)\n   Location: ROCKVILLE CENTER | Price: Price available\n\n\n💡 **Additional Suggestions:**\n• Check opening hours and seasonal availability\n• Read recent reviews from other travelers\n• Consider booking popular attractions in advance\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Find top recommendations for New York",
+            "Analyze user preferences",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Let me know which recommendations interest you most",
+            "I can provide more details about specific attractions",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "refinement_details": null
+        },
+        "total_response_time": 27.25324249267578,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Find top recommendations for New York",
+          "Analyze user preferences",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Let me know which recommendations interest you most",
+          "I can provide more details about specific attractions",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:54:26.559206",
+        "error_message": null
+      },
+      {
+        "test_id": "ef484201-cd36-4488-bb7b-d3423ba1f151",
+        "test_type": "multi_session",
+        "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+        "query_index": 3,
+        "test_name": "multi_session_query_3",
+        "request_data": {
+          "message": "What are the best transportation options from airports to city centers in each location?",
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your query request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "refinement_details": null
+        },
+        "total_response_time": 16.64763355255127,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:54:43.713253",
+        "error_message": null
+      },
+      {
+        "test_id": "abe91df0-b7d4-406a-a6ac-e0e4bab0bcd4",
+        "test_type": "multi_session",
+        "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+        "query_index": 4,
+        "test_name": "multi_session_query_4",
+        "request_data": {
+          "message": "Can you suggest some quick networking dinner spots and business lunch venues?",
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "refinement_details": null
+        },
+        "total_response_time": 25.83159375190735,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:55:10.053298",
+        "error_message": null
+      },
+      {
+        "test_id": "f05a3c82-f38a-4ce1-9b16-d50103f7d98f",
+        "test_type": "multi_session",
+        "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+        "query_index": 5,
+        "test_name": "multi_session_query_5",
+        "request_data": {
+          "message": "How should I schedule the cities to optimize for meeting efficiency?",
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "I'll help you plan your trip to New York! Here's what I found:\n\n🏨 **Accommodation Options in New York**\n1. **BEST WESTERN JAMAICA INN** (Rating: None)\n   Location: JAMAICA | Price: Price available\n2. **AVALON HOTEL** (Rating: None)\n   Location: MANHATTAN | Price: Price available\n3. **RAMADA ROCKVILLE CENTRE** (Rating: None)\n   Location: ROCKVILLE CENTER | Price: Price available\n4. **AMERICAS BEST VALUE INN** (Rating: None)\n   Location: BROOKLYN | Price: Price available\n5. **BEST WESTERN GREGORY HOTEL** (Rating: None)\n   Location: BROOKLYN | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about New York.\n\nI had trouble finding attraction search information, but I can still help with general advice about New York.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for New York\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Analyze travel requirements for New York",
+            "Search for comprehensive travel options",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Search for attractions and activities",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Review the travel plan and let me know your preferences",
+            "I can help create a detailed day-by-day itinerary",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "refinement_details": null
+        },
+        "total_response_time": 19.331231117248535,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Analyze travel requirements for New York",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Review the travel plan and let me know your preferences",
+          "I can help create a detailed day-by-day itinerary",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:55:29.900250",
+        "error_message": null
+      },
+      {
+        "test_id": "4d58bdd2-83fa-40d5-b7f3-c0f15626ec9c",
+        "test_type": "multi_session",
+        "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+        "query_index": 6,
+        "test_name": "multi_session_query_6",
+        "request_data": {
+          "message": "Any tips for maintaining productivity during extended business travel?",
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "164d60b1-47bd-4fac-8332-d2b6332b2012",
+          "refinement_details": null
+        },
+        "total_response_time": 23.591071844100952,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:55:53.995765",
+        "error_message": null
+      }
+    ]
+  },
+  {
+    "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+    "session_title": "Adventure Backpacking Trip",
+    "session_description": "Planning an adventure-focused backpacking trip",
+    "queries": [
+      "Plan a 3-week adventure backpacking trip through Southeast Asia for 2 people, focusing on outdoor activities. Budget $3000.",
+      "Which countries and regions offer the best hiking, diving, and adventure sports?",
+      "What's the best route to take considering seasons and weather patterns?",
+      "What gear should we pack for multiple climates and activities?",
+      "How do we balance budget accommodation with safety and comfort?",
+      "What are the visa requirements and health considerations for this region?",
+      "Can you suggest a mix of guided tours vs independent exploration?"
+    ],
+    "session_created_at": "2025-07-29T16:55:56.541208",
+    "metrics": [
+      {
+        "test_id": "4ed7e8f6-8e38-4a6f-9a5a-b91c9dc86257",
+        "test_type": "multi_session",
+        "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+        "query_index": 0,
+        "test_name": "multi_session_query_0",
+        "request_data": {
+          "message": "Plan a 3-week adventure backpacking trip through Southeast Asia for 2 people, focusing on outdoor activities. Budget $3000.",
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your planning request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "refinement_details": null
+        },
+        "total_response_time": 28.11767268180847,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:56:24.659877",
+        "error_message": null
+      },
+      {
+        "test_id": "8a9cbcae-e943-42a8-9e4c-65198132ca16",
+        "test_type": "multi_session",
+        "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+        "query_index": 1,
+        "test_name": "multi_session_query_1",
+        "request_data": {
+          "message": "Which countries and regions offer the best hiking, diving, and adventure sports?",
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "refinement_details": null
+        },
+        "total_response_time": 17.909693002700806,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:56:43.081171",
+        "error_message": null
+      },
+      {
+        "test_id": "81f595d5-44c5-40d3-b1da-fb6e150f4053",
+        "test_type": "multi_session",
+        "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+        "query_index": 2,
+        "test_name": "multi_session_query_2",
+        "request_data": {
+          "message": "What's the best route to take considering seasons and weather patterns?",
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "refinement_details": null
+        },
+        "total_response_time": 23.965984582901,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:57:07.554545",
+        "error_message": null
+      },
+      {
+        "test_id": "a1bb1a56-5bb9-4cee-a7da-73633b8af766",
+        "test_type": "multi_session",
+        "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+        "query_index": 3,
+        "test_name": "multi_session_query_3",
+        "request_data": {
+          "message": "What gear should we pack for multiple climates and activities?",
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an issue while processing your query request: None. Let me try to help you in another way. Could you provide more details about what you're looking for?",
+          "confidence": 0.4,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "refinement_details": null
+        },
+        "total_response_time": 17.11675190925598,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.4,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:57:25.177875",
+        "error_message": null
+      },
+      {
+        "test_id": "8fd0a1c5-a535-491c-a6f6-6f6103c96780",
+        "test_type": "multi_session",
+        "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+        "query_index": 4,
+        "test_name": "multi_session_query_4",
+        "request_data": {
+          "message": "How do we balance budget accommodation with safety and comfort?",
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "Here are my top recommendations for unknown:\n\nI had trouble finding attraction search information, but I can still help with general advice about unknown.\n\n🏨 **Accommodation Options in unknown**\n1. **TOKYO DOME HOTEL** (Rating: None)\n   Location: TOKYO | Price: Price available\n2. **GRAND PRINCE NEW TAKANAWA** (Rating: None)\n   Location: TOKYO | Price: Price available\n3. **HOTEL MONTEREY LA SOEUR GINZA** (Rating: None)\n   Location: TOKYO | Price: Price available\n4. **HOTEL RYUMEIKAN TOKYO** (Rating: None)\n   Location: TOKYO | Price: Price available\n5. **HOTEL METROPOLITAN TOKYO** (Rating: None)\n   Location: TOKYO | Price: Price available\n\n\n💡 **Additional Suggestions:**\n• Check opening hours and seasonal availability\n• Read recent reviews from other travelers\n• Consider booking popular attractions in advance\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Find top recommendations for unknown",
+            "Analyze user preferences",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Let me know which recommendations interest you most",
+            "I can provide more details about specific attractions",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "refinement_details": null
+        },
+        "total_response_time": 27.63758134841919,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Find top recommendations for unknown",
+          "Analyze user preferences",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Let me know which recommendations interest you most",
+          "I can provide more details about specific attractions",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:57:53.330183",
+        "error_message": null
+      },
+      {
+        "test_id": "6519f41d-d61b-4e3d-a84e-7d0b7414d231",
+        "test_type": "multi_session",
+        "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+        "query_index": 5,
+        "test_name": "multi_session_query_5",
+        "request_data": {
+          "message": "What are the visa requirements and health considerations for this region?",
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": true,
+          "content": "Here's information about Tokyo:\n\nI had trouble finding attraction search information, but I can still help with general advice about Tokyo.\n\n🏨 **Accommodation Options in Tokyo**\n1. **HOTEL AZUR TAKESHIBA** (Rating: None)\n   Location: TOKYO | Price: Price available\n2. **OAKWOOD APARTMENTS ARIAKE** (Rating: None)\n   Location: TOKYO | Price: Price available\n3. **WESTIN TOKYO** (Rating: None)\n   Location: TOKYO | Price: Price available\n4. **THE GATE HOTEL** (Rating: None)\n   Location: TOKYO | Price: Price available\n5. **SHERATON GRANDE TOKYO BAY HOTEL** (Rating: None)\n   Location: TOKYO | Price: Price available\n\n\n✈️ **Flight Information to Tokyo**\n1. **TW** | Price: 206.6 USD | Duration: 390\n2. **SL** | Price: 261.0 USD | Duration: 155\n3. **TW** | Price: 261.6 USD | Duration: 390\n\n\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+          "confidence": 0.87,
+          "actions_taken": [
+            "Search for information about Tokyo",
+            "Provide relevant details",
+            "Search for attractions and activities",
+            "Search for accommodation options",
+            "Search for flight information",
+            "Compile comprehensive travel information"
+          ],
+          "next_steps": [
+            "Let me know if you need more specific information",
+            "Consider booking flights early for better prices",
+            "Check hotel reviews and amenities",
+            "Verify visa requirements if traveling internationally",
+            "Consider travel insurance for your trip"
+          ],
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "refinement_details": null
+        },
+        "total_response_time": 20.82030177116394,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": true,
+        "final_confidence": 0.87,
+        "final_actions": [
+          "Search for information about Tokyo",
+          "Provide relevant details",
+          "Search for attractions and activities",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Compile comprehensive travel information"
+        ],
+        "final_next_steps": [
+          "Let me know if you need more specific information",
+          "Consider booking flights early for better prices",
+          "Check hotel reviews and amenities",
+          "Verify visa requirements if traveling internationally",
+          "Consider travel insurance for your trip"
+        ],
+        "timestamp": "2025-07-29T16:58:14.662275",
+        "error_message": null
+      },
+      {
+        "test_id": "b3d77d95-be59-41b4-b505-3a6b321b3c76",
+        "test_type": "multi_session",
+        "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+        "query_index": 6,
+        "test_name": "multi_session_query_6",
+        "request_data": {
+          "message": "Can you suggest a mix of guided tours vs independent exploration?",
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "enable_refinement": false
+        },
+        "response_data": {
+          "success": false,
+          "content": "I encountered an error while processing your request: cannot access local variable 'logger' where it is not associated with a value",
+          "confidence": 0.0,
+          "actions_taken": [],
+          "next_steps": [],
+          "session_id": "eb9b8c02-60b7-4f8b-bc3d-2935b4c6bca7",
+          "refinement_details": null
+        },
+        "total_response_time": 24.48154067993164,
+        "refinement_enabled": false,
+        "refinement_loops": [],
+        "total_loops": 0,
+        "final_success": false,
+        "final_confidence": 0.0,
+        "final_actions": [],
+        "final_next_steps": [],
+        "timestamp": "2025-07-29T16:58:39.648988",
+        "error_message": null
+      }
+    ]
+  }
+]

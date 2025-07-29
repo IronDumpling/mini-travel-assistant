@@ -1,0 +1,1127 @@
+[
+  {
+    "test_id": "2002bd3c-0b43-4892-9798-8e24dcf02549",
+    "test_type": "single_session",
+    "session_id": "637b5f3a-c058-495f-93b1-ff6c69c55afa",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 7-day trip to London for 2 people with a budget of $3000",
+      "session_id": "637b5f3a-c058-495f-93b1-ff6c69c55afa",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to London! Here's what I found:\n\n🏨 **Accommodation Options in London**\n1. **LONDON MARRIOTT PARK LANE** (Rating: None)\n   Location: LONDON | Price: Price available\n2. **RADISSON BLU GRAFTON LONDON** (Rating: None)\n   Location: LONDON ENGLAND | Price: Price available\n3. **RADISSON BLU HAMPSHIRE LONDON** (Rating: None)\n   Location: LONDON | Price: Price available\n4. **LONDON MARRIOTT REGENTS PARK** (Rating: None)\n   Location: LONDON | Price: Price available\n5. **HOLIDAY INN KENSINGTON FORUM** (Rating: None)\n   Location: LONDON | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about London.\n\nI had trouble finding attraction search information, but I can still help with general advice about London.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for London\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+      "confidence": 0.87,
+      "actions_taken": [
+        "Analyze travel requirements for London",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "637b5f3a-c058-495f-93b1-ff6c69c55afa",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 1.0,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.87,
+            "quality_scores": {
+              "overall": 1.0
+            },
+            "actions_taken": [
+              "Analyze travel requirements for London",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      }
+    },
+    "total_response_time": 28.261691093444824,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.87,
+        "quality_scores": {
+          "overall": 1.0
+        },
+        "actions_taken": [
+          "Analyze travel requirements for London",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:00:12.324638"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.87,
+    "final_actions": [
+      "Analyze travel requirements for London",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-29T17:00:12.324638",
+    "error_message": null
+  },
+  {
+    "test_id": "0791c086-fc7c-44a9-83f7-b62f46d92655",
+    "test_type": "single_session",
+    "session_id": "63792c17-bbf7-4b69-beaf-ac273ec6505c",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a romantic weekend in Paris for 2 people, focusing on fine dining and cultural experiences",
+      "session_id": "63792c17-bbf7-4b69-beaf-ac273ec6505c",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Paris! Here's what I found:\n\n🏨 **Accommodation Options in Paris**\n1. **DIAMOND HOTEL** (Rating: None)\n   Location: Paris | Price: Price available\n2. **HOTEL PRINCE ALBERT LOUVRE** (Rating: None)\n   Location: PARIS | Price: Price available\n3. **MERCURE PARIS TOUR EIFFEL 4*** (Rating: None)\n   Location: PARIS | Price: Price available\n4. **BW PREMIER FAUBOURG 88** (Rating: None)\n   Location: PARIS | Price: Price available\n5. **RENAISSANCE PARIS VENDOME** (Rating: None)\n   Location: PARIS | Price: Price available\n\n\n✈️ **Flight Information to Paris**\n1. **TW** | Price: 785.4 USD | Duration: 390\n2. **AI** | Price: 831.4 USD | Duration: 360\n3. **AI** | Price: 831.4 USD | Duration: 360\n\n\nI had trouble finding attraction search information, but I can still help with general advice about Paris.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Paris\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+      "confidence": 0.87,
+      "actions_taken": [
+        "Analyze travel requirements for Paris",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "63792c17-bbf7-4b69-beaf-ac273ec6505c",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 1.0,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.87,
+            "quality_scores": {
+              "overall": 1.0
+            },
+            "actions_taken": [
+              "Analyze travel requirements for Paris",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      }
+    },
+    "total_response_time": 30.891764879226685,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.87,
+        "quality_scores": {
+          "overall": 1.0
+        },
+        "actions_taken": [
+          "Analyze travel requirements for Paris",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:00:44.224464"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.87,
+    "final_actions": [
+      "Analyze travel requirements for Paris",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-29T17:00:44.224464",
+    "error_message": null
+  },
+  {
+    "test_id": "9d276595-9ab7-4b3d-8ef0-47168fd3acf8",
+    "test_type": "single_session",
+    "session_id": "f1665ddb-d25c-4a74-85f2-27ff7b80428d",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "I need a 3-day business trip to Tokyo with meetings in Shibuya and Shinjuku areas",
+      "session_id": "f1665ddb-d25c-4a74-85f2-27ff7b80428d",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Tokyo! Here's what I found:\n\n🏨 **Accommodation Options in Tokyo**\n1. **HOTEL NIWA TOKYO** (Rating: None)\n   Location: TOKYO | Price: Price available\n2. **COURTYARD TOKYO GINZA MARRIOTT** (Rating: None)\n   Location: TOKYO | Price: Price available\n3. **IMPERIAL HOTEL TOKYO** (Rating: None)\n   Location: TOKYO | Price: Price available\n4. **CONCIERIA AZABU JUBAN** (Rating: None)\n   Location: TOKYO | Price: Price available\n5. **AKIHABARA WASHINGTON HOTEL** (Rating: None)\n   Location: TOKYO | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about Tokyo.\n\nI had trouble finding attraction search information, but I can still help with general advice about Tokyo.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Tokyo\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+      "confidence": 0.87,
+      "actions_taken": [
+        "Analyze travel requirements for Tokyo",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "f1665ddb-d25c-4a74-85f2-27ff7b80428d",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 1.0,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.87,
+            "quality_scores": {
+              "overall": 1.0
+            },
+            "actions_taken": [
+              "Analyze travel requirements for Tokyo",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      }
+    },
+    "total_response_time": 27.057331085205078,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.87,
+        "quality_scores": {
+          "overall": 1.0
+        },
+        "actions_taken": [
+          "Analyze travel requirements for Tokyo",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:01:12.296986"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.87,
+    "final_actions": [
+      "Analyze travel requirements for Tokyo",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-29T17:01:12.296986",
+    "error_message": null
+  },
+  {
+    "test_id": "b651e769-42f1-45be-8c4c-58243acf5ebe",
+    "test_type": "single_session",
+    "session_id": "ceae84b4-da8c-4459-85c5-b7cbcf8b7877",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 5-day family trip to Singapore with 2 adults and 2 children (ages 8 and 12)",
+      "session_id": "ceae84b4-da8c-4459-85c5-b7cbcf8b7877",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Singapore! Here's what I found:\n\n🏨 **Accommodation Options in Singapore**\n1. **CARLTON HOTEL SINGAPORE** (Rating: None)\n   Location: SINGAPORE | Price: Price available\n2. **IBIS SINGAPORE ON BENCOOLEN** (Rating: None)\n   Location: SINGAPORE | Price: Price available\n3. **HOLIDAY INN SINGAPORE ORCHARD** (Rating: None)\n   Location: SINGAPORE | Price: Price available\n4. **CROWNE PLAZA CHANGI AIRPORT** (Rating: None)\n   Location: SINGAPORE | Price: Price available\n5. **THE SCARLET SINGAPORE** (Rating: None)\n   Location: SINGAPORE | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about Singapore.\n\nI had trouble finding attraction search information, but I can still help with general advice about Singapore.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Singapore\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+      "confidence": 0.87,
+      "actions_taken": [
+        "Analyze travel requirements for Singapore",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "ceae84b4-da8c-4459-85c5-b7cbcf8b7877",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 1.0,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.87,
+            "quality_scores": {
+              "overall": 1.0
+            },
+            "actions_taken": [
+              "Analyze travel requirements for Singapore",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      }
+    },
+    "total_response_time": 27.792667865753174,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.87,
+        "quality_scores": {
+          "overall": 1.0
+        },
+        "actions_taken": [
+          "Analyze travel requirements for Singapore",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:01:41.115253"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.87,
+    "final_actions": [
+      "Analyze travel requirements for Singapore",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-29T17:01:41.115253",
+    "error_message": null
+  },
+  {
+    "test_id": "0d253c2e-612f-4ca5-8082-3587e3431164",
+    "test_type": "single_session",
+    "session_id": "27816a1e-1ff7-4683-b451-eabe04de4a4f",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Create a 14-day backpacking itinerary across Europe for a student with a $1500 budget",
+      "session_id": "27816a1e-1ff7-4683-b451-eabe04de4a4f",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": false,
+      "content": "Thank you for your Europe travel inquiry! I've prepared some initial recommendations based on current trends: 1) Popular destinations this season include Barcelona for architecture, Swiss Alps for hiking, and Prague for cultural experiences. 2) Current travel advisories show no major restrictions across Western Europe. 3) I have three tailored itinerary templates ready (cultural, adventure, luxury). To provide the best options, could you share: your top 2-3 preferred countries, exact travel dates (for seasonal considerations), and whether you prefer cities/nature or a mix? This will help me customize suggestions to your interests.",
+      "confidence": 0.9999999999999999,
+      "actions_taken": [
+        "Researched seasonal destination popularity",
+        "Verified up-to-date travel advisories",
+        "Prepared differentiated itinerary templates"
+      ],
+      "next_steps": [
+        "Share preferred countries from: France, Italy, Spain, Germany, Switzerland, Austria, Czech Republic",
+        "Confirm exact travel dates (month/year)",
+        "Select primary interest: cultural sites, outdoor activities, food/wine, or mixed"
+      ],
+      "session_id": "27816a1e-1ff7-4683-b451-eabe04de4a4f",
+      "refinement_details": {
+        "final_iteration": 3,
+        "final_quality_score": 0.5800000000000001,
+        "refinement_status": "max_iterations_reached",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.41500000000000004,
+            "quality_scores": {
+              "overall": 0.41500000000000004
+            },
+            "actions_taken": [],
+            "response_time": 0.0,
+            "improvements_made": [
+              "Improve response completeness and detail",
+              "Include specific actions taken",
+              "Provide clear next steps"
+            ]
+          },
+          {
+            "iteration": 2,
+            "confidence": 0.55,
+            "quality_scores": {
+              "overall": 0.55
+            },
+            "actions_taken": [],
+            "response_time": 0.0,
+            "improvements_made": [
+              "Increase response confidence with more specific information"
+            ]
+          },
+          {
+            "iteration": 3,
+            "confidence": 0.9999999999999999,
+            "quality_scores": {
+              "overall": 0.5800000000000001
+            },
+            "actions_taken": [
+              "Researched seasonal destination popularity",
+              "Verified up-to-date travel advisories",
+              "Prepared differentiated itinerary templates"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 2,
+        "total_iterations": 3
+      }
+    },
+    "total_response_time": 59.13802742958069,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.41500000000000004,
+        "quality_scores": {
+          "overall": 0.41500000000000004
+        },
+        "actions_taken": [],
+        "response_time": 0.0,
+        "improvements_made": [
+          "Improve response completeness and detail",
+          "Include specific actions taken",
+          "Provide clear next steps"
+        ],
+        "timestamp": "2025-07-29T17:02:41.274194"
+      },
+      {
+        "iteration": 2,
+        "confidence": 0.55,
+        "quality_scores": {
+          "overall": 0.55
+        },
+        "actions_taken": [],
+        "response_time": 0.0,
+        "improvements_made": [
+          "Increase response confidence with more specific information"
+        ],
+        "timestamp": "2025-07-29T17:02:41.274194"
+      },
+      {
+        "iteration": 3,
+        "confidence": 0.9999999999999999,
+        "quality_scores": {
+          "overall": 0.5800000000000001
+        },
+        "actions_taken": [
+          "Researched seasonal destination popularity",
+          "Verified up-to-date travel advisories",
+          "Prepared differentiated itinerary templates"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:02:41.274194"
+      }
+    ],
+    "total_loops": 3,
+    "final_success": false,
+    "final_confidence": 0.9999999999999999,
+    "final_actions": [
+      "Researched seasonal destination popularity",
+      "Verified up-to-date travel advisories",
+      "Prepared differentiated itinerary templates"
+    ],
+    "final_next_steps": [
+      "Share preferred countries from: France, Italy, Spain, Germany, Switzerland, Austria, Czech Republic",
+      "Confirm exact travel dates (month/year)",
+      "Select primary interest: cultural sites, outdoor activities, food/wine, or mixed"
+    ],
+    "timestamp": "2025-07-29T17:02:41.274194",
+    "error_message": null
+  },
+  {
+    "test_id": "0e9591e7-aa8f-41b4-b8aa-ebc01b3af591",
+    "test_type": "single_session",
+    "session_id": "cf884b1e-dde8-42d6-a6db-5f4213fe3447",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a luxury 4-day trip to Dubai for celebrating our anniversary, budget is flexible",
+      "session_id": "cf884b1e-dde8-42d6-a6db-5f4213fe3447",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Dubai! Here's what I found:\n\n🏨 **Accommodation Options in Dubai**\n1. **TIME TOPAZ HOTEL APARTMENTS** (Rating: None)\n   Location: DUBAI | Price: Price available\n2. **TEST GTDXBBA7** (Rating: None)\n   Location: AASIAAT | Price: Price available\n3. **MILLENNIUM AIRPORT HOTEL DUBAI** (Rating: None)\n   Location: DUBAI | Price: Price available\n4. **BELVEDERE COURT HOTEL APARTMENTS** (Rating: None)\n   Location: DUBAI | Price: Price available\n5. **REGAL PLAZA** (Rating: None)\n   Location: DUBAI | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about Dubai.\n\nI had trouble finding attraction search information, but I can still help with general advice about Dubai.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Dubai\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+      "confidence": 0.87,
+      "actions_taken": [
+        "Analyze travel requirements for Dubai",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "cf884b1e-dde8-42d6-a6db-5f4213fe3447",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 1.0,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.87,
+            "quality_scores": {
+              "overall": 1.0
+            },
+            "actions_taken": [
+              "Analyze travel requirements for Dubai",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      }
+    },
+    "total_response_time": 27.43583869934082,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.87,
+        "quality_scores": {
+          "overall": 1.0
+        },
+        "actions_taken": [
+          "Analyze travel requirements for Dubai",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:03:09.728392"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.87,
+    "final_actions": [
+      "Analyze travel requirements for Dubai",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-29T17:03:09.728392",
+    "error_message": null
+  },
+  {
+    "test_id": "9286ec8d-3d2b-4b20-8199-92dcd4c822f7",
+    "test_type": "single_session",
+    "session_id": "9d95cf9f-5235-45a4-8031-2ac01a84532e",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "I'm planning a solo trip to Barcelona for 6 days, interested in art, architecture, and nightlife",
+      "session_id": "9d95cf9f-5235-45a4-8031-2ac01a84532e",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "I'll help you plan your trip to Barcelona! Here's what I found:\n\n🏨 **Accommodation Options in Barcelona**\n1. **CATALONIA SAGRADA FAMILIA HOTE** (Rating: None)\n   Location: BARCELONA | Price: Price available\n2. **HOTEL SERCOTEL U232** (Rating: None)\n   Location: BARCELONA | Price: Price available\n3. **U232** (Rating: None)\n   Location: BARCELONA | Price: Price available\n4. **APARTHOTEL ATENEA BARCELONA** (Rating: None)\n   Location: BARCELONA | Price: Price available\n5. **ATLAS BARCELONA RAMBLAS** (Rating: None)\n   Location: BARCELONA | Price: Price available\n\n\nI had trouble finding flight search information, but I can still help with general advice about Barcelona.\n\nI had trouble finding attraction search information, but I can still help with general advice about Barcelona.\n\n💡 **Travel Tips:**\n• Research local customs and etiquette for Barcelona\n• Check weather conditions for your travel dates\n• Consider getting travel insurance\n• Book flights 2-3 months in advance for better prices\n• Compare amenities and read recent guest reviews\n• Check for combo tickets or city passes for multiple attractions",
+      "confidence": 0.87,
+      "actions_taken": [
+        "Analyze travel requirements for Barcelona",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "9d95cf9f-5235-45a4-8031-2ac01a84532e",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 1.0,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.87,
+            "quality_scores": {
+              "overall": 1.0
+            },
+            "actions_taken": [
+              "Analyze travel requirements for Barcelona",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      }
+    },
+    "total_response_time": 27.717945098876953,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.87,
+        "quality_scores": {
+          "overall": 1.0
+        },
+        "actions_taken": [
+          "Analyze travel requirements for Barcelona",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:03:38.458153"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.87,
+    "final_actions": [
+      "Analyze travel requirements for Barcelona",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-07-29T17:03:38.458153",
+    "error_message": null
+  },
+  {
+    "test_id": "5c1e8d65-2130-4924-85e7-885ae663c5d5",
+    "test_type": "single_session",
+    "session_id": "3199727b-6fa3-408e-8616-bb2cc491b1ab",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 5-day ski trip to the Swiss Alps for 4 people in February",
+      "session_id": "3199727b-6fa3-408e-8616-bb2cc491b1ab",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": false,
+      "content": "Thank you for your interest in the Swiss Alps! Based on current seasonal offerings, I can recommend several excellent options: For hiking enthusiasts, the Jungfrau region offers breathtaking trails like the Eiger Trail (May-October). Skiers will find world-class slopes in Zermatt (November-April), while cultural explorers might enjoy the Montreux Jazz Festival (July) or Château de Chillon. To provide the best recommendations, could you share: 1) Your preferred travel month, 2) Whether you're traveling with family/couples/solo, and 3) Your activity priorities (e.g., 70% adventure/30% relaxation)?",
+      "confidence": 0.9999999999999999,
+      "actions_taken": [
+        "Researched current seasonal activities in Swiss Alps",
+        "Identified top destinations for different interests",
+        "Prepared question framework for personalized recommendations"
+      ],
+      "next_steps": [
+        "Share your travel month and companion details",
+        "Select your top 2-3 activity preferences",
+        "Specify any accessibility or budget considerations"
+      ],
+      "session_id": "3199727b-6fa3-408e-8616-bb2cc491b1ab",
+      "refinement_details": {
+        "final_iteration": 3,
+        "final_quality_score": 0.5800000000000001,
+        "refinement_status": "max_iterations_reached",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.41500000000000004,
+            "quality_scores": {
+              "overall": 0.41500000000000004
+            },
+            "actions_taken": [],
+            "response_time": 0.0,
+            "improvements_made": [
+              "Improve response completeness and detail",
+              "Include specific actions taken",
+              "Provide clear next steps"
+            ]
+          },
+          {
+            "iteration": 2,
+            "confidence": 0.55,
+            "quality_scores": {
+              "overall": 0.55
+            },
+            "actions_taken": [],
+            "response_time": 0.0,
+            "improvements_made": [
+              "Increase response confidence with more specific information"
+            ]
+          },
+          {
+            "iteration": 3,
+            "confidence": 0.9999999999999999,
+            "quality_scores": {
+              "overall": 0.5800000000000001
+            },
+            "actions_taken": [
+              "Researched current seasonal activities in Swiss Alps",
+              "Identified top destinations for different interests",
+              "Prepared question framework for personalized recommendations"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 2,
+        "total_iterations": 3
+      }
+    },
+    "total_response_time": 60.45920920372009,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.41500000000000004,
+        "quality_scores": {
+          "overall": 0.41500000000000004
+        },
+        "actions_taken": [],
+        "response_time": 0.0,
+        "improvements_made": [
+          "Improve response completeness and detail",
+          "Include specific actions taken",
+          "Provide clear next steps"
+        ],
+        "timestamp": "2025-07-29T17:04:39.937649"
+      },
+      {
+        "iteration": 2,
+        "confidence": 0.55,
+        "quality_scores": {
+          "overall": 0.55
+        },
+        "actions_taken": [],
+        "response_time": 0.0,
+        "improvements_made": [
+          "Increase response confidence with more specific information"
+        ],
+        "timestamp": "2025-07-29T17:04:39.937649"
+      },
+      {
+        "iteration": 3,
+        "confidence": 0.9999999999999999,
+        "quality_scores": {
+          "overall": 0.5800000000000001
+        },
+        "actions_taken": [
+          "Researched current seasonal activities in Swiss Alps",
+          "Identified top destinations for different interests",
+          "Prepared question framework for personalized recommendations"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:04:39.937649"
+      }
+    ],
+    "total_loops": 3,
+    "final_success": false,
+    "final_confidence": 0.9999999999999999,
+    "final_actions": [
+      "Researched current seasonal activities in Swiss Alps",
+      "Identified top destinations for different interests",
+      "Prepared question framework for personalized recommendations"
+    ],
+    "final_next_steps": [
+      "Share your travel month and companion details",
+      "Select your top 2-3 activity preferences",
+      "Specify any accessibility or budget considerations"
+    ],
+    "timestamp": "2025-07-29T17:04:39.937649",
+    "error_message": null
+  },
+  {
+    "test_id": "5d59f5b0-43fa-4af2-95f9-aafc79143991",
+    "test_type": "single_session",
+    "session_id": "dd5dadd7-2b01-4eb8-b95d-c586655033f0",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 7-day trip to Berlin and Munich for 2 people with a budget of $7000 in this summer",
+      "session_id": "dd5dadd7-2b01-4eb8-b95d-c586655033f0",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": false,
+      "content": "Thank you for your Berlin travel inquiry! Based on our latest Berlin travel data, I can offer these initial suggestions while we refine your perfect itinerary: 1) Top historical sites include the Brandenburg Gate (open daily, free access) and Museum Island (9am-6pm, €19 combo ticket). 2) For nightlife, Kreuzberg's clubs typically open around 11pm with €5-15 cover charges. 3) Family-friendly options include the Berlin Zoo (9am-6:30pm, €21 adults/€11 kids). Could you share your preferred travel dates and which of these interest areas you'd like me to prioritize? I'll then provide customized recommendations including transportation options and timed entry reservations where needed.",
+      "confidence": 0.9999999999999999,
+      "actions_taken": [
+        "Provided specific opening hours and pricing for key attractions",
+        "Offered differentiated suggestions by interest category",
+        "Included practical details about transportation and reservations"
+      ],
+      "next_steps": [
+        "Confirm travel dates to check seasonal events/availability",
+        "Select priority interest areas (history/nightlife/family)",
+        "Specify any dietary restrictions for restaurant recommendations"
+      ],
+      "session_id": "dd5dadd7-2b01-4eb8-b95d-c586655033f0",
+      "refinement_details": {
+        "final_iteration": 3,
+        "final_quality_score": 0.5800000000000001,
+        "refinement_status": "max_iterations_reached",
+        "quality_dimensions": {
+          "relevance": 0.2,
+          "information_fusion": 0.25,
+          "completeness": 0.2,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.41500000000000004,
+            "quality_scores": {
+              "overall": 0.41500000000000004
+            },
+            "actions_taken": [],
+            "response_time": 0.0,
+            "improvements_made": [
+              "Improve response completeness and detail",
+              "Include specific actions taken",
+              "Provide clear next steps"
+            ]
+          },
+          {
+            "iteration": 2,
+            "confidence": 0.55,
+            "quality_scores": {
+              "overall": 0.55
+            },
+            "actions_taken": [],
+            "response_time": 0.0,
+            "improvements_made": [
+              "Increase response confidence with more specific information"
+            ]
+          },
+          {
+            "iteration": 3,
+            "confidence": 0.9999999999999999,
+            "quality_scores": {
+              "overall": 0.5800000000000001
+            },
+            "actions_taken": [
+              "Provided specific opening hours and pricing for key attractions",
+              "Offered differentiated suggestions by interest category",
+              "Included practical details about transportation and reservations"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 2,
+        "total_iterations": 3
+      }
+    },
+    "total_response_time": 63.06317329406738,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.41500000000000004,
+        "quality_scores": {
+          "overall": 0.41500000000000004
+        },
+        "actions_taken": [],
+        "response_time": 0.0,
+        "improvements_made": [
+          "Improve response completeness and detail",
+          "Include specific actions taken",
+          "Provide clear next steps"
+        ],
+        "timestamp": "2025-07-29T17:05:44.023721"
+      },
+      {
+        "iteration": 2,
+        "confidence": 0.55,
+        "quality_scores": {
+          "overall": 0.55
+        },
+        "actions_taken": [],
+        "response_time": 0.0,
+        "improvements_made": [
+          "Increase response confidence with more specific information"
+        ],
+        "timestamp": "2025-07-29T17:05:44.023721"
+      },
+      {
+        "iteration": 3,
+        "confidence": 0.9999999999999999,
+        "quality_scores": {
+          "overall": 0.5800000000000001
+        },
+        "actions_taken": [
+          "Provided specific opening hours and pricing for key attractions",
+          "Offered differentiated suggestions by interest category",
+          "Included practical details about transportation and reservations"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-07-29T17:05:44.023721"
+      }
+    ],
+    "total_loops": 3,
+    "final_success": false,
+    "final_confidence": 0.9999999999999999,
+    "final_actions": [
+      "Provided specific opening hours and pricing for key attractions",
+      "Offered differentiated suggestions by interest category",
+      "Included practical details about transportation and reservations"
+    ],
+    "final_next_steps": [
+      "Confirm travel dates to check seasonal events/availability",
+      "Select priority interest areas (history/nightlife/family)",
+      "Specify any dietary restrictions for restaurant recommendations"
+    ],
+    "timestamp": "2025-07-29T17:05:44.023721",
+    "error_message": null
+  }
+]
