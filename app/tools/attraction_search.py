@@ -17,6 +17,9 @@ from app.tools.base_tool import (
     ToolExecutionContext,
     ToolMetadata,
 )
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class Attraction(BaseModel):
@@ -120,15 +123,19 @@ class AttractionSearchTool(BaseTool):
     ) -> AttractionSearchOutput:
         """Execute attraction search using Google Places API (New)"""
         try:
+            logger.info(f"Searching attractions in {input_data.location}, query: {input_data.query or 'nearby search'}")
+            
             # Ensure API key is available before proceeding
             self._ensure_api_key()
 
             # Determine search strategy based on input
             if input_data.query:
                 # Use text search for specific queries
+                logger.debug(f"Using text search for query: {input_data.query}")
                 attractions = await self._text_search(input_data)
             else:
                 # Use nearby search for location-based discovery
+                logger.debug(f"Using nearby search for location: {input_data.location}")
                 attractions = await self._nearby_search(input_data)
 
             # Filter attractions based on criteria
@@ -137,6 +144,8 @@ class AttractionSearchTool(BaseTool):
             # Limit results
             if input_data.max_results:
                 filtered_attractions = filtered_attractions[: input_data.max_results]
+
+            logger.info(f"Attraction search completed: {len(attractions)} total, {len(filtered_attractions)} after filtering")
 
             return AttractionSearchOutput(
                 success=True,
@@ -152,6 +161,7 @@ class AttractionSearchTool(BaseTool):
             )
 
         except Exception as e:
+            logger.error(f"Attraction search failed for {input_data.location}: {e}")
             return AttractionSearchOutput(
                 success=False,
                 error=str(e),

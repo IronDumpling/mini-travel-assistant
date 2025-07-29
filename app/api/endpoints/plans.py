@@ -7,8 +7,8 @@ structured outputs instead of complex parsing.
 
 from fastapi import APIRouter, HTTPException, status
 from typing import List, Optional, Dict, Any
-from app.api.schemas import TravelRequest, TravelPlan, TravelPlanUpdate, TravelPlanResponse, FrameworkMetadata
-from app.agents.travel_agent import TravelAgent
+from app.api.schemas import TravelRequest, TravelPlan, TravelPlanUpdate, TravelPlanResponse
+from app.agents.travel_agent import get_travel_agent
 from datetime import datetime
 from app.core.logging_config import get_logger
 
@@ -26,8 +26,8 @@ async def create_travel_plan(request: TravelRequest):
         # Convert request to natural language message
         message_content = _request_to_message(request)
         
-        # Create travel agent
-        agent = TravelAgent()
+        # Use Agent singleton instead of creating new instance
+        agent = get_travel_agent()
         
         # Generate structured plan using the complete framework
         structured_plan_data = await agent.generate_structured_plan(
@@ -79,8 +79,8 @@ async def update_travel_plan(plan_id: str, update: TravelPlanUpdate):
                 original_message = _request_to_message(update.updated_request)
                 feedback_message = f"{original_message}\n\nAdditional feedback: {update.feedback}"
             
-            # Create travel agent and generate updated plan
-            agent = TravelAgent()
+            # ✅ 使用单例Agent，而不是每次创建新实例
+            agent = get_travel_agent()
             
             structured_plan_data = await agent.generate_structured_plan(
                 user_message=feedback_message,

@@ -9,72 +9,10 @@ This project implements a sophisticated AI travel planning agent with the follow
 - **🧠 RAG-Enhanced Intelligence**: ChromaDB + SentenceTransformer for semantic knowledge retrieval
 - **🔄 Multi-Provider LLM Support**: Flexible architecture supporting OpenAI, Claude, and DeepSeek
 - **🤖 Self-Refining Agent**: Advanced quality assessment and iterative improvement
-- **💾 Intelligent Memory**: Conversation history with semantic search and user preference learning
+- **💾 Intelligent Memory**: Dual-system conversation storage with RAG-indexed semantic search, automatic preference extraction, and intelligent session summaries
 - **🔧 Smart Tool Orchestration**: RAG-powered tool selection and coordination
 - **📊 Performance Optimized**: Lazy initialization, shared resources, and efficient document chunking
 - **🌐 Production Ready**: FastAPI backend with comprehensive API endpoints
-
-## 🔄 User Request Process Flow
-
-The system processes user requests through a sophisticated multi-stage pipeline with self-refinement capabilities:
-
-```mermaid
-graph TD
-    A[User Request] --> B[Agent Message Processing]
-    B --> C[Intent Analysis]
-    C --> D[Knowledge Retrieval]
-    D --> E[Tool Selection]
-    E --> F[Tool Execution]
-    F --> G[Response Generation]
-    G --> H[Quality Assessment]
-    H --> I{Quality Score >= 0.8?}
-    I -->|Yes| J[Final Response]
-    I -->|No| K[Self-Refinement]
-    K --> L[Refined Response]
-    L --> M[Return to User]
-    J --> M
-
-    %% Stage Details
-    B1[Input: Raw user message<br/>Output: AgentMessage object]
-    C1[Input: User message<br/>Output: Structured intent analysis<br/>- Intent type, destination<br/>- Travel details, preferences<br/>- Sentiment, urgency]
-    D1[Input: User query<br/>Output: Knowledge context<br/>- Relevant documents<br/>- RAG search results<br/>- Context snippets]
-    E1[Input: Intent + Knowledge<br/>Output: Selected tools<br/>- Tool names list<br/>- Tool parameters<br/>- Execution strategy]
-    F1[Input: Tool parameters<br/>Output: Tool results<br/>- Flight/hotel/attraction data<br/>- Search results<br/>- API responses]
-    G1[Input: Intent + Knowledge + Tools<br/>Output: Generated response<br/>- Formatted travel content<br/>- Recommendations<br/>- Next steps]
-    H1[Input: Original + Response<br/>Output: Quality scores<br/>- 6-dimension scoring<br/>- Improvement suggestions<br/>- Overall quality]
-    K1[Input: Quality assessment<br/>Output: Improved response<br/>- Enhanced content<br/>- Better personalization<br/>- Increased confidence]
-
-    %% Connections to details
-    B -.-> B1
-    C -.-> C1
-    D -.-> D1
-    E -.-> E1
-    F -.-> F1
-    G -.-> G1
-    H -.-> H1
-    K -.-> K1
-
-    %% Styling
-    classDef processStage fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    classDef inputOutput fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px
-    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef final fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
-
-    class A,B,C,D,E,F,G,H,K processStage
-    class B1,C1,D1,E1,F1,G1,H1,K1 inputOutput
-    class I decision
-    class J,L,M final
-```
-
-### 🎯 Process Stages Explained
-
-1. **Intent Analysis**: Multi-dimensional analysis of user intent including destination, travel style, preferences, and urgency
-2. **Knowledge Retrieval**: RAG-powered semantic search through travel knowledge base
-3. **Tool Selection**: Intelligent selection of appropriate tools (flight, hotel, attraction search) based on intent
-4. **Tool Execution**: Parallel or sequential execution of selected tools with real-time data
-5. **Response Generation**: LLM-powered synthesis of tool results and knowledge into comprehensive response
-6. **Quality Assessment**: 6-dimension quality scoring (relevance, completeness, accuracy, actionability, personalization, feasibility)
-7. **Self-Refinement**: Iterative improvement process when quality threshold not met
 
 ## 📋 Core Features
 
@@ -87,7 +25,11 @@ graph TD
 
 ### RAG-Enhanced Capabilities
 - **Semantic Knowledge Retrieval**: ChromaDB vector database with SentenceTransformer embeddings
-- **Conversation Memory**: RAG-powered conversation history search and user preference extraction
+- **Intelligent Conversation Memory**: Dual-system storage with RAG-indexed conversation analysis
+- **Smart Context Retrieval**: Semantic search for relevant conversation history instead of simple "recent N messages"
+- **Automatic Preference Learning**: AI-powered extraction of user travel preferences from conversation history
+- **Intelligent Session Summaries**: RAG-enhanced generation of conversation insights and key decisions
+- **Global Semantic Search**: Cross-session intelligent search across all conversation history
 - **Intelligent Tool Selection**: Semantic tool matching based on user intent and context
 - **Document Type Organization**: Specialized handling for travel knowledge, conversation turns, and tool knowledge
 
@@ -106,72 +48,210 @@ graph TD
 
 ## 🏗️ System Architecture
 
-### Core Architecture Layers
+### Complete Application Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        FastAPI Application                      │
+│                     Mini Travel Assistant                       │
+│                    FastAPI Application                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  📡 API Layer (endpoints/)                                      │
-│  ├── chat.py       - Chat interface with refinement support     │
-│  ├── sessions.py   - Session management                         │
-│  ├── plans.py      - Travel plan generation                     │
-│  ├── agent.py      - Agent interactions & configuration         │
-│  └── system.py     - System status and health                   │
+│  📡 API Layer (app/api/endpoints/)                              │
+│  ├── chat.py        - Chat interface with refinement support    │
+│  │   ├── POST /api/chat - Main conversation endpoint            │
+│  │   ├── GET /api/chat/history/{session_id} - Chat history      │
+│  │   └── DELETE /api/chat/history/{session_id} - Clear history  │
+│  ├── sessions.py    - Session management & RAG-enhanced search  │
+│  │   ├── GET /api/sessions - List sessions                      │
+│  │   ├── POST /api/sessions - Create session                    │
+│  │   ├── PUT /api/sessions/{id}/switch - Switch session         │
+│  │   ├── GET /api/sessions/{id}/intelligent-search - RAG search │
+│  │   ├── GET /api/sessions/{id}/preferences - Extract prefs     │
+│  │   └── GET /api/sessions/{id}/summary - AI summary            │
+│  ├── plans.py       - Structured travel plan generation         │
+│  │   ├── POST /api/plans - Create travel plan                   │
+│  │   ├── GET /api/plans/{id} - Get plan                         │
+│  │   └── PUT /api/plans/{id} - Update with feedback             │
+│  ├── agent.py       - Agent configuration & status              │
+│  │   ├── POST /api/agent/configure - Configure refinement       │
+│  │   ├── GET /api/agent/status - Agent status                   │
+│  │   └── GET /api/agent/metrics - Performance metrics           │
+│  └── system.py      - System health and monitoring              │
 ├─────────────────────────────────────────────────────────────────┤
-│  🤖 Agent Layer (agents/)                                       │
+│  🤖 Agent Layer (app/agents/)                                   │
 │  ├── travel_agent.py - Self-refining travel planning agent      │
-│  │   ├── Intent Analysis - Multi-dimensional user intent        │
-│  │   ├── Quality Assessment - 6-dimension quality scoring       │
-│  │   ├── Self-Refinement - Iterative response improvement       │
-│  │   └── Tool Coordination - Smart tool selection & execution   │
-│  └── base_agent.py   - Agent framework and management           │
+│  │   ├── Intent Analysis      - Multi-dimensional user intent   │
+│  │   ├── Rule-based Planning  - Fast tool selection             │
+│  │   ├── Tool Execution       - Parallel tool coordination      │
+│  │   ├── Fast Quality Check   - Heuristic quality assessment    │
+│  │   ├── LLM Enhancement      - Smart response improvement      │
+│  │   ├── Quality Assessment   - 6-dimension quality scoring     │
+│  │   ├── Self-Refinement      - Iterative response improvement  │
+│  │   └── Structured Planning  - Complete itinerary generation   │
+│  └── base_agent.py   - Agent framework and refinement engine    │
+│      ├── process_with_refinement() - Main refinement loop       │
+│      ├── Quality Threshold Management - Adaptive thresholds     │
+│      ├── Convergence Analysis - Diminishing returns detection   │
+│      └── Error Recovery - Timeout handling and fallbacks        │
 ├─────────────────────────────────────────────────────────────────┤
-│  🧠 Memory Layer (memory/)                                      │
+│  🧠 Memory Layer (app/memory/)                                  │
 │  ├── conversation_memory.py - RAG-powered conversation memory   │
-│  └── session_manager.py     - Session state management          │
+│  │   ├── RAG Context Retrieval - Semantic conversation search   │
+│  │   ├── Preference Extraction - AI-powered user preference     │
+│  │   ├── Session Summarization - Intelligent conversation sum   │
+│  │   └── Global Search - Cross-session semantic search          │
+│  └── session_manager.py - Session state management              │
+│      ├── Session CRUD - Create, read, update, delete sessions   │
+│      ├── Message Storage - Conversation persistence             │
+│      └── Session Analytics - Usage statistics and metrics       │
 ├─────────────────────────────────────────────────────────────────┤
-│  🔧 Tool Layer (tools/)                                         │
-│  ├── tool_executor.py    - RAG-enhanced tool selection          │
+│  🔧 Tool Layer (app/tools/)                                     │
+│  ├── tool_executor.py    - RAG-enhanced tool orchestration      │
 │  ├── flight_search.py    - Flight search integration            │
 │  ├── hotel_search.py     - Hotel search integration             │
 │  ├── attraction_search.py - Attraction search integration       │
 │  └── base_tool.py        - Tool framework and registry          │
 ├─────────────────────────────────────────────────────────────────┤
-│  🎯 Core Layer (core/)                                          │
-│  ├── rag_engine.py      - RAG engine with ChromaDB              │
+│  🎯 Core Layer (app/core/)                                      │
+│  ├── rag_engine.py      - ChromaDB + SentenceTransformer RAG    │
 │  ├── knowledge_base.py  - Travel knowledge management           │
 │  ├── llm_service.py     - Multi-provider LLM interface          │
+│  │   ├── OpenAI Provider - GPT-3.5/4 integration                │
+│  │   ├── Claude Provider - Anthropic Claude integration         │
+│  │   └── DeepSeek Provider - DeepSeek chat integration          │
 │  ├── prompt_manager.py  - Prompt templates and schemas          │
 │  └── data_loader.py     - Knowledge data loading                │
+├─────────────────────────────────────────────────────────────────┤
+│  📚 Knowledge Base (app/knowledge/)                             │
+│  ├── documents/destinations/ - Asia, Europe destination guides  │
+│  ├── documents/practical/ - Visa requirements and travel tips   │
+│  ├── documents/transportation/ - Metro systems and transport    │
+│  ├── schemas/ - Knowledge validation schemas                    │
+│  └── categories.yaml - Knowledge categorization                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Travel Agent Processing Pipeline
+### Enhanced Travel Agent Process Flow
 
 ```mermaid
 graph TD
-    A[User Message] --> B[Intent Analysis]
-    B --> C[Knowledge Retrieval]
-    C --> D[Tool Selection]
-    D --> E[Action Plan Creation]
-    E --> F[Tool Execution]
-    F --> G[Response Generation]
-    G --> H[Quality Assessment]
-    H --> I{Quality > Threshold?}
-    I -->|No| J[Self-Refinement]
-    J --> G
-    I -->|Yes| K[Final Response]
+    A[👤 User sends POST /api/chat] --> B[🔄 Session Manager]
+    B --> B1[Get/Create Session]
+    B1 --> B2[RAG Context Retrieval]
+    B2 --> B3[Build Conversation History]
     
-    L[RAG Engine] --> C
-    M[Prompt Manager] --> B
-    M --> G
-    M --> J
-    N[LLM Service] --> B
-    N --> D
-    N --> G
-    N --> J
+    B3 --> C[🤖 Create AgentMessage]
+    C --> D{🔧 Refinement Enabled?}
+    
+    D -->|Yes| E[🔄 process_with_refinement]
+    D -->|No| F[⚡ process_message]
+    
+    E --> E1[📊 Iteration Loop Start]
+    E1 --> E2{First iteration?}
+    
+    E2 -->|Yes| G[🧠 Initial Processing]
+    E2 -->|No| R[🔧 Refine Response]
+    
+    G --> G1[📝 Intent Analysis with Context]
+    G1 --> G2[⚡ Rule-based Action Planning]
+    G2 --> G3[🔧 Tool Execution]
+    G3 --> G4[📄 Structured Response Fusion]
+    
+    G4 --> H[📊 Quality Assessment]
+    H --> H1[🚀 Fast Heuristic Assessment]
+    H1 --> H2[📈 Calculate Quality Score]
+    
+    H2 --> I{🎯 Quality ≥ Threshold?}
+    I -->|Yes| J[✅ Quality Threshold Met]
+    I -->|No| K[📈 Check Convergence]
+    
+    K --> K1{🔄 Score Plateau?}
+    K1 -->|Yes| L[⏹️ Plateau Detected]
+    K1 -->|No| K2{📉 Diminishing Returns?}
+    
+    K2 -->|Yes| M[⏹️ Diminishing Returns]
+    K2 -->|No| K3{🔢 Max Iterations?}
+    
+    K3 -->|Yes| N[⏹️ Max Iterations Reached]
+    K3 -->|No| O[➕ Increment Iteration]
+    
+    O --> R
+    R --> R1[🤖 LLM-based Refinement]
+    R1 --> R2[🔄 Apply Improvements]
+    R2 --> H
+    
+    J --> P[✅ Final Response]
+    L --> P
+    M --> P
+    N --> P
+    
+    F --> F1[🧠 Intent Analysis]
+    F1 --> F2[⚡ Rule-based Planning]
+    F2 --> F3[🔧 Tool Execution]
+    F3 --> F4[📄 Structured Response]
+    F4 --> F5[🚀 Fast Quality Check]
+    F5 --> F6{📊 Quality Good?}
+    F6 -->|Yes| P
+    F6 -->|No| F7[🤖 LLM Enhancement]
+    F7 --> P
+    
+    P --> Q[💾 Store in Session Manager]
+    Q --> Q1[💾 Store in RAG Memory]
+    Q1 --> S[📤 Return ChatResponse]
+    
+    style A fill:#e1f5fe
+    style E fill:#fff3e0
+    style H fill:#f3e5f5
+    style P fill:#e8f5e8
+    style S fill:#e8f5e8
 ```
+
+### Key Process Flow Components
+
+#### 1. **Request Processing (API Layer)**
+- `POST /api/chat` receives user message with refinement preferences
+- Session manager handles session creation/retrieval
+- RAG-powered conversation history retrieval for context
+
+#### 2. **Agent Message Creation**
+- AgentMessage created with conversation context metadata
+- Includes session_id and relevant conversation history
+
+#### 3. **Refinement Decision Point**
+- If `enable_refinement=true`: Uses `process_with_refinement()`
+- If `enable_refinement=false`: Uses optimized `process_message()`
+
+#### 4. **Initial Processing (Both Paths)**
+- **Intent Analysis**: Multi-dimensional user intent understanding with conversation context
+- **Rule-based Planning**: Fast tool selection without LLM calls
+- **Tool Execution**: Parallel execution of selected tools (flight, hotel, attraction search)
+- **Structured Response**: Template-based response fusion for speed
+
+#### 5. **Quality Assessment & Enhancement**
+- **Fast Path**: Heuristic quality assessment (~0.1s)
+- **Enhancement**: If quality < fast_response_threshold (0.75), apply LLM enhancement
+- **Refinement Path**: Full 6-dimension quality assessment for iterative improvement
+
+#### 6. **Refinement Loop (When Enabled)**
+- **Quality Threshold**: Default 0.75, configurable per request
+- **Convergence Detection**: Advanced algorithms for plateau and diminishing returns
+- **Max Iterations**: Default 3, with early termination for efficiency
+- **Performance Monitoring**: Detailed metrics for each iteration
+
+#### 7. **Response Storage & Return**
+- **Dual Storage**: Session manager for basic storage + RAG memory for semantic indexing
+- **Refinement Metadata**: Complete details about refinement process
+- **Performance Metrics**: Response time, iteration count, quality scores
+
+### Refinement Loop Termination Conditions
+
+1. **Quality Threshold Met**: Score ≥ configured threshold (default 0.75)
+2. **Score Plateau**: Variance < 0.03 over 4+ iterations  
+3. **Diminishing Returns**: Improvement < 0.05 with trend analysis
+4. **Max Iterations**: Hard limit reached (default 3)
+5. **Timeout Protection**: Individual timeouts for each phase
+6. **Error Conditions**: Graceful fallback with error tracking
+
+
 
 ### Project Structure
 
@@ -271,7 +351,7 @@ python -m venv venv
 .\venv\Scripts\activate
 
 # macOS/Linux  
-source venv/bin/activate
+source venv/Scripts/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -469,11 +549,29 @@ GET /api/sessions/search?query=budget&limit=20
 GET /api/sessions/{session_id}/export?format=json
 ```
 
+#### RAG-Enhanced Intelligent Features
+```bash
+# Intelligent semantic search within session
+GET /api/sessions/{session_id}/intelligent-search?query=budget hotels&limit=10
+
+# Extract user travel preferences using RAG analysis
+GET /api/sessions/{session_id}/preferences
+
+# Generate intelligent session summary
+GET /api/sessions/{session_id}/summary
+
+# Get contextually relevant conversation history
+GET /api/sessions/{session_id}/context?query=hotel recommendations&max_turns=5
+
+# Global semantic search across all conversations
+GET /api/conversations/global-search?query=Tokyo travel tips&limit=20
+```
+
 ### Chat APIs
 
 #### Conversational Interface with Refinement
 ```bash
-# Chat with AI agent (with refinement enabled)
+# Chat with AI agent (with RAG-enhanced context retrieval and refinement)
 POST /api/chat
 {
   "message": "Plan a 5-day trip to Tokyo for 2 people with a budget of $3000",
@@ -535,6 +633,15 @@ DELETE /api/plans/{plan_id}
 5. **Get plan refinement feedback**: `PUT /api/plans/{plan_id}`
 6. **Check agent performance metrics**: `GET /api/agent/metrics`
 
+### RAG-Enhanced Intelligence Workflow
+
+1. **Create session and have conversations**: `POST /api/sessions` → `POST /api/chat`
+2. **Extract user preferences automatically**: `GET /api/sessions/{session_id}/preferences`
+3. **Search conversation history semantically**: `GET /api/sessions/{session_id}/intelligent-search`
+4. **Get contextually relevant past discussions**: `GET /api/sessions/{session_id}/context`
+5. **Generate intelligent session summary**: `GET /api/sessions/{session_id}/summary`
+6. **Perform global search across all conversations**: `GET /api/conversations/global-search`
+
 ## 🧪 Testing & Validation
 
 ### Run Tests
@@ -560,6 +667,9 @@ pytest --cov=app tests/
 - **Embedding Speed**: ~100ms for query encoding
 - **Vector Search**: <50ms for top-5 results
 - **Knowledge Retrieval**: <200ms end-to-end
+- **Conversation Search**: <150ms for semantic conversation history search
+- **Preference Extraction**: <300ms for AI-powered user preference analysis
+- **Session Summarization**: <500ms for intelligent conversation summary generation
 - **Memory Efficiency**: Lazy loading reduces startup time by 60%
 
 ### System Performance

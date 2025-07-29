@@ -260,17 +260,22 @@ class ChromaVectorStore:
     ) -> List[Tuple[Document, float]]:
         """Perform vector similarity search"""
         try:
-            # Build where clause for filtering
-            where_clause = {}
+            where_clause = None
             if filter_metadata:
+                conditions = []
                 for key, value in filter_metadata.items():
-                    where_clause[key] = {"$eq": value}
+                    conditions.append({key: {"$eq": value}})
+                
+                if len(conditions) == 1:
+                    where_clause = conditions[0]
+                elif len(conditions) > 1:
+                    where_clause = {"$and": conditions}
             
             # Perform search
             results = self.collection.query(
                 query_embeddings=[query_embedding],
                 n_results=top_k,
-                where=where_clause if where_clause else None,
+                where=where_clause,
                 include=['documents', 'metadatas', 'distances']
             )
             

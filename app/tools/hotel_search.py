@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from app.tools.base_tool import BaseTool, ToolInput, ToolOutput, ToolExecutionContext, ToolMetadata
 from app.core.logging_config import get_logger
 
-# Initialize logger
+
 logger = get_logger(__name__)
 
 class Hotel(BaseModel):
@@ -123,6 +123,7 @@ class HotelSearchTool(BaseTool):
     async def _execute(self, input_data: HotelSearchInput, context: ToolExecutionContext) -> HotelSearchOutput:
         """Execute hotel search using AMADEUS API"""
         try:
+
             logger.info(f"🏨 Starting hotel search for location: {input_data.location}")
             logger.info(f"📅 Check-in: {input_data.check_in}, Check-out: {input_data.check_out}")
             logger.info(f"👥 Guests: {input_data.guests}, Rooms: {input_data.rooms}")
@@ -139,6 +140,7 @@ class HotelSearchTool(BaseTool):
                     )
             
             hotels = await self._search_hotels_amadeus(
+
                 input_data.location,
                 input_data.check_in,
                 input_data.check_out,
@@ -151,6 +153,7 @@ class HotelSearchTool(BaseTool):
             filtered_hotels = self._filter_hotels(hotels, input_data)
             
             logger.info(f"🏨 After filtering: {len(filtered_hotels)} hotels match criteria")
+
             
             return HotelSearchOutput(
                 success=True,
@@ -164,7 +167,9 @@ class HotelSearchTool(BaseTool):
                 }
             )
         except Exception as e:
+
             logger.error(f"❌ Exception in hotel search execution: {str(e)}")
+
             return HotelSearchOutput(
                 success=False,
                 error=str(e),
@@ -178,6 +183,7 @@ class HotelSearchTool(BaseTool):
         check_out: datetime,
         guests: int = 1
     ) -> List[Hotel]:
+
         """Search for hotels using AMADEUS Hotel List API"""
         try:
             # Validate and clean city code
@@ -305,6 +311,7 @@ class HotelSearchTool(BaseTool):
         except Exception as e:
             logger.error(f"❌ Error parsing hotel data: {str(e)}")
             return None
+
     
     def _filter_hotels(self, hotels: List[Hotel], criteria: HotelSearchInput) -> List[Hotel]:
         """Filter hotels based on search criteria"""
