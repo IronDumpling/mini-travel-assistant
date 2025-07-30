@@ -45,7 +45,6 @@ class Attraction(BaseModel):
     longitude: Optional[float] = None
     # Additional cost and review fields
     cost_range: Optional[str] = None  # Cost range (e.g., "$10-20")
-    popular_times: Optional[Dict[str, str]] = None  # Busy times information
     accessibility_info: Optional[str] = None  # Accessibility information
 
 
@@ -482,10 +481,33 @@ class AttractionSearchTool(BaseTool):
         # Extract opening hours
         opening_hours = None
         if "regularOpeningHours" in place_data:
-            opening_hours = {}
-            for period in place_data["regularOpeningHours"].get("periods", []):
-                day = period.get("open", {}).get("day", 0)
-                day_name = [
+            hours_data = place_data["regularOpeningHours"]
+
+            # Use the human-readable weekdayDescriptions if available (simpler)
+            if "weekdayDescriptions" in hours_data:
+                opening_hours = {}
+                day_names = [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday",
+                ]
+                descriptions = hours_data["weekdayDescriptions"]
+
+                for i, description in enumerate(descriptions):
+                    if i < len(day_names):
+                        # Extract just the hours part (after the colon)
+                        if ": " in description:
+                            hours_part = description.split(": ", 1)[1]
+                            opening_hours[day_names[i]] = hours_part
+
+            # Fallback: parse from periods if weekdayDescriptions not available
+            elif "periods" in hours_data:
+                opening_hours = {}
+                day_names = [
                     "Sunday",
                     "Monday",
                     "Tuesday",
@@ -493,11 +515,23 @@ class AttractionSearchTool(BaseTool):
                     "Thursday",
                     "Friday",
                     "Saturday",
-                ][day]
-                open_time = period.get("open", {}).get("time", "")
-                close_time = period.get("close", {}).get("time", "")
-                if open_time and close_time:
-                    opening_hours[day_name] = f"{open_time}-{close_time}"
+                ]
+
+                for period in hours_data["periods"]:
+                    open_info = period.get("open", {})
+                    close_info = period.get("close", {})
+
+                    day = open_info.get("day")
+                    if day is not None and day < len(day_names):
+                        open_hour = open_info.get("hour")
+                        open_minute = open_info.get("minute", 0)
+                        close_hour = close_info.get("hour")
+                        close_minute = close_info.get("minute", 0)
+
+                        if open_hour is not None and close_hour is not None:
+                            open_time = f"{open_hour:02d}:{open_minute:02d}"
+                            close_time = f"{close_hour:02d}:{close_minute:02d}"
+                            opening_hours[day_names[day]] = f"{open_time}-{close_time}"
 
         # Extract photos
         photo_urls = []
@@ -513,7 +547,6 @@ class AttractionSearchTool(BaseTool):
         price_level_description = self._get_price_level_description(price_level)
         review_summary = self._extract_review_summary(place_data)
         individual_reviews = self._extract_individual_reviews(place_data)
-        popular_times = self._extract_popular_times(place_data)
         accessibility_info = self._extract_accessibility_info(place_data)
         cost_range = self._get_cost_range(price_level)
 
@@ -547,7 +580,6 @@ class AttractionSearchTool(BaseTool):
             latitude=location.get("latitude"),
             longitude=location.get("longitude"),
             cost_range=cost_range,
-            popular_times=popular_times,
             accessibility_info=accessibility_info,
         )
 
@@ -711,12 +743,6 @@ class AttractionSearchTool(BaseTool):
                     reviews.append(review)
 
         return reviews
-
-    def _extract_popular_times(self, place_data: dict) -> Optional[Dict[str, str]]:
-        """Extract popular times information - Note: This field may not be available in the API"""
-        # Popular times data is not consistently available in Google Places API (New)
-        # This method is kept for future compatibility if the field becomes available
-        return None
 
     def _extract_accessibility_info(self, place_data: dict) -> Optional[str]:
         """Extract accessibility information"""
