@@ -128,17 +128,22 @@ class AttractionSearchTool(BaseTool):
                 return await self._execute_multi_location_search(input_data, context)
             
             # Validate input parameters for single location
-            if not input_data.location or input_data.location.lower() in ['unknown', '']:
+            if not input_data.location or input_data.location.lower() in [
+                "unknown",
+                "",
+            ]:
                 return AttractionSearchOutput(
                     success=False,
                     error="Invalid location: location is required and cannot be 'unknown'",
                     attractions=[],
                     total_results=0,
-                    search_location=input_data.location or "unknown"
+                    search_location=input_data.location or "unknown",
                 )
-            
-            logger.info(f"Searching attractions in {input_data.location}, query: {input_data.query or 'nearby search'}")
-            
+
+            logger.info(
+                f"Searching attractions in {input_data.location}, query: {input_data.query or 'nearby search'}"
+            )
+
             # Ensure API key is available before proceeding
             self._ensure_api_key()
 
@@ -157,7 +162,9 @@ class AttractionSearchTool(BaseTool):
             if input_data.max_results:
                 filtered_attractions = filtered_attractions[: input_data.max_results]
 
-            logger.info(f"Attraction search completed: {len(attractions)} total, {len(filtered_attractions)} after filtering")
+            logger.info(
+                f"Attraction search completed: {len(attractions)} total, {len(filtered_attractions)} after filtering"
+            )
 
             return AttractionSearchOutput(
                 success=True,
@@ -343,12 +350,6 @@ class AttractionSearchTool(BaseTool):
                 "maxResultCount": min(
                     input_data.max_results or 20, 20
                 ),  # Max 20 for text search
-                "locationBias": {
-                    "rectangle": {
-                        "low": {"latitude": -90, "longitude": -180},
-                        "high": {"latitude": 90, "longitude": 180},
-                    }
-                },
             }
 
             # Add category filter if specified
