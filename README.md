@@ -1,13 +1,13 @@
 # Mini AI Travel Assistant
 
-An intelligent travel planning system powered by **RAG (Retrieval-Augmented Generation)** and **multi-provider LLM architecture**, featuring advanced semantic search, conversation memory, and intelligent tool orchestration with **self-refinement capabilities**.
+An intelligent travel planning system powered by **RAG (Retrieval-Augmented Generation)** and **LLM architecture**, featuring advanced semantic search, conversation memory, and intelligent tool orchestration with **self-refinement capabilities**.
 
 ## 🚀 Architecture Overview
 
 This project implements a sophisticated AI travel planning agent with the following core capabilities:
 
 - **🧠 RAG-Enhanced Intelligence**: ChromaDB + SentenceTransformer for semantic knowledge retrieval
-- **🔄 Multi-Provider LLM Support**: Flexible architecture supporting OpenAI, Claude, and DeepSeek
+- **🔄 Multi-Provider LLM Support**: Flexible architecture supporting DeepSeek
 - **🤖 Self-Refining Agent**: Advanced quality assessment and iterative improvement
 - **💾 Intelligent Memory**: Dual-system conversation storage with RAG-indexed semantic search, automatic preference extraction, and intelligent session summaries
 - **🔧 Smart Tool Orchestration**: RAG-powered tool selection and coordination
@@ -40,7 +40,7 @@ This project implements a sophisticated AI travel planning agent with the follow
 - **Multi-turn Conversation Support**: Stateful conversation management with memory persistence
 
 ### Technical Features
-- **Multi-Provider LLM Architecture**: Support for OpenAI, Claude, DeepSeek, and extensible provider system
+- **LLM Architecture**: Support for DeepSeek, and extensible provider system
 - **Flexible Configuration**: Environment-based and programmatic configuration options
 - **Performance Optimization**: Lazy initialization, embedding model sharing, and efficient chunking
 - **Type Safety**: Comprehensive type annotations and Pydantic models
@@ -115,8 +115,6 @@ This project implements a sophisticated AI travel planning agent with the follow
 │  ├── rag_engine.py      - ChromaDB + SentenceTransformer RAG    │
 │  ├── knowledge_base.py  - Travel knowledge management           │
 │  ├── llm_service.py     - Multi-provider LLM interface          │
-│  │   ├── OpenAI Provider - GPT-3.5/4 integration                │
-│  │   ├── Claude Provider - Anthropic Claude integration         │
 │  │   └── DeepSeek Provider - DeepSeek chat integration          │
 │  ├── prompt_manager.py  - Prompt templates and schemas          │
 │  └── data_loader.py     - Knowledge data loading                │
@@ -261,7 +259,7 @@ Project/
 │   ├── core/                    # 🎯 Core Layer - RAG & LLM Services
 │   │   ├── rag_engine.py       # RAG engine with ChromaDB + SentenceTransformer
 │   │   ├── knowledge_base.py   # Travel knowledge management
-│   │   ├── llm_service.py      # Multi-provider LLM interface (OpenAI, Claude, DeepSeek)
+│   │   ├── llm_service.py      # Multi-provider LLM interface (DeepSeek)
 │   │   ├── prompt_manager.py   # Prompt templates and response schemas
 │   │   └── data_loader.py      # Knowledge data loading and processing
 │   ├── agents/                  # 🤖 Agent Layer - Self-Refining AI
@@ -281,8 +279,6 @@ Project/
 │   ├── memory/                  # 🧠 Memory Layer - Conversation & Sessions
 │   │   ├── conversation_memory.py # RAG-powered conversation memory
 │   │   └── session_manager.py  # Session state management
-│   ├── api/                     # 📡 API Layer - REST Endpoints
-│   │   └── endpoints/          # API route definitions
 │   ├── knowledge/               # 📚 Knowledge Base
 │   │   ├── documents/          # Travel knowledge documents
 │   │   │   ├── destinations/   # Destination guides (Asia, Europe)
@@ -291,10 +287,22 @@ Project/
 │   │   ├── schemas/            # Knowledge validation schemas
 │   │   ├── categories.yaml     # Knowledge categorization
 │   │   └── generate_travel_data.py # Data generation utilities
-│   ├── models/                  # 📊 Data Models
-│   │   └── schemas.py          # Pydantic models and schemas
+│   ├── api/                     # 📡 API Layer - REST Endpoints
+│   │   ├── endpoints/          # API route definitions
+│   │   └── schemas.py          # Pydantic models and API schemas
 │   └── main.py                 # 🚀 Application entry point
 ├── tests/                       # 🧪 Test Suite
+│   ├── chats/                  # Chat API comprehensive testing framework
+│   │   ├── chat_tester.py     # Core testing framework with refinement analysis
+│   │   ├── metrics_analyzer.py # Enhanced metrics and visualization
+│   │   ├── test_scenarios.py  # Single and multi-session test scenarios
+│   │   ├── test_runner.py     # Main test runner with multiple modes
+│   │   ├── test_chat_pytest.py # Pytest-based unit tests
+│   │   └── test_connectivity.py # API connectivity validation
+│   ├── chromaDB/              # ChromaDB and RAG engine tests
+│   │   ├── inspect_chromadb.py # ChromaDB inspection tools
+│   │   └── test_force_rag_indexing.py # RAG indexing tests
+│   └── test_response_time.py  # Performance and response time testing
 ├── data/                        # 💾 Persistent Data
 │   └── chroma_db/              # ChromaDB vector database
 ├── ARCHITECTURE.md             # 📖 Detailed architecture documentation
@@ -307,7 +315,7 @@ Project/
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **Web Framework** | FastAPI | High-performance API with auto-documentation |
-| **LLM Services** | OpenAI API + Claude + DeepSeek | Multi-provider LLM support with fallback |
+| **LLM Services** | DeepSeek | Multi-provider LLM support with fallback |
 | **Vector Database** | ChromaDB | Persistent vector storage for RAG |
 | **Embeddings** | SentenceTransformer | Local text-to-vector encoding |
 | **Memory Management** | SQLAlchemy | Conversation and session persistence |
@@ -334,7 +342,9 @@ Project/
 ### Development Stack
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Testing** | pytest + pytest-asyncio | Comprehensive test coverage |
+| **Testing** | pytest + pytest-asyncio | Comprehensive test coverage with refinement analysis |
+| **Visualization** | matplotlib + seaborn | Performance metrics and refinement progression charts |
+| **API Testing** | httpx + custom framework | Chat API testing with multi-session scenarios |
 | **Data Processing** | pandas + numpy | Data manipulation and analysis |
 | **Logging** | loguru | Structured logging with performance tracking |
 | **Configuration** | pydantic + python-dotenv | Type-safe configuration management |
@@ -363,12 +373,10 @@ Create `.env` file in project root:
 
 ```env
 # LLM Service Keys
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_claude_api_key
 DEEPSEEK_API_KEY=your_deepseek_api_key
 
 # LLM Configuration
-LLM_PROVIDER=deepseek        # deepseek, openai, claude (deepseek is default)
+LLM_PROVIDER=deepseek        # deepseek
 LLM_MODEL=deepseek-chat      # Model to use
 LLM_API_KEY=your_api_key_here
 LLM_TEMPERATURE=0.7
@@ -642,18 +650,6 @@ DELETE /api/plans/{plan_id}
 5. **Generate intelligent session summary**: `GET /api/sessions/{session_id}/summary`
 6. **Perform global search across all conversations**: `GET /api/conversations/global-search`
 
-## 🧪 Testing & Validation
-
-### Run Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=app tests/
-```
-
 ## 📊 Performance Metrics
 
 ### Agent Performance
@@ -685,7 +681,7 @@ pytest --cov=app tests/
 - **Quality dimension weights**: Relevance (25%), Completeness (20%), Accuracy (20%), Actionability (15%), Personalization (10%), Feasibility (10%)
 
 ### LLM Provider Configuration
-- **Supported providers**: DeepSeek (default), OpenAI, Claude
+- **Supported provider**: DeepSeek
 - **Environment variables**: `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`
 
 ### RAG Configuration

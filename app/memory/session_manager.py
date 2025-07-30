@@ -118,6 +118,15 @@ class SessionManager:
         # Save to disk
         self._save_session(metadata)
         
+        # Create corresponding travel plan
+        try:
+            from app.core.plan_manager import get_plan_manager
+            plan_manager = get_plan_manager()
+            plan_id = plan_manager.create_plan_for_session(session_id)
+            logger.info(f"✅ Created plan {plan_id} for session {session_id}")
+        except Exception as e:
+            logger.warning(f"Failed to create plan for session {session_id}: {e}")
+        
         # Index session for RAG search (async task)
         try:
             loop = asyncio.get_event_loop()
@@ -138,18 +147,19 @@ class SessionManager:
     def switch_session(self, session_id: str) -> bool:
         """Switch to a different session"""
         if session_id in self.sessions:
-            # Update last activity of previous session
+            # Update status of previous session (but not last_activity)
             if self.current_session_id:
                 prev_session = self.sessions.get(self.current_session_id)
                 if prev_session:
-                    prev_session.last_activity = datetime.now(timezone.utc)
+                    prev_session.status = SessionStatus.INACTIVE
                     self._save_session(prev_session)
             
             # Switch to new session
             self.current_session_id = session_id
             current_session = self.sessions[session_id]
             current_session.status = SessionStatus.ACTIVE
-            current_session.last_activity = datetime.now(timezone.utc)
+            # Don't update last_activity when just switching - only when adding messages
+            # This prevents session list reordering when user clicks on sessions
             self._save_session(current_session)
             
             logger.info(f"Switched to session: {session_id}")
@@ -407,6 +417,17 @@ Summary:"""
             session_file = self.storage_path / f"{session_id}.json"
             if session_file.exists():
                 session_file.unlink()
+            
+            # Delete corresponding travel plan
+            try:
+                from app.core.plan_manager import get_plan_manager
+                plan_manager = get_plan_manager()
+                plan = plan_manager.get_plan_by_session(session_id)
+                if plan:
+                    plan_manager.delete_plan(plan.plan_id)
+                    logger.info(f"✅ Deleted plan for session {session_id}")
+            except Exception as e:
+                logger.warning(f"Failed to delete plan for session {session_id}: {e}")
             
             # Remove from RAG index (async task)
             try:

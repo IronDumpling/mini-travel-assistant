@@ -75,3 +75,6 @@ htmlcov/
 
 # Jupyter Notebooks
 .ipynb_checkpoints
+
+# Frontend
+frontend/node_modules/

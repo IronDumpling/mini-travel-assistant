@@ -2,6 +2,8 @@
 
 This directory contains the comprehensive knowledge management system for the AI Travel Planning Agent's RAG (Retrieval-Augmented Generation) engine. The system handles loading, processing, indexing, and retrieving travel knowledge from various sources to power intelligent travel planning with self-refinement capabilities.
 
+This knowledge base is fully integrated with the DeepSeek-powered LLM architecture and provides semantic search capabilities for the travel agent's decision-making process.
+
 ## 🏗️ Knowledge Base Architecture
 
 ```
@@ -25,7 +27,8 @@ app/knowledge/
 │   │       ├── barcelona_attractions.json
 │   │       ├── vienna_attractions.json
 │   │       ├── prague_attractions.json
-│   │       └── budapest_attractions.json
+│   │       ├── budapest_attractions.json
+│   │       └── munich_attractions.json
 │   ├── practical/                 # Practical travel information
 │   │   └── visa/                  # Visa requirements by country
 │   │       ├── japan_visa.json
@@ -38,7 +41,7 @@ app/knowledge/
 │   │       └── south_africa_visa.json
 │   ├── transportation/            # Transportation information
 │   │   └── metro/                 # Metro system guides
-│   │       ├── tokyo_metro.json
+│   │       ├── japan_metro.json
 │   │       ├── london_underground.json
 │   │       ├── newyork_subway.json
 │   │       ├── seoul_metro.json
@@ -116,6 +119,7 @@ graph TD
 - ✅ Batch processing utilities
 - ✅ Schema validation tools
 - ✅ Performance monitoring and statistics
+- ✅ DeepSeek LLM integration for enhanced content analysis
 
 ## 📊 Knowledge Structure
 
@@ -461,13 +465,13 @@ quality_dimensions = {
 ### Current Knowledge Base Coverage
 ```
 Total Knowledge Items: 50+
-├── Destinations: 18 cities
-│   ├── Asia: 9 cities (Tokyo, Kyoto, Seoul, Beijing, Shanghai, Singapore, etc.)
-│   └── Europe: 9 cities (Paris, London, Rome, Berlin, Amsterdam, etc.)
+├── Destinations: 16 cities
+│   ├── Asia: 6 cities (Tokyo, Kyoto, Seoul, Beijing, Shanghai, Singapore)
+│   └── Europe: 10 cities (Paris, London, Rome, Berlin, Amsterdam, Barcelona, Vienna, Prague, Budapest, Munich)
 ├── Practical Info: 8 countries
 │   └── Visa Requirements: USA, Japan, Canada, China, India, Australia, Brazil, South Africa
 ├── Transportation: 7 metro systems
-│   └── Metro Systems: Tokyo, London, NYC, Seoul, Singapore, Hong Kong, Bangkok
+│   └── Metro Systems: Japan, London, NYC, Seoul, Singapore, Hong Kong, Bangkok
 └── Categories: 5 main categories with 20+ subcategories
 ```
 
@@ -602,15 +606,15 @@ async def backup_knowledge_base():
 - **Multi-language Support**: Expand beyond English
 - **Dynamic Content**: Real-time updates from travel APIs
 - **User Contributions**: Community-driven content expansion
-- **AI Content Generation**: Automated knowledge creation
+- **AI Content Generation**: DeepSeek-powered automated knowledge creation
 - **Personalization**: User-specific knowledge preferences
 
 ### Technical Roadmap
-- **Enhanced RAG**: More sophisticated retrieval strategies
+- **Enhanced RAG**: More sophisticated retrieval strategies with DeepSeek integration
 - **Knowledge Graphs**: Relationship mapping between entities
 - **Distributed Storage**: Scalable knowledge distribution
 - **API Integration**: Real-time data synchronization
-- **Machine Learning**: Automated quality assessment
+- **Machine Learning**: DeepSeek-powered automated quality assessment
 
 ## 📞 Support and Contributing
 
