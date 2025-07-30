@@ -31,6 +31,7 @@ class Attraction(BaseModel):
     category: str
     rating: float
     price_level: Optional[int] = None  # 0-4 scale from Google Places
+    price_level_description: Optional[str] = None  # Human-readable price level
     opening_hours: Optional[Dict[str, str]] = None
     place_id: Optional[str] = None
     formatted_address: Optional[str] = None
@@ -38,8 +39,14 @@ class Attraction(BaseModel):
     website: Optional[str] = None
     photo_urls: List[str] = []
     reviews_count: Optional[int] = None
+    review_summary: Optional[str] = None  # Summary of recent reviews
+    individual_reviews: List[Dict[str, Any]] = []  # Individual user reviews
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    # Additional cost and review fields
+    cost_range: Optional[str] = None  # Cost range (e.g., "$10-20")
+    popular_times: Optional[Dict[str, str]] = None  # Busy times information
+    accessibility_info: Optional[str] = None  # Accessibility information
 
 
 class AttractionSearchInput(ToolInput):
@@ -363,7 +370,7 @@ class AttractionSearchTool(BaseTool):
             headers = {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": self.api_key,
-                "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.priceLevel,places.types,places.location,places.regularOpeningHours,places.internationalPhoneNumber,places.websiteUri,places.photos",
+                "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.priceLevel,places.types,places.location,places.regularOpeningHours,places.internationalPhoneNumber,places.websiteUri,places.photos,places.accessibilityOptions,places.editorialSummary,places.reviews",
             }
 
             async with session.post(
@@ -398,8 +405,8 @@ class AttractionSearchTool(BaseTool):
                             "longitude": location_coords["lng"],
                         },
                         "radius": min(
-                            input_data.radius_meters or 5000, 50000
-                        ),  # Max 50km
+                            input_data.radius_meters or 30000, 30000
+                        ),  # Max 30km
                     }
                 },
             }
@@ -421,7 +428,7 @@ class AttractionSearchTool(BaseTool):
             headers = {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": self.api_key,
-                "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.priceLevel,places.types,places.location,places.regularOpeningHours,places.internationalPhoneNumber,places.websiteUri,places.photos",
+                "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.priceLevel,places.types,places.location,places.regularOpeningHours,places.internationalPhoneNumber,places.websiteUri,places.photos,places.accessibilityOptions,places.editorialSummary,places.reviews",
             }
 
             async with session.post(
@@ -466,7 +473,7 @@ class AttractionSearchTool(BaseTool):
         formatted_address = place_data.get("formattedAddress", "")
         rating = place_data.get("rating", 0.0)
         user_rating_count = place_data.get("userRatingCount", 0)
-        price_level = place_data.get("priceLevel")
+        price_level = self._parse_price_level(place_data.get("priceLevel"))
         types = place_data.get("types", [])
         location = place_data.get("location", {})
         phone = place_data.get("internationalPhoneNumber")
@@ -501,8 +508,23 @@ class AttractionSearchTool(BaseTool):
 
         # Determine category and description
         category = self._determine_category(types)
+
+        # Extract additional cost and review information
+        price_level_description = self._get_price_level_description(price_level)
+        review_summary = self._extract_review_summary(place_data)
+        individual_reviews = self._extract_individual_reviews(place_data)
+        popular_times = self._extract_popular_times(place_data)
+        accessibility_info = self._extract_accessibility_info(place_data)
+        cost_range = self._get_cost_range(price_level)
+
+        # Generate description
         description = self._generate_description(
-            name, category, formatted_address, rating, user_rating_count
+            name,
+            category,
+            formatted_address,
+            rating,
+            user_rating_count,
+            price_level_description,
         )
 
         return Attraction(
@@ -512,6 +534,7 @@ class AttractionSearchTool(BaseTool):
             category=category,
             rating=rating,
             price_level=price_level,
+            price_level_description=price_level_description,
             opening_hours=opening_hours,
             place_id=place_data.get("id"),
             formatted_address=formatted_address,
@@ -519,8 +542,13 @@ class AttractionSearchTool(BaseTool):
             website=website,
             photo_urls=photo_urls,
             reviews_count=user_rating_count,
+            review_summary=review_summary,
+            individual_reviews=individual_reviews,
             latitude=location.get("latitude"),
             longitude=location.get("longitude"),
+            cost_range=cost_range,
+            popular_times=popular_times,
+            accessibility_info=accessibility_info,
         )
 
     async def _get_photo_urls(self, photos: List[dict]) -> List[str]:
@@ -561,7 +589,13 @@ class AttractionSearchTool(BaseTool):
         return "Attraction"
 
     def _generate_description(
-        self, name: str, category: str, address: str, rating: float, review_count: int
+        self,
+        name: str,
+        category: str,
+        address: str,
+        rating: float,
+        review_count: int,
+        price_level_description: Optional[str] = None,
     ) -> str:
         """Generate attraction description from available data"""
         description_parts = [f"{name} is a {category.lower()}"]
@@ -573,6 +607,9 @@ class AttractionSearchTool(BaseTool):
             description_parts.append(f"with a {rating}/5 rating")
             if review_count > 0:
                 description_parts.append(f"based on {review_count} reviews")
+
+        if price_level_description:
+            description_parts.append(f"({price_level_description})")
 
         return " ".join(description_parts) + "."
 
@@ -602,6 +639,112 @@ class AttractionSearchTool(BaseTool):
     def get_output_schema(self) -> Dict[str, Any]:
         """Get output schema for the tool"""
         return AttractionSearchOutput.model_json_schema()
+
+    def _parse_price_level(self, price_level_raw: any) -> Optional[int]:
+        """Parse price level from Google Places API (handles both string and int formats)"""
+        if price_level_raw is None:
+            return None
+
+        # Handle string format (new Google Places API)
+        if isinstance(price_level_raw, str):
+            price_level_mapping = {
+                "PRICE_LEVEL_FREE": 0,
+                "PRICE_LEVEL_INEXPENSIVE": 1,
+                "PRICE_LEVEL_MODERATE": 2,
+                "PRICE_LEVEL_EXPENSIVE": 3,
+                "PRICE_LEVEL_VERY_EXPENSIVE": 4,
+            }
+            return price_level_mapping.get(price_level_raw)
+
+        # Handle numeric format (legacy or direct numeric values)
+        if isinstance(price_level_raw, int) and 0 <= price_level_raw <= 4:
+            return price_level_raw
+
+        return None
+
+    def _get_price_level_description(self, price_level: Optional[int]) -> Optional[str]:
+        """Convert price level number to human-readable description"""
+        if price_level is None:
+            return None
+
+        price_descriptions = {
+            0: "Free",
+            1: "Inexpensive",
+            2: "Moderate",
+            3: "Expensive",
+            4: "Very Expensive",
+        }
+        return price_descriptions.get(price_level, "Price not specified")
+
+    def _extract_review_summary(self, place_data: dict) -> Optional[str]:
+        """Extract review summary from editorial summary if available"""
+        if "editorialSummary" in place_data:
+            return place_data["editorialSummary"].get("text", "")
+        return None
+
+    def _extract_individual_reviews(
+        self, place_data: dict, max_reviews: int = 5
+    ) -> List[Dict[str, Any]]:
+        """Extract individual user reviews from place data"""
+        reviews = []
+
+        if "reviews" in place_data and place_data["reviews"]:
+            for review_data in place_data["reviews"][:max_reviews]:
+                review = {}
+
+                # Extract author information
+                if "authorAttribution" in review_data:
+                    author = review_data["authorAttribution"]
+                    review["author_name"] = author.get("displayName", "Anonymous")
+                    review["author_photo"] = author.get("photoUri", "")
+
+                # Extract review details
+                review["rating"] = review_data.get("rating", None)
+                review["text"] = review_data.get("text", {}).get("text", "")
+                review["relative_time"] = review_data.get(
+                    "relativePublishTimeDescription", ""
+                )
+                review["publish_time"] = review_data.get("publishTime", "")
+
+                # Only add reviews with meaningful content
+                if review.get("text") and len(review["text"].strip()) > 10:
+                    reviews.append(review)
+
+        return reviews
+
+    def _extract_popular_times(self, place_data: dict) -> Optional[Dict[str, str]]:
+        """Extract popular times information - Note: This field may not be available in the API"""
+        # Popular times data is not consistently available in Google Places API (New)
+        # This method is kept for future compatibility if the field becomes available
+        return None
+
+    def _extract_accessibility_info(self, place_data: dict) -> Optional[str]:
+        """Extract accessibility information"""
+        if "accessibilityOptions" in place_data:
+            options = place_data["accessibilityOptions"]
+            features = []
+
+            if options.get("wheelchairAccessibleEntrance"):
+                features.append("Wheelchair accessible entrance")
+            if options.get("wheelchairAccessibleParking"):
+                features.append("Wheelchair accessible parking")
+            if options.get("wheelchairAccessibleRestroom"):
+                features.append("Wheelchair accessible restroom")
+            if options.get("wheelchairAccessibleSeating"):
+                features.append("Wheelchair accessible seating")
+
+            return ", ".join(features) if features else None
+        return None
+
+    def _get_cost_range(self, price_level: Optional[int]) -> Optional[str]:
+        """Simple cost range based on price level from API"""
+        if price_level is None:
+            return "Free"
+
+        # Simple cost ranges
+        cost_ranges = {0: "Free", 1: "$5-15", 2: "$15-30", 3: "$30-50", 4: "$50+"}
+
+        return cost_ranges.get(price_level, "Free")
 
 
 # Register the tool
