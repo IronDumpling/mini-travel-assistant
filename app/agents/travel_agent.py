@@ -1565,42 +1565,64 @@ Please analyze the current message considering the conversation history for bett
         return city_upper
 
     def _extract_origin_from_message(self, user_message: str) -> str:
-        """Extract origin city from user message using simple text parsing"""
+        """Extract origin city from user message using improved text parsing"""
         import re
         
         # Convert to lowercase for easier matching
         message_lower = user_message.lower()
         
-        # Common destinations that could be origins
+        # Known cities that could be origins
         cities = [
             "tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", 
             "shanghai", "rome", "barcelona", "amsterdam", "vienna", "prague", 
             "budapest", "berlin", "bangkok", "singapore", "seoul", "sydney", 
-            "melbourne", "munich", "madrid", "athens", "dubai", "istanbul"
+            "melbourne", "munich", "madrid", "athens", "dubai", "istanbul",
+            "toronto", "vancouver", "montreal", "calgary", "ottawa"
         ]
         
-        # Common patterns for origin extraction
+        # Exclude common non-location words
+        non_locations = [
+            "trip", "travel", "plan", "vacation", "holiday", "journey", "flight",
+            "hotel", "stay", "visit", "tour", "day", "week", "month", "year"
+        ]
+        
+        # Improved patterns for origin extraction (more specific)
         patterns = [
-            r'from\s+(\w+)\s+to\s+(\w+)',  # "from Paris to Rome"
-            r'(\w+)\s+to\s+(\w+)',  # "Paris to Rome" (if no "from")
-            r'plan\s+a\s+trip\s+from\s+(\w+)\s+to\s+(\w+)',  # "plan a trip from Paris to Rome"
-            r'travel\s+from\s+(\w+)\s+to\s+(\w+)',  # "travel from Paris to Rome"
-            r'flying\s+from\s+(\w+)',  # "flying from Paris"
-            r'departing\s+from\s+(\w+)',  # "departing from Paris"
+            r'from\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)',  # "from Paris to Rome"
+            r'departing\s+from\s+([a-zA-Z\s]+?)(?:\s|$|,|\.|!|\?)',  # "departing from Paris"
+            r'flying\s+from\s+([a-zA-Z\s]+?)(?:\s|$|,|\.|!|\?)',  # "flying from Paris"
+            r'starting\s+from\s+([a-zA-Z\s]+?)(?:\s|$|,|\.|!|\?)',  # "starting from Paris"
+            r'travel\s+from\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)',  # "travel from Paris to Rome"
         ]
         
         for pattern in patterns:
             match = re.search(pattern, message_lower)
             if match:
                 origin = match.group(1).strip().lower()
-                # Check if it's a known city
-                if origin in cities:
-                    return origin.title()  # Capitalize first letter
-                # If not in our list but looks like a city name, return it
-                if len(origin) > 2 and origin.isalpha():
+                
+                # Skip if it's a non-location word
+                if origin in non_locations:
+                    continue
+                    
+                # Check if it's a known city (exact match or partial match)
+                for city in cities:
+                    if city in origin or origin in city:
+                        return city.title()
+                
+                # If not in our list but looks like a valid city name
+                if len(origin) > 2 and origin.replace(' ', '').isalpha() and origin not in non_locations:
                     return origin.title()
         
-        # If no pattern matches, return "Unknown"
+        # Try to find "CITY to DESTINATION" pattern but only if CITY is a known location
+        city_to_pattern = r'([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)'
+        match = re.search(city_to_pattern, message_lower)
+        if match:
+            potential_origin = match.group(1).strip().lower()
+            # Only accept if it's a known city and not a common word
+            if potential_origin in cities and potential_origin not in non_locations:
+                return potential_origin.title()
+        
+        # If no valid origin found, return "Unknown" (will default to Toronto)
         return "Unknown"
 
     async def _extract_parameters_from_intent(

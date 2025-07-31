@@ -42,27 +42,38 @@ async def chat_with_agent(message: ChatMessage):
     This is the main endpoint that leverages the self-refine loop.
     """
     try:
-        # Get or create session
+        # Get or create session with proper validation
         session_manager = get_session_manager()
         if message.session_id:
-            session_manager.switch_session(message.session_id)
+            # Validate session exists before switching
+            if message.session_id in session_manager.sessions:
+                session_manager.switch_session(message.session_id)
+                logger.info(f"Switched to existing session: {message.session_id}")
+            else:
+                logger.warning(f"Session {message.session_id} not found, creating new session")
+                session_id = session_manager.create_session(
+                    title=f"Travel Planning - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                    description="AI-powered travel planning conversation"
+                )
+                message.session_id = session_id
         else:
             session_id = session_manager.create_session(
                 title=f"Travel Planning - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
                 description="AI-powered travel planning conversation"
             )
             message.session_id = session_id
+            logger.info(f"Created new session: {session_id}")
 
-        # ✅ 使用单例Agent，避免全局配置污染
+        # Use singleton agent to avoid global configuration pollution   
         agent = get_travel_agent()
         
-        # 🆕 获取session历史并传给agent (使用RAG增强的对话记忆)
+        # Get session history and pass to agent (using RAG enhanced conversation memory)
         session = session_manager.get_current_session()
         conversation_memory = get_conversation_memory()
         conversation_history = []
         
         if session and session.messages:
-            # 首先尝试使用RAG搜索获取相关对话上下文
+            # First try to use RAG to get relevant conversation context
             try:
                 relevant_turns = await conversation_memory.get_relevant_context(
                     session_id=message.session_id,
@@ -71,7 +82,7 @@ async def chat_with_agent(message: ChatMessage):
                 )
                 
                 if relevant_turns:
-                    # 使用RAG找到的相关对话
+                    # Use RAG to find relevant conversation
                     for turn in relevant_turns:
                         conversation_history.append({
                             "user": turn.user_message,
@@ -80,22 +91,22 @@ async def chat_with_agent(message: ChatMessage):
                             "importance": turn.importance_score,
                             "intent": turn.intent
                         })
-                    logger.info(f"使用RAG搜索找到 {len(relevant_turns)} 条相关对话")
+                    logger.info(f"Found {len(relevant_turns)} relevant conversations using RAG")
                 else:
-                    # 如果RAG没有找到相关内容，回退到最近的对话
-                    recent_messages = session.messages[-3:]  # 最近3条
+                    # If RAG didn't find relevant content, fall back to recent conversation
+                    recent_messages = session.messages[-3:]  # Last 3 messages
                     for msg in recent_messages:
                         conversation_history.append({
                             "user": msg.user_message,
                             "assistant": msg.agent_response,
                             "timestamp": msg.timestamp.isoformat()
                         })
-                    logger.info(f"RAG未找到相关内容，使用最近 {len(recent_messages)} 条对话")
+                    logger.info(f"RAG didn't find relevant content, using recent {len(recent_messages)} messages")
                         
             except Exception as e:
-                logger.warning(f"RAG搜索失败，使用最近对话: {e}")
-                # 回退到简单的最近对话
-                recent_messages = session.messages[-3:]  # 最近3条
+                logger.warning(f"RAG search failed, using recent conversation: {e}")
+                # Fall back to simple recent conversation
+                recent_messages = session.messages[-3:]  # Last 3 messages
                 for msg in recent_messages:
                     conversation_history.append({
                         "user": msg.user_message,
@@ -110,7 +121,7 @@ async def chat_with_agent(message: ChatMessage):
             content=message.message,
             metadata={
                 "session_id": message.session_id,
-                "conversation_history": conversation_history  # 🆕 传递历史
+                "conversation_history": conversation_history  # Pass history
             }
         )
         

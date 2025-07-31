@@ -404,7 +404,17 @@ If no changes are needed, return empty arrays for each section."""
                     logger.warning("LLM returned empty response, falling back to heuristic extraction")
                     return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
                 
-                modifications = json.loads(response_content.strip())
+                # Clean up LLM response that might be wrapped in code blocks
+                cleaned_content = response_content.strip()
+                if cleaned_content.startswith("```json"):
+                    cleaned_content = cleaned_content[7:]  # Remove ```json
+                if cleaned_content.endswith("```"):
+                    cleaned_content = cleaned_content[:-3]  # Remove ending ```
+                cleaned_content = cleaned_content.strip()
+                
+                logger.debug(f"Cleaned JSON content: {cleaned_content[:200]}...")
+                
+                modifications = json.loads(cleaned_content)
                 
                 logger.info(f"LLM plan modification extraction successful: {len(modifications.get('new_events', []))} new events, {len(modifications.get('updated_events', []))} updates, {len(modifications.get('deleted_event_ids', []))} deletions")
                 
