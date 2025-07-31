@@ -3645,57 +3645,71 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.error(f"❌ Invalid destination '{city_name}' - cannot convert to IATA code")
             return ''  # Return empty string to indicate invalid destination
         
-        # Region/Continent to major cities mapping
+        # ✅ Region/Continent to multiple cities mapping (based on available documents)
         region_to_cities = {
-            'europe': 'london',      # Default to London for Europe
-            'european': 'london',
-            'asia': 'tokyo',         # Default to Tokyo for Asia
-            'asian': 'tokyo',
-            'north america': 'new york',  # Default to NYC for North America
-            'north american': 'new york',
-            'south america': 'sao paulo', # Default to Sao Paulo for South America
-            'south american': 'sao paulo',
-            'africa': 'johannesburg', # Default to Johannesburg for Africa
-            'african': 'johannesburg',
-            'oceania': 'sydney',     # Default to Sydney for Oceania
-            'middle east': 'dubai',  # Default to Dubai for Middle East
-            'middle eastern': 'dubai',
-            # ✅ Regional/Mountain/Special area mappings
-            'swiss alps': 'zurich',     # Swiss Alps -> Zurich
-            'alps': 'zurich',           # Alps -> Zurich
-            'himalaya': 'kathmandu',    # Himalaya -> Kathmandu  
-            'himalayas': 'kathmandu',   # Himalayas -> Kathmandu
-            'rockies': 'denver',        # Rocky Mountains -> Denver
-            'rocky mountains': 'denver', # Rocky Mountains -> Denver
-            'andes': 'lima',            # Andes -> Lima
-            'sahara': 'cairo',          # Sahara -> Cairo
-            'sahara desert': 'cairo',   # Sahara Desert -> Cairo
-            'scottish highlands': 'glasgow', # Scottish Highlands -> Glasgow
-            'lake district': 'manchester',   # Lake District -> Manchester
-            'tuscany': 'florence',      # Tuscany -> Florence
-            'provence': 'marseille',    # Provence -> Marseille
-            'bavarian alps': 'munich',  # Bavarian Alps -> Munich
-            'black forest': 'stuttgart', # Black Forest -> Stuttgart
-            # Country-level mappings to major cities
-            'france': 'paris',
-            'germany': 'berlin', 
-            'italy': 'rome',
-            'spain': 'barcelona',
-            'netherlands': 'amsterdam',
-            'austria': 'vienna',
-            'czech republic': 'prague',
-            'hungary': 'budapest',
-            'united kingdom': 'london',
-            'england': 'london',
-            'scotland': 'edinburgh',
-            'ireland': 'dublin',
-            'switzerland': 'zurich',
-            'belgium': 'brussels',
-            'poland': 'warsaw',
-            'sweden': 'stockholm',
-            'norway': 'oslo',
-            'denmark': 'copenhagen',
-            'finland': 'helsinki'
+            # European destinations with multiple cities
+            'europe': ['london', 'paris', 'berlin', 'rome', 'barcelona', 'amsterdam', 'vienna', 'prague'],
+            'european': ['london', 'paris', 'berlin', 'rome', 'barcelona', 'amsterdam', 'vienna', 'prague'],
+            'western europe': ['london', 'paris', 'amsterdam', 'barcelona'],
+            'central europe': ['berlin', 'vienna', 'prague', 'budapest'],
+            'southern europe': ['rome', 'barcelona'],
+            
+            # Asian destinations with multiple cities  
+            'asia': ['tokyo', 'beijing', 'shanghai', 'seoul', 'singapore'],
+            'asian': ['tokyo', 'beijing', 'shanghai', 'seoul', 'singapore'],
+            'east asia': ['tokyo', 'beijing', 'shanghai', 'seoul'],
+            'southeast asia': ['singapore'],
+            'japan': ['tokyo', 'kyoto'],
+            'china': ['beijing', 'shanghai'],
+            
+            # Other regions (keeping single cities for now)
+            'north america': ['new york'],
+            'north american': ['new york'],
+            'south america': ['sao paulo'],
+            'south american': ['sao paulo'],
+            'africa': ['johannesburg'],
+            'african': ['johannesburg'],
+            'oceania': ['sydney'],
+            'middle east': ['dubai'],
+            'middle eastern': ['dubai'],
+            
+            # ✅ Special area mappings to available cities
+            'swiss alps': ['munich', 'vienna'],     # Nearby European cities
+            'alps': ['munich', 'vienna'],           # Nearby European cities
+            'himalaya': ['beijing'],                # Closest available city
+            'himalayas': ['beijing'],               # Closest available city
+            'rockies': ['new york'],                # Default North American city
+            'rocky mountains': ['new york'],        # Default North American city
+            'andes': ['sao paulo'],                 # Default South American city
+            'sahara': ['cairo'],                    # Not in our documents
+            'sahara desert': ['cairo'],             # Not in our documents
+            'scottish highlands': ['london'],       # UK -> London
+            'lake district': ['london'],            # UK -> London
+            'tuscany': ['rome'],                    # Italy -> Rome
+            'provence': ['paris'],                  # France -> Paris
+            'bavarian alps': ['munich'],            # Germany -> Munich
+            'black forest': ['munich'],             # Germany -> Munich
+            
+            # Country-level mappings to available cities
+            'france': ['paris'],
+            'germany': ['berlin', 'munich'], 
+            'italy': ['rome'],
+            'spain': ['barcelona'],
+            'netherlands': ['amsterdam'],
+            'austria': ['vienna'],
+            'czech republic': ['prague'],
+            'hungary': ['budapest'],
+            'united kingdom': ['london'],
+            'england': ['london'],
+            'scotland': ['london'],  # Use London as we don't have Edinburgh data
+            'ireland': ['london'],   # Use London as we don't have Dublin data
+            'switzerland': ['munich'],  # Use nearby city in our dataset
+            'belgium': ['amsterdam'], # Use nearby city in our dataset
+            'poland': ['berlin'],     # Use nearby city in our dataset
+            'sweden': ['london'],     # Use available city
+            'norway': ['london'],     # Use available city
+            'denmark': ['london'],    # Use available city
+            'finland': ['london']     # Use available city
         }
         
         # Normalize input and check for region mapping first
@@ -3953,15 +3967,27 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.info(f"✅ Clean IATA code: '{clean_iata}'")
             return clean_iata
         else:
-            # ✅ Smart fallback: try region/country mapping
+            # ✅ Smart fallback: try region/country mapping with multiple cities support
             logger.warning(f"⚠️ No direct IATA code found for '{city_name}', trying region fallback")
             
-            for region, fallback_city in region_to_cities.items():
+            for region, cities in region_to_cities.items():
                 if region in normalized_city:
-                    fallback_iata = city_to_iata.get(fallback_city)
-                    if fallback_iata:
-                        logger.info(f"✅ Using fallback: '{city_name}' -> '{fallback_city}' ({fallback_iata})")
-                        return fallback_iata.strip().upper()
+                    # ✅ Handle both single city and multiple cities
+                    if isinstance(cities, list):
+                        # For multiple cities, return IATA of the first available city
+                        for city in cities:
+                            fallback_iata = city_to_iata.get(city)
+                            if fallback_iata:
+                                logger.info(f"✅ Using multi-destination fallback: '{city_name}' -> '{city}' ({fallback_iata})")
+                                # ✅ Store multiple destinations for plan generation
+                                setattr(self, '_multi_destinations', cities)
+                                return fallback_iata.strip().upper()
+                    else:
+                        # Single city (legacy format)
+                        fallback_iata = city_to_iata.get(cities)
+                        if fallback_iata:
+                            logger.info(f"✅ Using fallback: '{city_name}' -> '{cities}' ({fallback_iata})")
+                            return fallback_iata.strip().upper()
             
             # ✅ Last resort: for any unknown location, use a sensible default based on context
             # This prevents tool failures and allows plan generation to continue

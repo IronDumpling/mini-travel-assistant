@@ -43,13 +43,19 @@ async def _async_update_plan(session_id: str, user_message: str, agent_response)
                 
                 tool_results = execution_result.get("results", {})
                 
+                # ✅ Check for multi-destinations from travel_agent
+                from app.agents.travel_agent import get_travel_agent
+                travel_agent = get_travel_agent()
+                multi_destinations = getattr(travel_agent, '_multi_destinations', None)
+                
                 # Generate plan directly from tool results using plan_manager
                 plan_update_result = await plan_manager.generate_plan_from_tool_results(
                     session_id=session_id,
                     tool_results=tool_results,
                     destination=destination_name,
                     user_message=user_message,
-                    intent=intent
+                    intent=intent,
+                    multi_destinations=multi_destinations
                 )
             else:
                 # If no execution_result, fall back to basic response parsing

@@ -177,7 +177,8 @@ class PlanManager:
         tool_results: Dict[str, Any], 
         destination: str, 
         user_message: str,
-        intent: Dict[str, Any] = None
+        intent: Dict[str, Any] = None,
+        multi_destinations: List[str] = None
     ) -> Dict[str, Any]:
         """
         Generate travel plan events directly from tool results (Fast non-LLM approach)
@@ -212,7 +213,8 @@ class PlanManager:
                 start_date, 
                 duration, 
                 travelers, 
-                user_message
+                user_message,
+                multi_destinations
             )
             
             # Update plan metadata (TravelPlanMetadata is a Pydantic model, not a dict)
@@ -373,9 +375,22 @@ class PlanManager:
                 except:
                     pass
         
-        # For now, use a smart default (tomorrow + 1 week for planning)
-        default_start = datetime.now() + timedelta(days=7)
-        logger.info(f"Using default start date: {default_start.strftime('%Y-%m-%d')}")
+        # ✅ Look for explicit date mentions in user message
+        user_message_lower = user_message.lower()
+        
+        # Check for "today", "tomorrow", "next week" etc.
+        if 'today' in user_message_lower:
+            return datetime.now()
+        elif 'tomorrow' in user_message_lower:
+            return datetime.now() + timedelta(days=1)
+        elif 'next week' in user_message_lower:
+            return datetime.now() + timedelta(days=7)
+        elif 'next month' in user_message_lower:
+            return datetime.now() + timedelta(days=30)
+        
+        # ✅ Default to tomorrow instead of next week for immediate planning
+        default_start = datetime.now() + timedelta(days=1)
+        logger.info(f"Using default start date: {default_start.strftime('%Y-%m-%d')} (tomorrow)")
         return default_start
 
     def _estimate_budget(self, duration: int, travelers: int) -> int:
@@ -391,7 +406,8 @@ class PlanManager:
         start_date: datetime, 
         duration: int, 
         travelers: int,
-        user_message: str
+        user_message: str,
+        multi_destinations: List[str] = None
     ) -> List:
         """Create calendar events from tool results with accurate timing"""
         events = []
@@ -399,6 +415,13 @@ class PlanManager:
         import uuid
         
         current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)
+        
+        # ✅ Handle multi-destination trips (passed as parameter)
+        if multi_destinations and len(multi_destinations) > 1:
+            logger.info(f"🌍 Planning multi-destination trip: {multi_destinations}")
+            return self._create_multi_destination_events(
+                tool_results, multi_destinations, start_date, duration, travelers, user_message
+            )
         
         try:
             # Add flight events (outbound and return)
@@ -541,6 +564,210 @@ class PlanManager:
                 "details": {"source": "fallback_generation"}
             })
             return [fallback_event] if fallback_event else []
+    
+    def _create_multi_destination_events(
+        self, 
+        tool_results: Dict[str, Any], 
+        destinations: List[str], 
+        start_date: datetime, 
+        duration: int, 
+        travelers: int,
+        user_message: str
+    ) -> List:
+        """Create calendar events for multi-destination trips"""
+        events = []
+        from datetime import timedelta
+        import uuid
+        
+        try:
+            logger.info(f"🗺️ Creating multi-destination itinerary for {len(destinations)} cities: {destinations}")
+            
+            # ✅ Calculate days per destination
+            days_per_destination = max(1, duration // len(destinations))
+            logger.info(f"📅 Allocating {days_per_destination} days per destination")
+            
+            current_date = start_date
+            
+            for i, destination in enumerate(destinations[:5]):  # Limit to 5 destinations max
+                logger.info(f"🏙️ Planning destination {i+1}: {destination}")
+                
+                # ✅ Arrival/departure events for each city
+                if i == 0:
+                    # First destination - arrival flight
+                    arrival_time = current_date.replace(hour=10, minute=0)
+                    event = self._create_calendar_event_from_data({
+                        "id": f"arrival_{destination}_{str(uuid.uuid4())[:8]}",
+                        "title": f"Arrive in {destination.title()}",
+                        "description": f"Arrival in {destination.title()} - Start of multi-city adventure",
+                        "event_type": "flight",
+                        "start_time": arrival_time.isoformat(),
+                        "end_time": (arrival_time + timedelta(hours=2)).isoformat(),
+                        "location": destination.title(),
+                        "details": {
+                            "source": "multi_destination_planning",
+                            "destination_sequence": i + 1,
+                            "total_destinations": len(destinations)
+                        }
+                    })
+                    if event:
+                        events.append(event)
+                else:
+                    # Travel between cities
+                    travel_time = current_date.replace(hour=14, minute=0)
+                    prev_destination = destinations[i-1]
+                    event = self._create_calendar_event_from_data({
+                        "id": f"travel_{prev_destination}_to_{destination}_{str(uuid.uuid4())[:8]}",
+                        "title": f"Travel: {prev_destination.title()} → {destination.title()}",
+                        "description": f"Journey from {prev_destination.title()} to {destination.title()}",
+                        "event_type": "transportation",
+                        "start_time": travel_time.isoformat(),
+                        "end_time": (travel_time + timedelta(hours=3)).isoformat(),
+                        "location": f"{prev_destination.title()} to {destination.title()}",
+                        "details": {
+                            "source": "multi_destination_planning",
+                            "travel_type": "intercity_transport"
+                        }
+                    })
+                    if event:
+                        events.append(event)
+                
+                # ✅ Hotel for each destination
+                checkin_time = current_date.replace(hour=15, minute=0)
+                checkout_time = (current_date + timedelta(days=days_per_destination)).replace(hour=11, minute=0)
+                
+                event = self._create_calendar_event_from_data({
+                    "id": f"hotel_{destination}_{str(uuid.uuid4())[:8]}",
+                    "title": f"Hotel in {destination.title()}",
+                    "description": f"Accommodation in {destination.title()} for {days_per_destination} nights",
+                    "event_type": "hotel",
+                    "start_time": checkin_time.isoformat(),
+                    "end_time": checkout_time.isoformat(),
+                    "location": destination.title(),
+                    "details": {
+                        "source": "multi_destination_planning",
+                        "nights": days_per_destination,
+                        "destination_sequence": i + 1
+                    }
+                })
+                if event:
+                    events.append(event)
+                
+                # ✅ Attractions for each destination
+                for day in range(days_per_destination):
+                    activity_date = current_date + timedelta(days=day)
+                    activity_time = activity_date.replace(hour=10, minute=0)
+                    
+                    event = self._create_calendar_event_from_data({
+                        "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
+                        "title": f"Explore {destination.title()} - Day {day+1}",
+                        "description": f"Discover attractions and culture in {destination.title()}",
+                        "event_type": "attraction",
+                        "start_time": activity_time.isoformat(),
+                        "end_time": (activity_time + timedelta(hours=4)).isoformat(),
+                        "location": destination.title(),
+                        "details": {
+                            "source": "multi_destination_planning",
+                            "day_in_destination": day + 1,
+                            "destination_sequence": i + 1,
+                            "recommendations": ["Visit main attractions", "Try local cuisine", "Explore cultural sites"]
+                        }
+                    })
+                    if event:
+                        events.append(event)
+                
+                # Move to next destination period
+                current_date += timedelta(days=days_per_destination)
+            
+            # ✅ Final departure flight
+            departure_time = current_date.replace(hour=18, minute=0)
+            final_destination = destinations[-1]
+            event = self._create_calendar_event_from_data({
+                "id": f"departure_{final_destination}_{str(uuid.uuid4())[:8]}",
+                "title": f"Departure from {final_destination.title()}",
+                "description": f"Return journey from {final_destination.title()} - End of multi-city trip",
+                "event_type": "flight",
+                "start_time": departure_time.isoformat(),
+                "end_time": (departure_time + timedelta(hours=6)).isoformat(),
+                "location": final_destination.title(),
+                "details": {
+                    "source": "multi_destination_planning",
+                    "trip_conclusion": True,
+                    "cities_visited": destinations
+                }
+            })
+            if event:
+                events.append(event)
+            
+            logger.info(f"✅ Created {len(events)} events for multi-destination trip covering {len(destinations)} cities")
+            return events
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating multi-destination events: {e}")
+            # Fallback to single destination
+            return self._create_single_destination_fallback(destinations[0], start_date, duration)
+    
+    def _create_single_destination_fallback(self, destination: str, start_date: datetime, duration: int) -> List:
+        """Create a simple single-destination fallback plan"""
+        events = []
+        from datetime import timedelta
+        import uuid
+        
+        try:
+            # Simple 3-event plan
+            arrival_time = start_date.replace(hour=10, minute=0)
+            
+            # Arrival
+            event = self._create_calendar_event_from_data({
+                "id": f"fallback_arrival_{str(uuid.uuid4())[:8]}",
+                "title": f"Arrive in {destination.title()}",
+                "description": f"Begin your {duration}-day trip to {destination.title()}",
+                "event_type": "flight",
+                "start_time": arrival_time.isoformat(),
+                "end_time": (arrival_time + timedelta(hours=2)).isoformat(),
+                "location": destination.title(),
+                "details": {"source": "fallback_single_destination"}
+            })
+            if event:
+                events.append(event)
+            
+            # Stay
+            checkin_time = start_date.replace(hour=15, minute=0)
+            checkout_time = (start_date + timedelta(days=duration)).replace(hour=11, minute=0)
+            
+            event = self._create_calendar_event_from_data({
+                "id": f"fallback_stay_{str(uuid.uuid4())[:8]}",
+                "title": f"Stay in {destination.title()}",
+                "description": f"Accommodation for {duration} nights",
+                "event_type": "hotel",
+                "start_time": checkin_time.isoformat(),
+                "end_time": checkout_time.isoformat(),
+                "location": destination.title(),
+                "details": {"source": "fallback_single_destination"}
+            })
+            if event:
+                events.append(event)
+            
+            # Departure
+            departure_time = (start_date + timedelta(days=duration)).replace(hour=18, minute=0)
+            
+            event = self._create_calendar_event_from_data({
+                "id": f"fallback_departure_{str(uuid.uuid4())[:8]}",
+                "title": f"Depart from {destination.title()}",
+                "description": f"Return journey from {destination.title()}",
+                "event_type": "flight",
+                "start_time": departure_time.isoformat(),
+                "end_time": (departure_time + timedelta(hours=6)).isoformat(),
+                "location": destination.title(),
+                "details": {"source": "fallback_single_destination"}
+            })
+            if event:
+                events.append(event)
+            
+            return events
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating fallback events: {e}")
+            return []
 
     async def update_plan_from_structured_response(
         self, 
