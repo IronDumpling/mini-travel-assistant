@@ -34,19 +34,22 @@ async def _async_update_plan(session_id: str, user_message: str, agent_response)
             intent = agent_response.metadata.get("intent", {})
             
             if execution_result:
-                # Use travel_agent's LLM plan generation capabilities
-                from app.agents.travel_agent import get_travel_agent
-                travel_agent = get_travel_agent()
+                # ✅ Use plan_manager's fast tool-based generation
+                destination = intent.get("destination", {})
+                if isinstance(destination, dict):
+                    destination_name = destination.get("primary", "unknown")
+                else:
+                    destination_name = str(destination)
                 
-                # Generate detailed structured plan
-                detailed_plan_response = await travel_agent._generate_plan_aware_response(
-                    execution_result, intent, user_message
-                )
+                tool_results = execution_result.get("results", {})
                 
-                # Use detailed plan update
-                plan_update_result = await plan_manager.update_plan_from_structured_response(
+                # Generate plan directly from tool results using plan_manager
+                plan_update_result = await plan_manager.generate_plan_from_tool_results(
                     session_id=session_id,
-                    agent_response=detailed_plan_response
+                    tool_results=tool_results,
+                    destination=destination_name,
+                    user_message=user_message,
+                    intent=intent
                 )
             else:
                 # If no execution_result, fall back to basic response parsing
@@ -177,10 +180,13 @@ async def chat_with_agent(message: ChatMessage):
         agent = get_travel_agent()
         
         # Get session history and pass to agent (using RAG enhanced conversation memory) 
-        # ✅ Use explicit session lookup instead of current_session
+        # Use explicit session lookup instead of current_session
         session = session_manager.sessions.get(message.session_id)
         conversation_memory = get_conversation_memory()
         conversation_history = []
+        
+        # Add session_id to context for plan generation
+        agent_context = {"session_id": message.session_id}
         
         if session and session.messages:
             # First try to use RAG to get relevant conversation context

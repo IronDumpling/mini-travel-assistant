@@ -40,9 +40,9 @@ const EventComponent = ({ event }: { event: any }) => {
   };
 
   return (
-    <div className="flex items-center gap-1 text-xs">
+    <div className="flex items-center gap-1 text-xs leading-tight">
       {getEventIcon(event.type)}
-      <span className="truncate">{event.title}</span>
+      <span className="flex-1 whitespace-normal break-words text-wrap leading-tight">{event.title}</span>
     </div>
   );
 };
@@ -114,6 +114,38 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     .rbc-calendar .rbc-event:focus {
       outline: none !important;
       box-shadow: none !important;
+    }
+    
+    /* ✅ Fix event title wrapping and overlapping layout */
+    .rbc-calendar .rbc-event {
+      white-space: normal !important; /* Allow text wrapping */
+      word-wrap: break-word !important;
+      overflow: visible !important;
+      line-height: 1.2 !important;
+      min-height: 20px !important;
+      text-overflow: clip !important; /* Remove ellipsis */
+    }
+    
+    .rbc-calendar .rbc-event-content {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      word-break: break-word !important;
+      line-height: 1.2 !important;
+    }
+    
+    /* ✅ Improve overlapping events layout */
+    .rbc-calendar .rbc-row-segment {
+      z-index: auto !important;
+    }
+    
+    .rbc-calendar .rbc-events-container {
+      margin-right: 0 !important;
+    }
+    
+    /* ✅ Better spacing for concurrent events */
+    .rbc-calendar .rbc-event + .rbc-event {
+      margin-left: 1px !important;
     }
   `;
 
@@ -281,7 +313,14 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         transition: 'background-color 0.2s ease',
         // Override react-big-calendar's default selection styling
         outline: 'none !important',
-        boxShadow: 'none !important'
+        boxShadow: 'none !important',
+        // ✅ Better text wrapping and spacing
+        whiteSpace: 'normal' as 'normal',
+        wordBreak: 'break-word' as 'break-word',
+        lineHeight: '1.2',
+        minHeight: '20px',
+        overflow: 'visible' as 'visible',
+        textOverflow: 'clip' as 'clip'
       },
       className: 'travel-calendar-event'
     };

@@ -171,6 +171,367 @@ class PlanManager:
                 "metadata_updated": False
             }
     
+    async def generate_plan_from_tool_results(
+        self, 
+        session_id: str, 
+        tool_results: Dict[str, Any], 
+        destination: str, 
+        user_message: str,
+        intent: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate travel plan events directly from tool results (Fast non-LLM approach)
+        Moved from travel_agent to centralize plan generation logic
+        """
+        from datetime import datetime, timedelta
+        import uuid
+        
+        try:
+            logger.info(f"Generating plan from tool results for destination: {destination}")
+            
+            # Get existing plan
+            plan = self.get_plan_by_session(session_id)
+            if not plan:
+                logger.warning(f"No plan found for session {session_id}, creating new one")
+                plan_id = self.create_plan_for_session(session_id)
+                plan = self.get_plan_by_id(plan_id)
+            
+            # ✅ Extract duration from user intent or message, not hardcoded
+            duration = self._extract_trip_duration(user_message, intent)
+            travelers = self._extract_travelers_count(user_message, intent)
+            
+            # ✅ Extract dates from user message or use smart defaults
+            start_date = self._extract_trip_start_date(user_message, intent)
+            
+            logger.info(f"Plan parameters: destination={destination}, duration={duration}, travelers={travelers}, start_date={start_date}")
+            
+            # Generate events from tool results
+            events = self._create_events_from_tools(
+                tool_results, 
+                destination, 
+                start_date, 
+                duration, 
+                travelers, 
+                user_message
+            )
+            
+            # Update plan metadata
+            plan.metadata.update({
+                "destination": destination,
+                "duration": duration,
+                "start_date": start_date.strftime("%Y-%m-%d"),
+                "end_date": (start_date + timedelta(days=duration)).strftime("%Y-%m-%d"),
+                "travelers": travelers,
+                "budget_estimate": {"currency": "USD", "amount": self._estimate_budget(duration, travelers)},
+                "generation_method": "fast_tool_based",
+                "generated_at": datetime.now().isoformat()
+            })
+            
+            # Add events to plan
+            events_added = 0
+            for event in events:
+                plan.events.append(event)
+                events_added += 1
+            
+            # Save plan
+            self._save_plan(plan)
+            
+            logger.info(f"Generated {events_added} events for {duration}-day trip to {destination}")
+            
+            return {
+                "success": True,
+                "changes_made": [f"Generated {events_added} events from tool results"],
+                "events_added": events_added,
+                "events_updated": 0,
+                "events_deleted": 0,
+                "metadata_updated": True,
+                "plan_generation_method": "fast_tool_based",
+                "duration": duration,
+                "travelers": travelers
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate plan from tool results: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "changes_made": []
+            }
+
+    def _extract_trip_duration(self, user_message: str, intent: Dict[str, Any] = None) -> int:
+        """Extract trip duration from user message or intent, with smart defaults"""
+        import re
+        
+        # Try to extract from intent first
+        if intent and "travel_details" in intent:
+            duration = intent["travel_details"].get("duration")
+            if duration and isinstance(duration, (int, float)) and duration > 0:
+                return int(duration)
+        
+        # Extract from user message using regex
+        user_message_lower = user_message.lower()
+        
+        # Look for explicit day mentions
+        day_patterns = [
+            r'(\d+)[- ]days?',
+            r'(\d+)[- ]day trip',
+            r'for (\d+) days?',
+            r'spend (\d+) days?',
+            r'stay (\d+) days?'
+        ]
+        
+        for pattern in day_patterns:
+            match = re.search(pattern, user_message_lower)
+            if match:
+                duration = int(match.group(1))
+                if 1 <= duration <= 30:  # Reasonable range
+                    logger.info(f"Extracted duration from message: {duration} days")
+                    return duration
+        
+        # Look for week mentions
+        week_patterns = [
+            r'(\d+)[- ]weeks?',
+            r'for (\d+) weeks?',
+            r'spend (\d+) weeks?'
+        ]
+        
+        for pattern in week_patterns:
+            match = re.search(pattern, user_message_lower)
+            if match:
+                duration = int(match.group(1)) * 7
+                if duration <= 30:  # Max 30 days
+                    logger.info(f"Extracted duration from message: {duration} days ({match.group(1)} weeks)")
+                    return duration
+        
+        # Look for weekend/trip keywords
+        if any(word in user_message_lower for word in ['weekend', 'short trip', 'quick trip']):
+            logger.info("Detected weekend/short trip: defaulting to 3 days")
+            return 3
+        elif any(word in user_message_lower for word in ['vacation', 'holiday', 'long trip']):
+            logger.info("Detected vacation/holiday: defaulting to 7 days")
+            return 7
+        
+        # Default based on destination type or general default
+        logger.info("No duration specified, defaulting to 5 days")
+        return 5
+
+    def _extract_travelers_count(self, user_message: str, intent: Dict[str, Any] = None) -> int:
+        """Extract number of travelers from user message or intent"""
+        import re
+        
+        # Try to extract from intent first
+        if intent and "travel_details" in intent:
+            travelers = intent["travel_details"].get("travelers")
+            if travelers and isinstance(travelers, (int, float)) and travelers > 0:
+                return int(travelers)
+        
+        # Extract from user message
+        user_message_lower = user_message.lower()
+        
+        # Look for explicit numbers
+        patterns = [
+            r'for (\d+) people',
+            r'(\d+) travelers?',
+            r'(\d+) persons?',
+            r'(\d+) adults?',
+            r'group of (\d+)',
+            r'(\d+) of us'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, user_message_lower)
+            if match:
+                count = int(match.group(1))
+                if 1 <= count <= 20:  # Reasonable range
+                    logger.info(f"Extracted travelers count: {count}")
+                    return count
+        
+        # Look for couple/pair indicators
+        if any(word in user_message_lower for word in ['couple', 'romantic', 'honeymoon', 'anniversary', 'two of us', 'my partner']):
+            logger.info("Detected couple trip: 2 travelers")
+            return 2
+        
+        # Look for family indicators
+        if any(word in user_message_lower for word in ['family', 'kids', 'children']):
+            logger.info("Detected family trip: 4 travelers")
+            return 4
+        
+        # Default to solo travel
+        logger.info("No traveler count specified, defaulting to 1")
+        return 1
+
+    def _extract_trip_start_date(self, user_message: str, intent: Dict[str, Any] = None) -> datetime:
+        """Extract start date from user message or use smart default"""
+        from datetime import datetime, timedelta
+        import re
+        
+        # Try to extract from intent first
+        if intent and "travel_details" in intent and "dates" in intent["travel_details"]:
+            departure = intent["travel_details"]["dates"].get("departure")
+            if departure and departure != "unknown":
+                try:
+                    return datetime.strptime(departure, "%Y-%m-%d")
+                except:
+                    pass
+        
+        # For now, use a smart default (tomorrow + 1 week for planning)
+        default_start = datetime.now() + timedelta(days=7)
+        logger.info(f"Using default start date: {default_start.strftime('%Y-%m-%d')}")
+        return default_start
+
+    def _estimate_budget(self, duration: int, travelers: int) -> int:
+        """Estimate budget based on duration and travelers"""
+        base_per_day_per_person = 150  # $150 per day per person
+        total = base_per_day_per_person * duration * travelers
+        return max(500, min(total, 10000))  # Cap between $500-$10000
+
+    def _create_events_from_tools(
+        self, 
+        tool_results: Dict[str, Any], 
+        destination: str, 
+        start_date: datetime, 
+        duration: int, 
+        travelers: int,
+        user_message: str
+    ) -> List:
+        """Create calendar events from tool results with accurate timing"""
+        events = []
+        from datetime import timedelta
+        import uuid
+        
+        current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)
+        
+        try:
+            # Add flight events (outbound and return)
+            if "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                if hasattr(flight_result, 'flights') and len(flight_result.flights) > 0:
+                    # Outbound flight
+                    outbound_flight = flight_result.flights[0]
+                    outbound_time = current_time.replace(hour=10, minute=0)  # 10 AM departure
+                    
+                    events.append(self._create_calendar_event_from_data({
+                        "id": f"flight_outbound_{str(uuid.uuid4())[:8]}",
+                        "title": f"Flight to {destination}",
+                        "description": f"Flight details: {getattr(outbound_flight, 'airline', 'TBA')} - Duration: {getattr(outbound_flight, 'duration', 'TBA')} minutes",
+                        "event_type": "flight",
+                        "start_time": outbound_time.isoformat(),
+                        "end_time": (outbound_time + timedelta(hours=int(getattr(outbound_flight, 'duration', 360) / 60))).isoformat(),
+                        "location": f"Airport → {destination}",
+                        "details": {
+                            "source": "flight_search",
+                            "airline": getattr(outbound_flight, 'airline', 'TBA'),
+                            "price": {"amount": getattr(outbound_flight, 'price', 500), "currency": "USD"},
+                            "flight_number": getattr(outbound_flight, 'flight_number', 'TBA')
+                        }
+                    }))
+                    
+                    # Return flight (on last day)
+                    return_time = (start_date + timedelta(days=duration-1)).replace(hour=18, minute=0)
+                    if len(flight_result.flights) > 1:
+                        return_flight = flight_result.flights[1]
+                    else:
+                        return_flight = outbound_flight  # Use same flight as template
+                    
+                    events.append(self._create_calendar_event_from_data({
+                        "id": f"flight_return_{str(uuid.uuid4())[:8]}",
+                        "title": f"Return Flight",
+                        "description": f"Return flight: {getattr(return_flight, 'airline', 'TBA')}",
+                        "event_type": "flight",
+                        "start_time": return_time.isoformat(),
+                        "end_time": (return_time + timedelta(hours=int(getattr(return_flight, 'duration', 360) / 60))).isoformat(),
+                        "location": f"{destination} → Home",
+                        "details": {
+                            "source": "flight_search",
+                            "airline": getattr(return_flight, 'airline', 'TBA'),
+                            "price": {"amount": getattr(return_flight, 'price', 500), "currency": "USD"}
+                        }
+                    }))
+            
+            # Add hotel events (full duration - 1 day to account for departure)
+            if "hotel_search" in tool_results:
+                hotel_result = tool_results["hotel_search"]
+                if hasattr(hotel_result, 'hotels') and len(hotel_result.hotels) > 0:
+                    hotel = hotel_result.hotels[0]
+                    checkin_time = current_time.replace(hour=15, minute=0)  # 3 PM check-in
+                    checkout_time = (start_date + timedelta(days=duration-1)).replace(hour=11, minute=0)  # 11 AM checkout
+                    
+                    events.append(self._create_calendar_event_from_data({
+                        "id": f"hotel_stay_{str(uuid.uuid4())[:8]}",
+                        "title": f"Hotel: {getattr(hotel, 'name', 'Hotel in ' + destination)}",
+                        "description": f"Accommodation in {destination} for {duration-1} nights",
+                        "event_type": "hotel",
+                        "start_time": checkin_time.isoformat(),
+                        "end_time": checkout_time.isoformat(),
+                        "location": getattr(hotel, 'location', destination),
+                        "details": {
+                            "source": "hotel_search",
+                            "rating": getattr(hotel, 'rating', 4.0),
+                            "price_per_night": {"amount": getattr(hotel, 'price_per_night', 150), "currency": "USD"},
+                            "nights": duration - 1
+                        }
+                    }))
+            
+            # Add attraction events (spread across middle days)
+            if "attraction_search" in tool_results:
+                attraction_result = tool_results["attraction_search"]
+                if hasattr(attraction_result, 'attractions') and len(attraction_result.attractions) > 0:
+                    attractions = attraction_result.attractions[:min(3, duration-2)]  # Limit based on duration
+                    for i, attraction in enumerate(attractions):
+                        visit_day = start_date + timedelta(days=i+1)  # Start from day 2
+                        visit_time = visit_day.replace(hour=10 + i*2, minute=0)  # 10 AM, 12 PM, 2 PM
+                        
+                        events.append(self._create_calendar_event_from_data({
+                            "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
+                            "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
+                            "description": getattr(attraction, 'category', 'Sightseeing activity'),
+                            "event_type": "attraction",
+                            "start_time": visit_time.isoformat(),
+                            "end_time": (visit_time + timedelta(hours=2)).isoformat(),
+                            "location": getattr(attraction, 'location', destination),
+                            "details": {
+                                "source": "attraction_search",
+                                "rating": getattr(attraction, 'rating', 4.5),
+                                "category": getattr(attraction, 'category', 'Tourism')
+                            }
+                        }))
+            
+            # Add default activities if no specific events were created
+            if len(events) <= 2:  # Only flights
+                for i in range(min(3, duration-1)):
+                    day = start_date + timedelta(days=i+1)
+                    event_time = day.replace(hour=10 + i*3, minute=0)
+                    events.append(self._create_calendar_event_from_data({
+                        "id": f"activity_{i+1}_{str(uuid.uuid4())[:8]}",
+                        "title": f"Explore {destination} - Day {i+1}",
+                        "description": f"Discover the best of {destination}",
+                        "event_type": "activity",
+                        "start_time": event_time.isoformat(),
+                        "end_time": (event_time + timedelta(hours=3)).isoformat(),
+                        "location": destination,
+                        "details": {
+                            "source": "default_generation",
+                            "recommendations": ["Bring camera", "Wear comfortable shoes"]
+                        }
+                    }))
+            
+            logger.info(f"Created {len(events)} events for {duration}-day trip")
+            return events
+            
+        except Exception as e:
+            logger.error(f"Error creating events from tool results: {e}")
+            # Return basic fallback event
+            return [self._create_calendar_event_from_data({
+                "id": f"basic_trip_{str(uuid.uuid4())[:8]}",
+                "title": f"Trip to {destination}",
+                "description": f"{duration}-day travel to {destination}",
+                "event_type": "activity",
+                "start_time": current_time.isoformat(),
+                "end_time": (current_time + timedelta(hours=4)).isoformat(),
+                "location": destination,
+                "details": {"source": "fallback_generation"}
+            })]
+
     async def update_plan_from_structured_response(
         self, 
         session_id: str, 

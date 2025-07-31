@@ -2545,7 +2545,7 @@ Please analyze the current message considering the conversation history for bett
         return requirements
 
     async def _execute_action_plan(
-        self, plan: Dict[str, Any], context: Dict[str, Any]
+        self, plan: Dict[str, Any], context: Dict[str, Any], session_id: str = None
     ) -> Dict[str, Any]:
         """Execute action plan using real tools and retrieve knowledge context"""
         results = {
@@ -4453,7 +4453,7 @@ This will help me provide you with the most relevant travel guidance possible.""
     async def _generate_plan_aware_response(
         self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
     ) -> AgentResponse:
-        """Generate structured plan data directly from tool results (Fast non-LLM approach)"""
+        """Generate structured plan data using plan_manager (Centralized approach)"""
         try:
             # Extract key information
             intent_type = intent.get("type") or intent.get("intent_type", "planning")
@@ -4467,57 +4467,56 @@ This will help me provide you with the most relevant travel guidance possible.""
             
             logger.info(f"Generating plan-aware response for destination: {destination_name}")
             
-            # ✅ Fast approach: Create events directly from tool results
-            plan_events = self._create_events_from_tool_results(tool_results, destination_name, user_message)
+            # ✅ Use plan_manager for centralized plan generation
+            from app.core.plan_manager import get_plan_manager
+            plan_manager = get_plan_manager()
             
-            logger.info(f"Fast plan generation successful: {len(plan_events)} events")
+            # Note: session_id should be passed from execution_result metadata
+            session_id = execution_result.get("session_id", "unknown")
             
-            # Create simple structured plan metadata
-            from datetime import datetime, timedelta
-            today = datetime.now()
+            # Generate plan using plan_manager
+            plan_result = await plan_manager.generate_plan_from_tool_results(
+                session_id=session_id,
+                tool_results=tool_results,
+                destination=destination_name,
+                user_message=user_message,
+                intent=intent
+            )
             
-            structured_plan = {
-                "destination": destination_name,
-                "duration": 7,  # Default 7 days
-                "start_date": today.strftime("%Y-%m-%d"),
-                "end_date": (today + timedelta(days=7)).strftime("%Y-%m-%d"),
-                "travelers": intent.get("travel_details", {}).get("travelers", 2),
-                "budget_estimate": {"currency": "USD", "amount": 2000},
-                "metadata": {
-                    "travel_style": "moderate",
-                    "generated_at": datetime.now().isoformat(),
-                    "generation_method": "fast_tool_based"
-                }
-            }
+            events_count = plan_result.get("events_added", 0)
+            duration = plan_result.get("duration", 5)
+            travelers = plan_result.get("travelers", 1)
+            
+            logger.info(f"Plan generation via plan_manager: {events_count} events for {duration}-day trip")
             
             # Create natural response
-            natural_response = self._create_natural_plan_response(destination_name, plan_events, tool_results)
+            natural_response = self._create_natural_plan_response(destination_name, events_count, duration, travelers, tool_results)
             
             # Create enhanced AgentResponse with structured plan data
             response = AgentResponse(
-                success=True,
+                success=plan_result.get("success", False),
                 content=natural_response,
                 actions_taken=execution_result.get("actions", []),
                 next_steps=execution_result.get("next_steps", []),
                 confidence=0.88,
-                structured_plan=structured_plan,
-                plan_events=plan_events,
+                plan_events=[],  # Events are now managed by plan_manager
                 metadata={
                     **execution_result,
                     "intent": intent,
                     "response_type": "structured_plan",
-                    "plan_generation_method": "fast_tool_based",
+                    "plan_generation_method": "plan_manager_based",
                     "destination": destination_name,
                     "intent_type": intent_type,
-                    "plan_events_count": len(plan_events)
+                    "plan_events_count": events_count,
+                    "plan_result": plan_result
                 }
             )
             
-            logger.info(f"Plan-aware response generated successfully: {len(plan_events)} events")
+            logger.info(f"Plan-aware response generated successfully: {events_count} events")
             return response
             
         except Exception as e:
-            logger.error(f"Failed to generate fast plan: {e}")
+            logger.error(f"Failed to generate plan via plan_manager: {e}")
             # Emergency fallback
             return AgentResponse(
                 success=False,
@@ -4652,30 +4651,39 @@ This will help me provide you with the most relevant travel guidance possible.""
             }]
     
     def _create_natural_plan_response(
-        self, destination: str, events: List[Dict], tool_results: Dict[str, Any]
+        self, destination: str, event_count: int, duration: int, travelers: int, tool_results: Dict[str, Any]
     ) -> str:
         """Create a natural language description of the generated plan"""
-        event_count = len(events)
-        
-        # Count event types
-        flight_events = len([e for e in events if e.get("event_type") == "flight"])
-        hotel_events = len([e for e in events if e.get("event_type") == "hotel"]) 
-        attraction_events = len([e for e in events if e.get("event_type") == "attraction"])
-        activity_events = len([e for e in events if e.get("event_type") == "activity"])
         
         response = f"🗺️ **Your {destination} Travel Plan is Ready!**\n\n"
-        response += f"I've created a detailed {event_count}-event itinerary for your trip to {destination}.\n\n"
+        response += f"I've created a detailed {duration}-day itinerary with {event_count} events for "
         
-        if flight_events > 0:
-            response += f"✈️ **Flights**: {flight_events} flight{'s' if flight_events > 1 else ''} scheduled\n"
-        if hotel_events > 0:
-            response += f"🏨 **Accommodation**: {hotel_events} hotel stay{'s' if hotel_events > 1 else ''} arranged\n"
-        if attraction_events > 0:
-            response += f"🎯 **Attractions**: {attraction_events} sightseeing activit{'ies' if attraction_events > 1 else 'y'} planned\n"
-        if activity_events > 0:
-            response += f"🌟 **Activities**: {activity_events} experience{'s' if activity_events > 1 else ''} included\n"
+        if travelers == 1:
+            response += "your solo trip"
+        elif travelers == 2:
+            response += "your couple's trip" 
+        else:
+            response += f"your group of {travelers}"
+            
+        response += f" to {destination}.\n\n"
         
-        response += f"\n📅 **Check your calendar** to see the complete schedule with times, locations, and details!\n"
+        # Add tool-specific highlights
+        if "hotel_search" in tool_results:
+            hotel_result = tool_results["hotel_search"]
+            if hasattr(hotel_result, 'hotels') and len(hotel_result.hotels) > 0:
+                response += f"🏨 **Accommodation**: Found {len(hotel_result.hotels)} hotel options\n"
+        
+        if "flight_search" in tool_results:
+            flight_result = tool_results["flight_search"]
+            if hasattr(flight_result, 'flights') and len(flight_result.flights) > 0:
+                response += f"✈️ **Flights**: Found {len(flight_result.flights)} flight options\n"
+        
+        if "attraction_search" in tool_results:
+            attraction_result = tool_results["attraction_search"]
+            if hasattr(attraction_result, 'attractions') and len(attraction_result.attractions) > 0:
+                response += f"🎯 **Attractions**: Found {len(attraction_result.attractions)} local attractions\n"
+        
+        response += f"\n📅 **Check your calendar** to see the complete {duration}-day schedule with times, locations, and details!\n"
         response += f"💡 You can chat with me to modify any part of your itinerary."
         
         return response
