@@ -215,23 +215,22 @@ class PlanManager:
                 user_message
             )
             
-            # Update plan metadata
-            plan.metadata.update({
-                "destination": destination,
-                "duration": duration,
-                "start_date": start_date.strftime("%Y-%m-%d"),
-                "end_date": (start_date + timedelta(days=duration)).strftime("%Y-%m-%d"),
-                "travelers": travelers,
-                "budget_estimate": {"currency": "USD", "amount": self._estimate_budget(duration, travelers)},
-                "generation_method": "fast_tool_based",
-                "generated_at": datetime.now().isoformat()
-            })
+            # Update plan metadata (TravelPlanMetadata is a Pydantic model, not a dict)
+            plan.metadata.destination = destination
+            plan.metadata.duration_days = duration
+            plan.metadata.travelers = travelers
+            plan.metadata.budget = self._estimate_budget(duration, travelers)
+            plan.metadata.budget_currency = "USD"
+            plan.metadata.last_updated = datetime.now()
+            plan.metadata.completion_status = "complete"
+            plan.metadata.confidence = 0.88
             
-            # Add events to plan
+            # Add events to plan (filter out None events)
             events_added = 0
             for event in events:
-                plan.events.append(event)
-                events_added += 1
+                if event is not None:  # _create_calendar_event_from_data can return None
+                    plan.events.append(event)
+                    events_added += 1
             
             # Save plan
             self._save_plan(plan)
@@ -410,7 +409,7 @@ class PlanManager:
                     outbound_flight = flight_result.flights[0]
                     outbound_time = current_time.replace(hour=10, minute=0)  # 10 AM departure
                     
-                    events.append(self._create_calendar_event_from_data({
+                    event = self._create_calendar_event_from_data({
                         "id": f"flight_outbound_{str(uuid.uuid4())[:8]}",
                         "title": f"Flight to {destination}",
                         "description": f"Flight details: {getattr(outbound_flight, 'airline', 'TBA')} - Duration: {getattr(outbound_flight, 'duration', 'TBA')} minutes",
@@ -424,7 +423,9 @@ class PlanManager:
                             "price": {"amount": getattr(outbound_flight, 'price', 500), "currency": "USD"},
                             "flight_number": getattr(outbound_flight, 'flight_number', 'TBA')
                         }
-                    }))
+                    })
+                    if event:
+                        events.append(event)
                     
                     # Return flight (on last day)
                     return_time = (start_date + timedelta(days=duration-1)).replace(hour=18, minute=0)
@@ -433,7 +434,7 @@ class PlanManager:
                     else:
                         return_flight = outbound_flight  # Use same flight as template
                     
-                    events.append(self._create_calendar_event_from_data({
+                    event = self._create_calendar_event_from_data({
                         "id": f"flight_return_{str(uuid.uuid4())[:8]}",
                         "title": f"Return Flight",
                         "description": f"Return flight: {getattr(return_flight, 'airline', 'TBA')}",
@@ -446,7 +447,9 @@ class PlanManager:
                             "airline": getattr(return_flight, 'airline', 'TBA'),
                             "price": {"amount": getattr(return_flight, 'price', 500), "currency": "USD"}
                         }
-                    }))
+                    })
+                    if event:
+                        events.append(event)
             
             # Add hotel events (full duration - 1 day to account for departure)
             if "hotel_search" in tool_results:
@@ -456,7 +459,7 @@ class PlanManager:
                     checkin_time = current_time.replace(hour=15, minute=0)  # 3 PM check-in
                     checkout_time = (start_date + timedelta(days=duration-1)).replace(hour=11, minute=0)  # 11 AM checkout
                     
-                    events.append(self._create_calendar_event_from_data({
+                    event = self._create_calendar_event_from_data({
                         "id": f"hotel_stay_{str(uuid.uuid4())[:8]}",
                         "title": f"Hotel: {getattr(hotel, 'name', 'Hotel in ' + destination)}",
                         "description": f"Accommodation in {destination} for {duration-1} nights",
@@ -470,7 +473,9 @@ class PlanManager:
                             "price_per_night": {"amount": getattr(hotel, 'price_per_night', 150), "currency": "USD"},
                             "nights": duration - 1
                         }
-                    }))
+                    })
+                    if event:
+                        events.append(event)
             
             # Add attraction events (spread across middle days)
             if "attraction_search" in tool_results:
@@ -481,7 +486,7 @@ class PlanManager:
                         visit_day = start_date + timedelta(days=i+1)  # Start from day 2
                         visit_time = visit_day.replace(hour=10 + i*2, minute=0)  # 10 AM, 12 PM, 2 PM
                         
-                        events.append(self._create_calendar_event_from_data({
+                        event = self._create_calendar_event_from_data({
                             "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
                             "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
                             "description": getattr(attraction, 'category', 'Sightseeing activity'),
@@ -494,14 +499,16 @@ class PlanManager:
                                 "rating": getattr(attraction, 'rating', 4.5),
                                 "category": getattr(attraction, 'category', 'Tourism')
                             }
-                        }))
+                        })
+                        if event:
+                            events.append(event)
             
             # Add default activities if no specific events were created
             if len(events) <= 2:  # Only flights
                 for i in range(min(3, duration-1)):
                     day = start_date + timedelta(days=i+1)
                     event_time = day.replace(hour=10 + i*3, minute=0)
-                    events.append(self._create_calendar_event_from_data({
+                    event = self._create_calendar_event_from_data({
                         "id": f"activity_{i+1}_{str(uuid.uuid4())[:8]}",
                         "title": f"Explore {destination} - Day {i+1}",
                         "description": f"Discover the best of {destination}",
@@ -513,7 +520,9 @@ class PlanManager:
                             "source": "default_generation",
                             "recommendations": ["Bring camera", "Wear comfortable shoes"]
                         }
-                    }))
+                    })
+                    if event:
+                        events.append(event)
             
             logger.info(f"Created {len(events)} events for {duration}-day trip")
             return events
@@ -521,7 +530,7 @@ class PlanManager:
         except Exception as e:
             logger.error(f"Error creating events from tool results: {e}")
             # Return basic fallback event
-            return [self._create_calendar_event_from_data({
+            fallback_event = self._create_calendar_event_from_data({
                 "id": f"basic_trip_{str(uuid.uuid4())[:8]}",
                 "title": f"Trip to {destination}",
                 "description": f"{duration}-day travel to {destination}",
@@ -530,7 +539,8 @@ class PlanManager:
                 "end_time": (current_time + timedelta(hours=4)).isoformat(),
                 "location": destination,
                 "details": {"source": "fallback_generation"}
-            })]
+            })
+            return [fallback_event] if fallback_event else []
 
     async def update_plan_from_structured_response(
         self, 
@@ -879,7 +889,7 @@ If no changes are needed, return empty arrays for each section."""
                 return None
             
             event = CalendarEvent(
-                id=f"event_{uuid.uuid4().hex[:8]}",
+                id=event_data.get("id", f"event_{uuid.uuid4().hex[:8]}"),
                 title=event_data.get("title", "Travel Event"),
                 description=event_data.get("description"),
                 event_type=event_type,
