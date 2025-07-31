@@ -76,7 +76,7 @@ class BaseLLMService(ABC):
         self,
         messages: List[Dict[str, str]],
         response_schema: Dict[str, Any],
-        max_retries: int = 2,  # Reduced retries for performance
+        max_retries: int = 1, 
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -89,8 +89,8 @@ class BaseLLMService(ABC):
         enhanced_messages = self._add_schema_instruction(messages, schema_instruction)
 
         # Set optimal parameters for structured output
-        kwargs.setdefault('temperature', 0.1)  # Lower temperature for more consistent JSON
-        kwargs.setdefault('max_tokens', 800)   # Reasonable limit for structured responses
+        kwargs.setdefault('temperature', 0.05)  # Lower temperature for more consistent JSON
+        kwargs.setdefault('max_tokens', 1200)   # Reasonable limit for structured responses
 
         for attempt in range(max_retries):
             try:
@@ -288,6 +288,21 @@ class BaseLLMService(ABC):
             
         if "selected_tools" in fallback:
             fallback["selected_tools"] = ["attraction_search"]  # Safe default
+        
+        # Special handling for plan generation schema
+        if "natural_response" in fallback:
+            fallback["natural_response"] = "I've created a travel plan based on your request. Please see the structured plan details below."
+        
+        if "structured_plan" in fallback:
+            fallback["structured_plan"] = {
+                "destination": "Unknown",
+                "duration": 3,
+                "travelers": 2,
+                "budget_estimate": {"currency": "USD", "amount": 1000}
+            }
+        
+        if "plan_events" in fallback:
+            fallback["plan_events"] = []
             
         logger.info(f"Generated fallback response with {len(fallback)} fields")
         return fallback

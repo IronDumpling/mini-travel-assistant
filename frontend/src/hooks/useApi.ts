@@ -7,6 +7,7 @@ export const queryKeys = {
   sessions: ['sessions'] as const,
   chatHistory: (sessionId: string) => ['chatHistory', sessionId] as const,
   travelPlans: (sessionId: string) => ['travelPlans', sessionId] as const,
+  planStatus: (sessionId: string) => ['planStatus', sessionId] as const,
   systemHealth: ['systemHealth'] as const,
 };
 
@@ -112,6 +113,22 @@ export const useTravelPlans = (sessionId: string | null) => {
     },
     enabled: !!sessionId,
     staleTime: 30000, // 30 seconds
+  });
+};
+
+// Plan generation status hook
+export const usePlanGenerationStatus = (sessionId: string | null) => {
+  return useQuery({
+    queryKey: queryKeys.planStatus(sessionId || ''),
+    queryFn: () => sessionId ? ApiService.getPlanGenerationStatus(sessionId) : null,
+    enabled: !!sessionId,
+    refetchInterval: (query) => {
+      // Stop polling if plan generation is completed or failed
+      if (!query.state.data || !sessionId) return false;
+      const status = query.state.data.plan_generation_status;
+      return (status === 'pending' || status === 'unknown') ? 2000 : false; // Poll every 2 seconds if pending
+    },
+    staleTime: 1000, // 1 second
   });
 };
 

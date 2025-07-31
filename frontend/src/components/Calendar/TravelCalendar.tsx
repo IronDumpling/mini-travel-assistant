@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, Plane, Hotel, Camera, Star } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, Plane, Hotel, Camera, Star, Loader2 } from 'lucide-react';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addDays, startOfDay, addHours } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import { useTravelPlans } from '../../hooks/useApi';
+import { useTravelPlans, usePlanGenerationStatus } from '../../hooks/useApi';
 import type { TravelPlan, SessionTravelPlan } from '../../types/api';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -29,6 +29,12 @@ const EventComponent = ({ event }: { event: any }) => {
       case 'flight': return <Plane className="w-3 h-3" />;
       case 'hotel': return <Hotel className="w-3 h-3" />;
       case 'attraction': return <Camera className="w-3 h-3" />;
+      case 'restaurant':
+      case 'meal': return <Star className="w-3 h-3" />; // Star icon for food-related events
+      case 'transportation': return <Plane className="w-3 h-3" />; // Reuse plane for transport
+      case 'activity': return <Camera className="w-3 h-3" />; // Similar to attractions
+      case 'meeting': return <Clock className="w-3 h-3" />;
+      case 'free_time': return <Clock className="w-3 h-3" />;
       default: return <MapPin className="w-3 h-3" />;
     }
   };
@@ -41,8 +47,35 @@ const EventComponent = ({ event }: { event: any }) => {
   );
 };
 
+// Utility function for safe datetime parsing
+const parseDateTime = (dateString: string): Date => {
+  // Standardize datetime format handling
+  let normalizedDate = dateString;
+  
+  // If space-separated format, convert to standard ISO format
+  if (dateString.includes(' ') && !dateString.includes('T')) {
+    normalizedDate = dateString.replace(' ', 'T');
+  }
+  
+  // Ensure timezone information is present
+  if (!normalizedDate.includes('+') && !normalizedDate.includes('Z')) {
+    normalizedDate += '+00:00';
+  }
+  
+  const date = new Date(normalizedDate);
+  
+  // Validate date validity
+  if (isNaN(date.getTime())) {
+    console.error('Invalid date format:', dateString, 'using current time as fallback');
+    return new Date(); // Return current time as fallback
+  }
+  
+  return date;
+};
+
 export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => {
   const { data: travelPlans, isLoading } = useTravelPlans(sessionId);
+  const { data: planStatus } = usePlanGenerationStatus(sessionId);
 
   // Add custom styles for hover effects
   const customStyles = `
@@ -108,8 +141,8 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             const startField = (event as any).start_time || (event as any).start;
             const endField = (event as any).end_time || (event as any).end;
             
-            const startDate = new Date(startField);
-            const endDate = new Date(endField);
+            const startDate = parseDateTime(startField);
+            const endDate = parseDateTime(endField);
             
             // Validate that dates are valid
             if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
@@ -149,8 +182,8 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
       plansArray.forEach((plan: TravelPlan) => {
         // Add flights
         plan.flights?.forEach((flight: any, index: number) => {
-          const departureTime = new Date(flight.departure_time);
-          const arrivalTime = new Date(flight.arrival_time);
+          const departureTime = parseDateTime(flight.departure_time);
+          const arrivalTime = parseDateTime(flight.arrival_time);
           
           events.push({
             id: `flight-${plan.id}-${index}`,
@@ -205,28 +238,35 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
   const eventStyleGetter = (event: any) => {
     let backgroundColor = '#3174ad';
     let color = 'white';
-    let hoverColor; // Default hover color (gray-700)
 
     switch (event.type) {
       case 'flight':
         backgroundColor = '#2563eb'; // blue
-        hoverColor = '#1d4ed8'; // darker blue on hover
         break;
       case 'hotel':
         backgroundColor = '#16a34a'; // green
-        hoverColor = '#15803d'; // darker green on hover
         break;
       case 'attraction':
         backgroundColor = '#9333ea'; // purple
-        hoverColor = '#7c3aed'; // darker purple on hover
         break;
       case 'restaurant':
-        backgroundColor = '#ea580c'; // orange
-        hoverColor = '#dc2626'; // red on hover
+      case 'meal':
+        backgroundColor = '#ea580c'; // orange for food-related events
+        break;
+      case 'transportation':
+        backgroundColor = '#0ea5e9'; // sky blue
+        break;
+      case 'activity':
+        backgroundColor = '#8b5cf6'; // violet
+        break;
+      case 'meeting':
+        backgroundColor = '#ef4444'; // red
+        break;
+      case 'free_time':
+        backgroundColor = '#10b981'; // emerald
         break;
       default:
         backgroundColor = '#6b7280'; // gray
-        hoverColor = '#4b5563'; // darker gray on hover
     }
 
     return {
@@ -259,6 +299,10 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     );
   }
 
+  // Check if plan is being generated
+  const isPlanGenerating = planStatus?.plan_generation_status === 'pending';
+  const planGenerationFailed = planStatus?.plan_generation_status === 'failed';
+
   return (
     <div className="w-[1000px] bg-white border-l border-gray-200 flex flex-col h-full">
       <style>{customStyles}</style>
@@ -267,6 +311,9 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
       <div className="flex-shrink-0 p-4 border-b border-gray-200">
         <div className="flex items-center gap-2 mb-3">
           <CalendarIcon className="w-5 h-5 text-blue-600" />
+          {isPlanGenerating && (
+            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+          )}
           <h2 className="font-semibold text-gray-900">Travel Schedule</h2>
         </div>
         
@@ -276,7 +323,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         
         {/* Legend */}
         <div className="mt-3 space-y-1">
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-blue-600 rounded"></div>
               <span>Flights</span>
@@ -288,6 +335,18 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-purple-600 rounded"></div>
               <span>Attractions</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-orange-600 rounded"></div>
+              <span>Meals</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-sky-500 rounded"></div>
+              <span>Transport</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-violet-500 rounded"></div>
+              <span>Activities</span>
             </div>
           </div>
         </div>
@@ -305,11 +364,31 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         ) : calendarEvents.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500 p-6">
-              <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <h3 className="font-medium mb-2">No Plans Yet</h3>
-              <p className="text-sm">
-                Start chatting to create your travel itinerary
-              </p>
+              {isPlanGenerating ? (
+                <>
+                  <Loader2 className="w-12 h-12 mx-auto mb-4 opacity-50 animate-spin" />
+                  <h3 className="font-medium mb-2">Generating Travel Plan</h3>
+                  <p className="text-sm">
+                    Creating your itinerary based on the conversation...
+                  </p>
+                </>
+              ) : planGenerationFailed ? (
+                <>
+                  <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2 text-red-600">Plan Generation Failed</h3>
+                  <p className="text-sm">
+                    {planStatus?.plan_generation_error || 'Failed to generate travel plan'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2">No Plans Yet</h3>
+                  <p className="text-sm">
+                    Start chatting to create your travel itinerary
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : (

@@ -16,6 +16,85 @@ import asyncio
 
 logger = get_logger(__name__)
 
+async def _async_update_plan(session_id: str, user_message: str, agent_response):
+    """Asynchronously update plan in background without blocking chat response"""
+    try:
+        from app.core.plan_manager import get_plan_manager
+        plan_manager = get_plan_manager()
+        
+        # Check if this is a plan request that needs detailed generation
+        is_plan_request = agent_response.metadata.get("is_plan_request", False)
+        
+        if is_plan_request:
+            # Now generating detailed plan in the background
+            logger.info(f"Background: Generating detailed plan for session {session_id}")
+            
+            # Get the execution_result passed
+            execution_result = agent_response.metadata.get("execution_result_for_plan", {})
+            intent = agent_response.metadata.get("intent", {})
+            
+            if execution_result:
+                # Use travel_agent's LLM plan generation capabilities
+                from app.agents.travel_agent import get_travel_agent
+                travel_agent = get_travel_agent()
+                
+                # Generate detailed structured plan
+                detailed_plan_response = await travel_agent._generate_plan_aware_response(
+                    execution_result, intent, user_message
+                )
+                
+                # Use detailed plan update
+                plan_update_result = await plan_manager.update_plan_from_structured_response(
+                    session_id=session_id,
+                    agent_response=detailed_plan_response
+                )
+            else:
+                # If no execution_result, fall back to basic response parsing
+                plan_update_result = await plan_manager.update_plan_from_chat_response(
+                    session_id=session_id,
+                    user_message=user_message,
+                    agent_response=agent_response.content,
+                    response_metadata=agent_response.metadata or {}
+                )
+        else:
+            # Standard plan update for non-plan requests
+            logger.info(f"Background: Standard plan update for session {session_id}")
+            plan_update_result = await plan_manager.update_plan_from_chat_response(
+                session_id=session_id,
+                user_message=user_message,
+                agent_response=agent_response.content,
+                response_metadata=agent_response.metadata or {}
+            )
+        
+        logger.info(f"Background plan update completed for session {session_id}: {plan_update_result}")
+        
+        # Update session with plan generation status
+        from app.memory.session_manager import get_session_manager
+        session_manager = get_session_manager()
+        session_manager.update_session_context(
+            session_id=session_id,
+            context_updates={
+                "plan_generation_status": "completed",
+                "plan_update_result": plan_update_result
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Background plan update failed for session {session_id}: {e}")
+        # Update session with error status
+        try:
+            from app.memory.session_manager import get_session_manager
+            session_manager = get_session_manager()
+            session_manager.update_session_context(
+                session_id=session_id,
+                context_updates={
+                    "plan_generation_status": "failed",
+                    "plan_generation_error": str(e)
+                }
+            )
+        except Exception as update_error:
+            logger.error(f"Failed to update session status: {update_error}")
+
 router = APIRouter()
 
 class ChatMessage(BaseModel):
@@ -132,39 +211,20 @@ async def chat_with_agent(message: ChatMessage):
         else:
             response = await agent.process_message(agent_message)
 
-        # Update plan based on chat response (before storing)
-        # Prioritize structured plan data when available
-        plan_update_result = None
+        # Schedule plan generation asynchronously (non-blocking)
+        plan_update_result = {"success": True, "status": "scheduled", "changes_made": ["Plan generation scheduled"]}
         try:
-            from app.core.plan_manager import get_plan_manager
-            plan_manager = get_plan_manager()
-            
-            # Check if response has structured plan data
-            if (hasattr(response, 'structured_plan') and response.structured_plan) or \
-               (hasattr(response, 'plan_events') and response.plan_events):
-                # Use structured plan data for direct, accurate updates
-                logger.info(f"Using structured plan data for session {message.session_id}")
-                plan_update_result = await plan_manager.update_plan_from_structured_response(
-                    session_id=message.session_id,
-                    agent_response=response
-                )
-            else:
-                # Fallback to LLM-based parsing of natural language response
-                logger.info(f"Using LLM-based plan parsing for session {message.session_id}")
-                plan_update_result = await plan_manager.update_plan_from_chat_response(
-                    session_id=message.session_id,
-                    user_message=message.message,
-                    agent_response=response.content,
-                    response_metadata=response.metadata or {}
-                )
-            
-            logger.info(f"Plan update result for session {message.session_id}: {plan_update_result}")
+            # Schedule background plan update without waiting
+            asyncio.create_task(
+                _async_update_plan(message.session_id, message.message, response)
+            )
+            logger.info(f"Plan update scheduled for session {message.session_id}")
             
         except Exception as e:
-            logger.error(f"Failed to update plan from chat response: {e}")
+            logger.error(f"Failed to schedule plan update for session {message.session_id}: {e}")
             plan_update_result = {
                 "success": False,
-                "error": f"Plan update failed: {str(e)}",
+                "error": f"Plan scheduling failed: {str(e)}",
                 "changes_made": []
             }
         
@@ -344,34 +404,33 @@ async def clear_chat_history(session_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear chat history: {str(e)}") 
 
-# ===== Helper Functions =====
-
-async def _update_plan_async(
-    session_id: str, 
-    user_message: str, 
-    agent_response: str, 
-    response_metadata: Dict[str, Any]
-) -> None:
+@router.get("/chat/plan-status/{session_id}")
+async def get_plan_generation_status(session_id: str):
     """
-    Asynchronously update travel plan based on chat response.
-    This runs in the background after the chat response is sent to user.
+    Get plan generation status for a specific session
     """
     try:
-        from app.core.plan_manager import get_plan_manager
-        plan_manager = get_plan_manager()
+        from app.memory.session_manager import get_session_manager
+        session_manager = get_session_manager()
         
-        success = await plan_manager.update_plan_from_chat_response(
-            session_id=session_id,
-            user_message=user_message,
-            agent_response=agent_response,
-            response_metadata=response_metadata
-        )
+        session = session_manager.sessions.get(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
         
-        if success:
-            logger.info(f"✅ Successfully updated plan for session {session_id}")
-        else:
-            logger.debug(f"No plan updates needed for session {session_id}")
-            
+        # Get plan generation status from travel context
+        plan_status = session.travel_context.get("plan_generation_status", "unknown")
+        plan_error = session.travel_context.get("plan_generation_error")
+        plan_result = session.travel_context.get("plan_update_result", {})
+        
+        return {
+            "session_id": session_id,
+            "plan_generation_status": plan_status,
+            "plan_generation_error": plan_error,
+            "plan_update_result": plan_result,
+            "last_updated": session.last_activity.isoformat() if session.last_activity else None
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Background plan update failed for session {session_id}: {e}")
-        # Don't raise - this is a background task and shouldn't affect chat response
+        raise HTTPException(status_code=500, detail=f"Failed to get plan status: {str(e)}")

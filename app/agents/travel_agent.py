@@ -3566,6 +3566,50 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.error(f"❌ Invalid destination '{city_name}' - cannot convert to IATA code")
             return ''  # Return empty string to indicate invalid destination
         
+        # Region/Continent to major cities mapping
+        region_to_cities = {
+            'europe': 'london',      # Default to London for Europe
+            'european': 'london',
+            'asia': 'tokyo',         # Default to Tokyo for Asia
+            'asian': 'tokyo',
+            'north america': 'new york',  # Default to NYC for North America
+            'north american': 'new york',
+            'south america': 'sao paulo', # Default to Sao Paulo for South America
+            'south american': 'sao paulo',
+            'africa': 'johannesburg', # Default to Johannesburg for Africa
+            'african': 'johannesburg',
+            'oceania': 'sydney',     # Default to Sydney for Oceania
+            'middle east': 'dubai',  # Default to Dubai for Middle East
+            'middle eastern': 'dubai',
+            # Country-level mappings to major cities
+            'france': 'paris',
+            'germany': 'berlin', 
+            'italy': 'rome',
+            'spain': 'barcelona',
+            'netherlands': 'amsterdam',
+            'austria': 'vienna',
+            'czech republic': 'prague',
+            'hungary': 'budapest',
+            'united kingdom': 'london',
+            'england': 'london',
+            'scotland': 'edinburgh',
+            'ireland': 'dublin',
+            'switzerland': 'zurich',
+            'belgium': 'brussels',
+            'poland': 'warsaw',
+            'sweden': 'stockholm',
+            'norway': 'oslo',
+            'denmark': 'copenhagen',
+            'finland': 'helsinki'
+        }
+        
+        # Normalize input and check for region mapping first
+        normalized_input = city_name.lower().strip()
+        if normalized_input in region_to_cities:
+            mapped_city = region_to_cities[normalized_input]
+            logger.info(f"🗺️ Mapped region '{city_name}' to city '{mapped_city}'")
+            city_name = mapped_city  # Replace the region with the mapped city
+        
         # City to IATA code mapping based on the provided list
         city_to_iata = {
             'amsterdam': 'AMS',
@@ -4258,13 +4302,13 @@ This will help me provide you with the most relevant travel guidance possible.""
             # Check if this is a plan request
             is_plan_request = self._is_plan_request(user_message) or intent_type in ["planning", "modification"]
             
-            # If it's a plan request, generate structured plan data
-            if is_plan_request:
-                return await self._generate_plan_aware_response(
-                    execution_result, intent, user_message
-                )
+            # Plan generation will be done in the background
             
-            # For non-plan requests, use existing logic
+            # Generate quick response content for all requests
+            content = self._build_quick_response_content(
+                intent_type, destination, tools_used, tool_results, user_message, is_plan_request
+            )
+            
             # Determine response success based on whether we can provide useful content
             has_useful_content = (
                 destination != "unknown" or 
@@ -4272,27 +4316,10 @@ This will help me provide you with the most relevant travel guidance possible.""
                 intent_type in ["query", "recommendation", "planning"]
             )
             
-            # Generate content using templates based on intent and results
-            if execution_success and tool_results:
-                content = self._build_structured_content(
-                    intent_type, destination, tools_used, tool_results, user_message
-                )
-                confidence = 0.87
-                response_success = True
-            elif has_useful_content:
-                # Generate helpful content even when tools partially fail
-                content = self._build_mixed_content(
-                    intent_type, destination, tools_used, tool_results, user_message
-                )
-                confidence = 0.75
-                response_success = True  # We can still help the user
-            else:
-                # Handle true error cases with fallback content
-                content = self._build_fallback_content(intent_type, destination, user_message)
-                confidence = 0.6
-                response_success = False
+            # Create fast response with plan generation metadata
+            response_success = execution_success or bool(tool_results) or has_useful_content
+            confidence = 0.85 if execution_success else 0.75
             
-            # Create response with structured metadata
             response = AgentResponse(
                 success=response_success,
                 content=content,
@@ -4303,15 +4330,19 @@ This will help me provide you with the most relevant travel guidance possible.""
                     "intent": intent,
                     "tools_used": tools_used,
                     "execution_time": execution_result.get("execution_time", 0),
-                    "response_method": "structured_template",
+                    "response_method": "fast_template",
                     "destination": destination,
                     "intent_type": intent_type,
+                    "is_plan_request": is_plan_request,  # ✅ 标记需要后台计划生成
+                    "plan_generation_status": "pending" if is_plan_request else "not_required",
+                    # ✅ 传递execution_result给后台plan generation使用
+                    "execution_result_for_plan": execution_result if is_plan_request else None,
                     "tool_execution_success": execution_success,
                     "partial_tool_success": bool(tool_results)
                 }
             )
             
-            logger.info(f"Structured response generated: success={response_success}, {len(content)} chars, confidence: {confidence}")
+            logger.info(f"Fast response generated: success={response_success}, plan_required={is_plan_request}, {len(content)} chars")
             return response
             
         except Exception as e:
@@ -4319,10 +4350,46 @@ This will help me provide you with the most relevant travel guidance possible.""
             # Emergency fallback
             return AgentResponse(
                 success=False,
-                content=f"I apologize, but I encountered an issue processing your travel request about {destination}. Please try rephrasing your question.",
+                content=f"I apologize, but I encountered an issue processing your travel request. Please try rephrasing your question.",
                 confidence=0.3,
                 metadata={"error": str(e), "response_method": "emergency_fallback"}
             )
+    
+    def _build_quick_response_content(
+        self, intent_type: str, destination: str, tools_used: List[str], 
+        tool_results: Dict[str, Any], user_message: str, is_plan_request: bool
+    ) -> str:
+        """Build quick response content without complex LLM calls"""
+        
+        if is_plan_request:
+            content = f"I'm creating a detailed travel plan for {destination}! 🗺️\n\n"
+            
+            # Quick summary of what we found
+            total_found = 0
+            if tool_results.get("hotel_search", {}).get("hotels"):
+                hotels_count = len(tool_results["hotel_search"]["hotels"])
+                content += f"🏨 Found {hotels_count} hotel options\n"
+                total_found += hotels_count
+            
+            if tool_results.get("flight_search", {}).get("flights"):
+                flights_count = len(tool_results["flight_search"]["flights"])
+                content += f"✈️ Found {flights_count} flight options\n"
+                total_found += flights_count
+            
+            if tool_results.get("attraction_search", {}).get("attractions"):
+                attractions_count = len(tool_results["attraction_search"]["attractions"])
+                content += f"🎯 Found {attractions_count} attractions\n"
+                total_found += attractions_count
+            
+            if total_found > 0:
+                content += f"\n📅 I'm now generating your detailed itinerary with precise timing and recommendations. You'll see it appear in the calendar shortly!"
+            else:
+                content += f"\n📅 I'm creating a comprehensive travel plan for {destination} with recommendations and timing. Check the calendar for your detailed itinerary!"
+            
+            return content
+        else:
+            # Non-plan requests use existing template logic
+            return self._build_structured_content(intent_type, destination, tools_used, tool_results, user_message)
 
     async def _generate_plan_aware_response(
         self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str

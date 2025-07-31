@@ -271,10 +271,10 @@ class PlanManager:
                 }
 
     def _create_calendar_event_from_structured_data(self, event_data: Dict[str, Any]):
-        """Create calendar event from structured event data"""
+        """Create calendar event from structured event data with event type validation"""
         try:
             # Import required classes
-            from app.api.schemas import CalendarEvent
+            from app.api.schemas import CalendarEvent, CalendarEventType
             import uuid
             
             # Parse timestamps
@@ -286,12 +286,16 @@ class PlanManager:
             if isinstance(end_time, str):
                 end_time = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
             
+            # Validate and map event type
+            raw_event_type = event_data.get("event_type", "activity")
+            validated_event_type = self._map_event_type(raw_event_type)
+            
             # Create event
             event = CalendarEvent(
                 id=event_data.get("id", str(uuid.uuid4())),
                 title=event_data.get("title", ""),
                 description=event_data.get("description", ""),
-                event_type=event_data.get("event_type", "activity"),
+                event_type=validated_event_type,
                 start_time=start_time,
                 end_time=end_time,
                 location=event_data.get("location", ""),
@@ -303,6 +307,42 @@ class PlanManager:
         except Exception as e:
             logger.error(f"Failed to create calendar event from structured data: {e}")
             return None
+    
+    def _map_event_type(self, raw_type: str) -> str:
+        """Map and validate event types, providing fallbacks for invalid types"""
+        from app.api.schemas import CalendarEventType
+        
+        # Direct mapping for valid types
+        try:
+            return CalendarEventType(raw_type.lower())
+        except ValueError:
+            pass
+        
+        # Mapping for common variations
+        type_mappings = {
+            "dining": CalendarEventType.MEAL,
+            "food": CalendarEventType.MEAL,
+            "breakfast": CalendarEventType.MEAL,
+            "lunch": CalendarEventType.MEAL,
+            "dinner": CalendarEventType.MEAL,
+            "eat": CalendarEventType.MEAL,
+            "sightseeing": CalendarEventType.ATTRACTION,
+            "tour": CalendarEventType.ACTIVITY,
+            "visit": CalendarEventType.ATTRACTION,
+            "transport": CalendarEventType.TRANSPORTATION,
+            "travel": CalendarEventType.TRANSPORTATION,
+            "accommodation": CalendarEventType.HOTEL,
+            "stay": CalendarEventType.HOTEL
+        }
+        
+        mapped_type = type_mappings.get(raw_type.lower())
+        if mapped_type:
+            logger.info(f"Mapped event type '{raw_type}' to '{mapped_type}'")
+            return mapped_type
+        
+        # Default fallback
+        logger.warning(f"Unknown event type '{raw_type}', defaulting to 'activity'")
+        return CalendarEventType.ACTIVITY
 
     async def _extract_plan_modifications(
         self, 
@@ -349,7 +389,7 @@ Analyze for:
 4. PLAN METADATA changes (destination, dates, budget, etc.)
 
 For each event, determine:
-- Event type (flight/hotel/attraction/restaurant/activity)
+- Event type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
 - Title and description
 - Start and end times (use ISO format: YYYY-MM-DDTHH:MM:SS+00:00)
 - Location
@@ -361,7 +401,7 @@ Return ONLY a valid JSON response with this exact structure:
         {{
             "title": "Event Title",
             "description": "Event description",
-            "event_type": "flight|hotel|attraction|restaurant|activity",
+            "event_type": "flight|hotel|attraction|restaurant|meal|transportation|activity|meeting|free_time",
             "start_time": "2025-07-27T10:00:00+00:00",
             "end_time": "2025-07-27T16:00:00+00:00",
             "location": "Location name",
@@ -465,13 +505,9 @@ If no changes are needed, return empty arrays for each section."""
                     logger.warning(f"Event missing required field '{field}': {event_data}")
                     return None
             
-            # Parse and validate event type
+            # Parse and validate event type using the mapping function
             event_type_str = event_data.get("event_type", "activity")
-            try:
-                event_type = CalendarEventType(event_type_str)
-            except ValueError:
-                logger.warning(f"Unknown event type '{event_type_str}', defaulting to activity")
-                event_type = CalendarEventType.ACTIVITY
+            event_type = self._map_event_type(event_type_str)
             
             # Parse and validate datetime fields
             try:
@@ -672,7 +708,7 @@ If no changes are needed, return empty arrays for each section."""
             Extract any specific travel events mentioned (flights, hotels, attractions, restaurants, activities).
             For each event, determine:
             - Title
-            - Type (flight/hotel/attraction/restaurant/activity)
+            - Type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
             - Start time (estimate if not explicit)
             - Duration/end time
             - Location
@@ -840,7 +876,11 @@ If no changes are needed, return empty arrays for each section."""
             # Create attractions for middle days of the trip
             for day in range(min(duration_days, 3)):  # Max 3 attractions
                 visit_date = start_date + timedelta(days=day)
-                visit_start = visit_date.replace(hour=9 + (day * 2), minute=0, second=0, microsecond=0)  # Stagger times
+                # Safe time calculation to avoid exceeding 24-hour format
+                base_hour = 9
+                hour_offset = min(day * 2, 12)  # Max offset 12 hours, avoiding past 21:00
+                target_hour = base_hour + hour_offset
+                visit_start = visit_date.replace(hour=target_hour, minute=0, second=0, microsecond=0)
                 visit_end = visit_start + timedelta(hours=2)  # 2 hour visits
                 
                 attraction_names = ["City Tour", "Local Attractions", "Cultural Sites"]
@@ -1053,13 +1093,22 @@ If no changes are needed, return empty arrays for each section."""
             logger.error(f"Error loading plans: {e}")
     
     def _save_plan(self, plan: SessionTravelPlan):
-        """Save plan to storage"""
+        """Save plan to storage with proper datetime serialization"""
         try:
             plan_file = self.storage_path / f"{plan.plan_id}.json"
             with open(plan_file, 'w', encoding='utf-8') as f:
-                json.dump(plan.model_dump(), f, default=str, indent=2)
+                json.dump(plan.model_dump(), f, default=self._datetime_serializer, indent=2)
         except Exception as e:
             logger.error(f"Error saving plan {plan.plan_id}: {e}")
+    
+    def _datetime_serializer(self, obj):
+        """Custom serializer for datetime objects to ensure ISO format"""
+        if isinstance(obj, datetime):
+            # Ensure timezone info and return standard ISO format
+            if obj.tzinfo is None:
+                obj = obj.replace(tzinfo=timezone.utc)
+            return obj.isoformat()  # Produces "2025-03-10T10:00:00+00:00" format
+        return str(obj)
 
 
 # Global plan manager instance

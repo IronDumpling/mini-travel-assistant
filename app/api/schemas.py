@@ -117,6 +117,7 @@ class CalendarEventType(str, Enum):
     HOTEL = "hotel"
     ATTRACTION = "attraction"
     RESTAURANT = "restaurant"
+    MEAL = "meal"
     TRANSPORTATION = "transportation"
     ACTIVITY = "activity"
     MEETING = "meeting"
