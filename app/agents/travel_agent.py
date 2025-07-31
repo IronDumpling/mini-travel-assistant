@@ -563,22 +563,44 @@ class TravelAgent(BaseAgent):
             }
             result = await self._execute_action_plan(action_plan, execution_context)
 
-            # 4. Structured response fusion (template-based, fast)
-            structured_response = await self._generate_structured_response(result, intent, message.content)
+            # 4. Generate response content using LLM
+            response_content = await self._generate_response(result, intent)
+
+            # Create agent response
+            response = AgentResponse(
+                success=result.get("success", False),
+                content=response_content,
+                actions_taken=result.get("actions", []),
+                next_steps=result.get("next_steps", []),
+                confidence=0.85 if result.get("success", False) else 0.7,
+                metadata={
+                    "intent": intent,
+                    "tools_used": result.get("tools_used", []),
+                    "execution_time": result.get("execution_time", 0),
+                    "response_method": "llm_generated",
+                    "destination": intent.get("destination", "unknown"),
+                    "intent_type": intent.get("type", "query"),
+                    "is_plan_request": self._is_plan_request(message.content),
+                    "execution_result_for_plan": result if self._is_plan_request(message.content) else None,
+                    "tool_execution_success": result.get("success", False),
+                    "partial_tool_success": bool(result.get("results", {}))
+                }
+            )
 
             # 5. Fast quality assessment (heuristic, ~0.1s) - Skip if in refinement mode
             if skip_quality_check:
                 self.status = AgentStatus.IDLE
-                return structured_response
+                return response
             
-            quality_score = await self._fast_quality_assessment(message, structured_response)
+            quality_score = await self._fast_quality_assessment(message, response)
 
-            # 6. Quality good enough -> return, else LLM enhancement
+            # 6. Quality good enough -> return, else enhancement
             if quality_score >= self.fast_response_threshold:  # 0.75 for fast response
                 self.status = AgentStatus.IDLE
-                return structured_response
+                return response
             else:
-                enhanced_response = await self._llm_enhanced_response(structured_response, result, intent)
+                # Try to enhance if needed
+                enhanced_response = await self._llm_enhanced_response(response, result, intent)
                 self.status = AgentStatus.IDLE
                 return enhanced_response
 
@@ -4366,20 +4388,57 @@ This will help me provide you with the most relevant travel guidance possible.""
             
             # Quick summary of what we found
             total_found = 0
-            if tool_results.get("hotel_search", {}).get("hotels"):
-                hotels_count = len(tool_results["hotel_search"]["hotels"])
-                content += f"🏨 Found {hotels_count} hotel options\n"
-                total_found += hotels_count
             
-            if tool_results.get("flight_search", {}).get("flights"):
-                flights_count = len(tool_results["flight_search"]["flights"])
-                content += f"✈️ Found {flights_count} flight options\n"
-                total_found += flights_count
+            # Safely handle hotel search results (might be Pydantic object or dict)
+            if "hotel_search" in tool_results:
+                hotel_result = tool_results["hotel_search"]
+                try:
+                    if hasattr(hotel_result, 'hotels'):  # Pydantic object
+                        hotels_count = len(hotel_result.hotels)
+                    elif isinstance(hotel_result, dict) and "hotels" in hotel_result:  # Dict
+                        hotels_count = len(hotel_result["hotels"])
+                    else:
+                        hotels_count = 0
+                    
+                    if hotels_count > 0:
+                        content += f"🏨 Found {hotels_count} hotel options\n"
+                        total_found += hotels_count
+                except Exception as e:
+                    logger.debug(f"Error processing hotel results: {e}")
             
-            if tool_results.get("attraction_search", {}).get("attractions"):
-                attractions_count = len(tool_results["attraction_search"]["attractions"])
-                content += f"🎯 Found {attractions_count} attractions\n"
-                total_found += attractions_count
+            # Safely handle flight search results
+            if "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                try:
+                    if hasattr(flight_result, 'flights'):  # Pydantic object
+                        flights_count = len(flight_result.flights)
+                    elif isinstance(flight_result, dict) and "flights" in flight_result:  # Dict
+                        flights_count = len(flight_result["flights"])
+                    else:
+                        flights_count = 0
+                    
+                    if flights_count > 0:
+                        content += f"✈️ Found {flights_count} flight options\n"
+                        total_found += flights_count
+                except Exception as e:
+                    logger.debug(f"Error processing flight results: {e}")
+            
+            # Safely handle attraction search results
+            if "attraction_search" in tool_results:
+                attraction_result = tool_results["attraction_search"]
+                try:
+                    if hasattr(attraction_result, 'attractions'):  # Pydantic object
+                        attractions_count = len(attraction_result.attractions)
+                    elif isinstance(attraction_result, dict) and "attractions" in attraction_result:  # Dict
+                        attractions_count = len(attraction_result["attractions"])
+                    else:
+                        attractions_count = 0
+                    
+                    if attractions_count > 0:
+                        content += f"🎯 Found {attractions_count} attractions\n"
+                        total_found += attractions_count
+                except Exception as e:
+                    logger.debug(f"Error processing attraction results: {e}")
             
             if total_found > 0:
                 content += f"\n📅 I'm now generating your detailed itinerary with precise timing and recommendations. You'll see it appear in the calendar shortly!"

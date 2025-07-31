@@ -11,7 +11,7 @@ from app.agents.base_agent import AgentMessage
 from app.memory.session_manager import get_session_manager
 from app.memory.conversation_memory import get_conversation_memory
 from app.core.logging_config import get_logger
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 
 logger = get_logger(__name__)
@@ -68,30 +68,32 @@ async def _async_update_plan(session_id: str, user_message: str, agent_response)
         
         logger.info(f"Background plan update completed for session {session_id}: {plan_update_result}")
         
-        # Update session with plan generation status
+        # Update session with plan generation status without changing current session
         from app.memory.session_manager import get_session_manager
         session_manager = get_session_manager()
-        session_manager.update_session_context(
-            session_id=session_id,
-            context_updates={
+        # ✅ Don't switch session here - just update the target session directly
+        target_session = session_manager.sessions.get(session_id)
+        if target_session:
+            target_session.travel_context.update({
                 "plan_generation_status": "completed",
                 "plan_update_result": plan_update_result
-            }
-        )
+            })
+            session_manager._save_session(target_session)
         
     except Exception as e:
         logger.error(f"Background plan update failed for session {session_id}: {e}")
-        # Update session with error status
+        # Update session with error status without changing current session
         try:
             from app.memory.session_manager import get_session_manager
             session_manager = get_session_manager()
-            session_manager.update_session_context(
-                session_id=session_id,
-                context_updates={
+            # ✅ Don't switch session here - just update the target session directly
+            target_session = session_manager.sessions.get(session_id)
+            if target_session:
+                target_session.travel_context.update({
                     "plan_generation_status": "failed",
                     "plan_generation_error": str(e)
-                }
-            )
+                })
+                session_manager._save_session(target_session)
         except Exception as update_error:
             logger.error(f"Failed to update session status: {update_error}")
 
@@ -121,20 +123,48 @@ async def chat_with_agent(message: ChatMessage):
     This is the main endpoint that leverages the self-refine loop.
     """
     try:
-        # Get or create session with proper validation
+        # Get or create session with proper validation - avoid global session switching in concurrent context
         session_manager = get_session_manager()
+        
+        # Store original current session to restore later (concurrency safety)
+        original_session_id = session_manager.current_session_id
+        
         if message.session_id:
-            # Validate session exists before switching
+            # Validate session exists 
             if message.session_id in session_manager.sessions:
-                session_manager.switch_session(message.session_id)
-                logger.info(f"Switched to existing session: {message.session_id}")
+                # ✅ Don't switch globally, just verify it exists
+                logger.info(f"Using existing session: {message.session_id}")
             else:
-                logger.warning(f"Session {message.session_id} not found, creating new session")
-                session_id = session_manager.create_session(
-                    title=f"Travel Planning - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                    description="AI-powered travel planning conversation"
+                # ✅ 修复: 保持原有session_id，不替换它
+                logger.warning(f"Session {message.session_id} not found in memory, creating it with provided ID")
+                
+                # Create session with existing ID (for test compatibility)
+                current_time = datetime.now(timezone.utc)
+                from app.memory.session_manager import SessionMetadata, SessionStatus
+                
+                metadata = SessionMetadata(
+                    session_id=message.session_id,  # ✅ 使用原有ID，不生成新的
+                    title=f"Travel Planning - {current_time.strftime('%Y-%m-%d %H:%M')}",
+                    description="AI-powered travel planning conversation",
+                    status=SessionStatus.ACTIVE,
+                    created_at=current_time,
+                    last_activity=current_time
                 )
-                message.session_id = session_id
+                
+                session_manager.sessions[message.session_id] = metadata
+                # ✅ Don't set as current session in concurrent environment
+                session_manager._save_session(metadata)
+                
+                # Create corresponding travel plan
+                try:
+                    from app.core.plan_manager import get_plan_manager
+                    plan_manager = get_plan_manager()
+                    plan_id = plan_manager.create_plan_for_session(message.session_id)
+                    logger.info(f"✅ Created plan {plan_id} for session {message.session_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to create plan for session {message.session_id}: {e}")
+                
+                logger.info(f"✅ Created session with preserved ID: {message.session_id}")
         else:
             session_id = session_manager.create_session(
                 title=f"Travel Planning - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
@@ -146,8 +176,9 @@ async def chat_with_agent(message: ChatMessage):
         # Use singleton agent to avoid global configuration pollution   
         agent = get_travel_agent()
         
-        # Get session history and pass to agent (using RAG enhanced conversation memory)
-        session = session_manager.get_current_session()
+        # Get session history and pass to agent (using RAG enhanced conversation memory) 
+        # ✅ Use explicit session lookup instead of current_session
+        session = session_manager.sessions.get(message.session_id)
         conversation_memory = get_conversation_memory()
         conversation_history = []
         
@@ -229,10 +260,11 @@ async def chat_with_agent(message: ChatMessage):
             }
         
         # 📝 Store conversation in both systems
-        # 1. Store in session manager (basic storage)
+        # 1. Store in session manager (basic storage) with explicit session_id
         session_manager.add_message(
             user_message=message.message,
             agent_response=response.content,
+            session_id=message.session_id,  # ✅ Explicit session_id
             metadata={
                 "confidence": response.confidence,
                 "actions_taken": response.actions_taken,
@@ -243,7 +275,8 @@ async def chat_with_agent(message: ChatMessage):
         
         # 2. Store in conversation memory (RAG enhanced analysis and indexing)
         try:
-            session = session_manager.get_current_session()
+            # ✅ Use explicit session lookup
+            session = session_manager.sessions.get(message.session_id)
             should_analyze = False
             
             if session and len(session.messages) % 2 == 1:  # Every 2nd message (odd count means just added 2nd)
