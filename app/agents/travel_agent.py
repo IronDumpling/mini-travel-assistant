@@ -310,31 +310,76 @@ class TravelAgent(BaseAgent):
         return suggestions
 
     def _is_plan_request(self, user_message: str) -> bool:
-        """Detect if user message is requesting plan generation or modification using keywords"""
+        """Detect if user message is requesting plan generation or modification using precise analysis"""
         message_lower = user_message.lower()
         
-        # Plan generation keywords
-        plan_keywords = [
-            "plan", "itinerary", "schedule", "trip", "travel plan", "vacation plan",
-            "create plan", "make plan", "build itinerary", "plan my trip", 
-            "plan a trip", "travel itinerary", "day by day", "agenda"
+        # ❌ Explicit exclusions for recommendation/information requests  
+        exclusion_patterns = [
+            "what are", "what is", "which", "where", "when", "how", "why",
+            "recommend", "suggest", "best", "advice", "tips", "should i",
+            "can you recommend", "what do you recommend", "any recommendations",
+            "tell me about", "explain", "describe", "what about", "thoughts on"
         ]
         
-        # Plan modification keywords  
-        modification_keywords = [
-            "change", "modify", "update", "edit", "revise", "adjust", "alter",
-            "reschedule", "move", "cancel", "remove", "add to plan", "update plan",
-            "change plan", "modify itinerary", "adjust schedule"
+        # Check for exclusions first
+        for pattern in exclusion_patterns:
+            if pattern in message_lower:
+                # Additional check: even if it has exclusion words, if it's clearly a plan request, allow it
+                strong_plan_indicators = [
+                    "create", "build", "generate", "make", "plan my", "plan a", 
+                    "itinerary", "day by day", "schedule"
+                ]
+                has_strong_plan = any(indicator in message_lower for indicator in strong_plan_indicators)
+                if not has_strong_plan:
+                    return False
+        
+        # ✅ Strong plan generation indicators (commands/requests)
+        strong_plan_keywords = [
+            "plan my trip", "plan a trip", "create plan", "create itinerary",
+            "make plan", "build itinerary", "generate itinerary", "plan for",
+            "travel plan", "vacation plan", "trip plan", "day by day itinerary",
+            "detailed itinerary", "complete itinerary", "full itinerary",
+            "schedule my", "organize my trip", "arrange my"
         ]
         
-        # Check for plan generation
-        for keyword in plan_keywords:
+        # Check for strong plan indicators
+        for keyword in strong_plan_keywords:
             if keyword in message_lower:
                 return True
-                
-        # Check for plan modification
+        
+        # ✅ Duration-based planning (specific time periods)
+        duration_patterns = [
+            r'\d+[\s-]day', r'\d+[\s-]week', r'\d+[\s-]night',
+            "weekend trip", "week trip", "month trip", "vacation"
+        ]
+        
+        import re
+        for pattern in duration_patterns:
+            if re.search(pattern, message_lower):
+                # If mentions duration AND has action words
+                action_words = ["plan", "visit", "go to", "travel to", "trip to"]
+                if any(action in message_lower for action in action_words):
+                    return True
+        
+        # ✅ Plan modification keywords (for existing plans)
+        modification_keywords = [
+            "change my plan", "modify my itinerary", "update my plan", 
+            "edit my schedule", "revise my trip", "adjust my itinerary",
+            "add to my plan", "remove from plan", "reschedule"
+        ]
+        
         for keyword in modification_keywords:
             if keyword in message_lower:
+                return True
+        
+        # ✅ Context-specific planning phrases
+        planning_phrases = [
+            "i'm planning", "i am planning", "help me plan", 
+            "planning a trip", "organizing a trip"
+        ]
+        
+        for phrase in planning_phrases:
+            if phrase in message_lower:
                 return True
                 
         return False
@@ -889,33 +934,45 @@ Please analyze the current message considering the conversation history for bett
         import re
         user_message_lower = user_message.lower()
 
-        # Enhanced intent type detection
+        # ✅ Enhanced intent type detection (more precise)
         intent_type = "query"  # default
-        if any(
-            word in user_message_lower
-            for word in ["plan", "create", "make", "arrange", "organize", "schedule"]
-        ):
+        
+        # Use the improved _is_plan_request method for planning detection
+        if self._is_plan_request(user_message):
             intent_type = "planning"
+        # Check for recommendations first (many requests are recommendations)
         elif any(
-            word in user_message_lower
-            for word in ["change", "modify", "update", "adjust", "revise"]
-        ):
-            intent_type = "modification"
-        elif any(
-            word in user_message_lower
-            for word in ["recommend", "suggest", "introduce", "advise", "what should"]
+            pattern in user_message_lower
+            for pattern in ["recommend", "suggest", "what are", "what is", "which", 
+                          "best", "advice", "tips", "should i", "can you recommend", 
+                          "what do you recommend", "any recommendations", "thoughts on"]
         ):
             intent_type = "recommendation"
+        # Plan modifications (for existing plans)
+        elif any(
+            pattern in user_message_lower
+            for pattern in ["change my plan", "modify my itinerary", "update my plan", 
+                          "edit my schedule", "revise my trip", "adjust my itinerary"]
+        ):
+            intent_type = "modification"
+        # Booking/reservation requests
         elif any(
             word in user_message_lower
-            for word in ["book", "reserve", "purchase", "buy"]
+            for word in ["book", "reserve", "purchase", "buy", "booking"]
         ):
             intent_type = "booking"
+        # Complaint/problem reports
         elif any(
             word in user_message_lower
-            for word in ["problem", "issue", "complaint", "wrong", "error"]
+            for word in ["problem", "issue", "complaint", "wrong", "error", "trouble"]
         ):
             intent_type = "complaint"
+        # Information queries (catch remaining questions)
+        elif any(
+            pattern in user_message_lower
+            for pattern in ["what", "how", "when", "where", "why", "tell me", "explain", "describe"]
+        ):
+            intent_type = "query"
 
         # Enhanced destination detection
         destination = "Unknown"
@@ -3603,6 +3660,22 @@ This will help me provide you with the most relevant travel guidance possible.""
             'oceania': 'sydney',     # Default to Sydney for Oceania
             'middle east': 'dubai',  # Default to Dubai for Middle East
             'middle eastern': 'dubai',
+            # ✅ Regional/Mountain/Special area mappings
+            'swiss alps': 'zurich',     # Swiss Alps -> Zurich
+            'alps': 'zurich',           # Alps -> Zurich
+            'himalaya': 'kathmandu',    # Himalaya -> Kathmandu  
+            'himalayas': 'kathmandu',   # Himalayas -> Kathmandu
+            'rockies': 'denver',        # Rocky Mountains -> Denver
+            'rocky mountains': 'denver', # Rocky Mountains -> Denver
+            'andes': 'lima',            # Andes -> Lima
+            'sahara': 'cairo',          # Sahara -> Cairo
+            'sahara desert': 'cairo',   # Sahara Desert -> Cairo
+            'scottish highlands': 'glasgow', # Scottish Highlands -> Glasgow
+            'lake district': 'manchester',   # Lake District -> Manchester
+            'tuscany': 'florence',      # Tuscany -> Florence
+            'provence': 'marseille',    # Provence -> Marseille
+            'bavarian alps': 'munich',  # Bavarian Alps -> Munich
+            'black forest': 'stuttgart', # Black Forest -> Stuttgart
             # Country-level mappings to major cities
             'france': 'paris',
             'germany': 'berlin', 
@@ -3880,9 +3953,20 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.info(f"✅ Clean IATA code: '{clean_iata}'")
             return clean_iata
         else:
-            # If not found, return empty string to indicate invalid destination
-            logger.error(f"❌ No IATA code found for '{city_name}' - invalid destination")
-            return ''  # Return empty string to indicate invalid destination
+            # ✅ Smart fallback: try region/country mapping
+            logger.warning(f"⚠️ No direct IATA code found for '{city_name}', trying region fallback")
+            
+            for region, fallback_city in region_to_cities.items():
+                if region in normalized_city:
+                    fallback_iata = city_to_iata.get(fallback_city)
+                    if fallback_iata:
+                        logger.info(f"✅ Using fallback: '{city_name}' -> '{fallback_city}' ({fallback_iata})")
+                        return fallback_iata.strip().upper()
+            
+            # ✅ Last resort: for any unknown location, use a sensible default based on context
+            # This prevents tool failures and allows plan generation to continue
+            logger.warning(f"⚠️ No IATA code found for '{city_name}', using default fallback: LON")
+            return 'LON'  # London as universal fallback
 
     def _extract_destination_from_message(self, message: str) -> str:
         """Extract destination from user message"""

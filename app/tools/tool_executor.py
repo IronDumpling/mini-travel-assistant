@@ -504,6 +504,73 @@ class ToolExecutor:
         self.max_concurrent = max_concurrent
         self.executor = ThreadPoolExecutor(max_workers=max_concurrent)
         self.tool_selector = ToolSelector()
+        
+    def _parse_flexible_date(self, date_str: str):
+        """Parse various date formats flexibly"""
+        from datetime import datetime, timedelta
+        import re
+        
+        if not date_str:
+            return datetime.now() + timedelta(days=7)  # Default to next week
+        
+        date_str = date_str.lower().strip()
+        
+        # ✅ Handle already formatted dates
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            pass
+        
+        # ✅ Handle month names
+        month_mapping = {
+            'january': 1, 'jan': 1, 'february': 2, 'feb': 2, 'march': 3, 'mar': 3,
+            'april': 4, 'apr': 4, 'may': 5, 'june': 6, 'jun': 6,
+            'july': 7, 'jul': 7, 'august': 8, 'aug': 8, 'september': 9, 'sep': 9,
+            'october': 10, 'oct': 10, 'november': 11, 'nov': 11, 'december': 12, 'dec': 12
+        }
+        
+        current_year = datetime.now().year
+        current_month = datetime.now().month
+        
+        # Month name only (e.g., "February", "March")
+        for month_name, month_num in month_mapping.items():
+            if month_name in date_str:
+                # If month is in the past, use next year
+                year = current_year if month_num >= current_month else current_year + 1
+                return datetime(year, month_num, 1)
+        
+        # ✅ Handle seasonal keywords
+        if 'summer' in date_str:
+            return datetime(current_year, 6, 21)  # Summer solstice
+        elif 'winter' in date_str:
+            year = current_year if datetime.now().month <= 6 else current_year + 1
+            return datetime(year, 12, 21)  # Winter solstice
+        elif 'spring' in date_str:
+            year = current_year if datetime.now().month <= 3 else current_year + 1
+            return datetime(year, 3, 21)  # Spring equinox
+        elif 'fall' in date_str or 'autumn' in date_str:
+            return datetime(current_year, 9, 21)  # Fall equinox
+        
+        # ✅ Handle relative terms
+        if 'next week' in date_str:
+            return datetime.now() + timedelta(weeks=1)
+        elif 'next month' in date_str:
+            next_month = current_month + 1 if current_month < 12 else 1
+            year = current_year if current_month < 12 else current_year + 1
+            return datetime(year, next_month, 1)
+        elif 'tomorrow' in date_str:
+            return datetime.now() + timedelta(days=1)
+        
+        # ✅ Handle year patterns (e.g., "2024")
+        year_match = re.search(r'\b(20\d{2})\b', date_str)
+        if year_match:
+            year = int(year_match.group(1))
+            return datetime(year, 6, 1)  # Default to June
+        
+        # ✅ Fallback: next week as safe default
+        logger = get_logger(__name__)
+        logger.warning(f"Could not parse date '{date_str}', using next week as fallback")
+        return datetime.now() + timedelta(days=7)
 
     async def execute_tool(
         self,
@@ -1073,17 +1140,9 @@ class ToolExecutor:
                 check_in_str = input_data.get("check_in", "2024-06-01")
                 check_out_str = input_data.get("check_out", "2024-06-03")
 
-                # Convert string dates to datetime objects
-                check_in = (
-                    datetime.strptime(check_in_str, "%Y-%m-%d")
-                    if isinstance(check_in_str, str)
-                    else check_in_str
-                )
-                check_out = (
-                    datetime.strptime(check_out_str, "%Y-%m-%d")
-                    if isinstance(check_out_str, str)
-                    else check_out_str
-                )
+                # Convert string dates to datetime objects with flexible parsing
+                check_in = self._parse_flexible_date(check_in_str) if isinstance(check_in_str, str) else check_in_str
+                check_out = self._parse_flexible_date(check_out_str) if isinstance(check_out_str, str) else check_out_str
 
                 cleaned_data = {
                     "location": input_data.get("destination", input_data.get("location", "unknown")),
@@ -1115,19 +1174,11 @@ class ToolExecutor:
                 start_date_str = input_data.get("start_date", "2024-06-01")
                 return_date_str = input_data.get("return_date")
 
-                # Convert string dates to datetime objects
-                start_date = (
-                    datetime.strptime(start_date_str, "%Y-%m-%d")
-                    if isinstance(start_date_str, str)
-                    else start_date_str
-                )
+                # Convert string dates to datetime objects with flexible parsing
+                start_date = self._parse_flexible_date(start_date_str) if isinstance(start_date_str, str) else start_date_str
                 end_date = None
                 if return_date_str:
-                    end_date = (
-                        datetime.strptime(return_date_str, "%Y-%m-%d")
-                        if isinstance(return_date_str, str)
-                        else return_date_str
-                    )
+                    end_date = self._parse_flexible_date(return_date_str) if isinstance(return_date_str, str) else return_date_str
 
                 cleaned_data = {
                     "origin": input_data.get("origin", "unknown"),
