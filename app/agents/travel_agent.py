@@ -4453,12 +4453,8 @@ This will help me provide you with the most relevant travel guidance possible.""
     async def _generate_plan_aware_response(
         self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
     ) -> AgentResponse:
-        """Generate structured plan data for plan requests using LLM"""
+        """Generate structured plan data directly from tool results (Fast non-LLM approach)"""
         try:
-            # Import required services
-            from app.core.llm_service import get_llm_service
-            from app.core.prompt_manager import prompt_manager, PromptType
-            
             # Extract key information
             intent_type = intent.get("type") or intent.get("intent_type", "planning")
             destination = intent.get("destination", {})
@@ -4468,64 +4464,221 @@ This will help me provide you with the most relevant travel guidance possible.""
                 destination_name = str(destination)
             
             tool_results = execution_result.get("results", {})
-            knowledge_context = execution_result.get("knowledge_context", {})
             
             logger.info(f"Generating plan-aware response for destination: {destination_name}")
             
-            # Get LLM service
-            llm_service = get_llm_service()
-            if not llm_service:
-                logger.warning("LLM service not available, falling back to template-based plan generation")
-                return self._generate_template_based_plan(execution_result, intent, user_message)
+            # ✅ Fast approach: Create events directly from tool results
+            plan_events = self._create_events_from_tool_results(tool_results, destination_name, user_message)
             
-            # Use PLAN_GENERATION prompt
-            plan_prompt = prompt_manager.get_prompt(
-                PromptType.PLAN_GENERATION,
-                user_message=user_message,
-                destination=destination_name,
-                tool_results=str(tool_results),
-                knowledge_context=str(knowledge_context),
-                intent=str(intent)
-            )
+            logger.info(f"Fast plan generation successful: {len(plan_events)} events")
             
-            # Generate structured plan using LLM
-            schema = prompt_manager.get_schema(PromptType.PLAN_GENERATION)
-            plan_result = await llm_service.structured_completion(
-                messages=[{"role": "user", "content": plan_prompt}],
-                response_schema=schema,
-                temperature=0.3,
-                max_tokens=2000
-            )
+            # Create simple structured plan metadata
+            from datetime import datetime, timedelta
+            today = datetime.now()
             
-            logger.info(f"LLM plan generation successful: {len(plan_result.get('plan_events', []))} events")
+            structured_plan = {
+                "destination": destination_name,
+                "duration": 7,  # Default 7 days
+                "start_date": today.strftime("%Y-%m-%d"),
+                "end_date": (today + timedelta(days=7)).strftime("%Y-%m-%d"),
+                "travelers": intent.get("travel_details", {}).get("travelers", 2),
+                "budget_estimate": {"currency": "USD", "amount": 2000},
+                "metadata": {
+                    "travel_style": "moderate",
+                    "generated_at": datetime.now().isoformat(),
+                    "generation_method": "fast_tool_based"
+                }
+            }
+            
+            # Create natural response
+            natural_response = self._create_natural_plan_response(destination_name, plan_events, tool_results)
             
             # Create enhanced AgentResponse with structured plan data
             response = AgentResponse(
                 success=True,
-                content=plan_result.get("natural_response", ""),
+                content=natural_response,
                 actions_taken=execution_result.get("actions", []),
                 next_steps=execution_result.get("next_steps", []),
-                confidence=0.92,
-                structured_plan=plan_result.get("structured_plan"),
-                plan_events=plan_result.get("plan_events", []),
+                confidence=0.88,
+                structured_plan=structured_plan,
+                plan_events=plan_events,
                 metadata={
                     **execution_result,
                     "intent": intent,
                     "response_type": "structured_plan",
-                    "plan_generation_method": "llm_based",
+                    "plan_generation_method": "fast_tool_based",
                     "destination": destination_name,
                     "intent_type": intent_type,
-                    "plan_events_count": len(plan_result.get("plan_events", []))
+                    "plan_events_count": len(plan_events)
                 }
             )
             
-            logger.info(f"Plan-aware response generated successfully: {len(plan_result.get('plan_events', []))} events")
+            logger.info(f"Plan-aware response generated successfully: {len(plan_events)} events")
             return response
             
         except Exception as e:
-            logger.error(f"Failed to generate LLM-based plan: {e}")
-            # Fallback to template-based plan generation
-            return self._generate_template_based_plan(execution_result, intent, user_message)
+            logger.error(f"Failed to generate fast plan: {e}")
+            # Emergency fallback
+            return AgentResponse(
+                success=False,
+                content=f"I created a basic travel plan outline for {destination_name}. Let me know if you'd like me to refine any specific aspects!",
+                confidence=0.6,
+                plan_events=[],
+                metadata={"error": str(e), "plan_generation_method": "emergency_fallback"}
+            )
+
+    def _create_events_from_tool_results(
+        self, tool_results: Dict[str, Any], destination: str, user_message: str
+    ) -> List[Dict[str, Any]]:
+        """Create calendar events directly from tool results"""
+        events = []
+        from datetime import datetime, timedelta
+        import uuid
+        
+        # Start from tomorrow
+        start_date = datetime.now() + timedelta(days=1)
+        current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)  # Start at 8 AM
+        
+        try:
+            # Add flight events
+            if "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                if hasattr(flight_result, 'flights'):
+                    flights = flight_result.flights[:2]  # Limit to 2 flights (outbound/return)
+                    for i, flight in enumerate(flights):
+                        flight_time = current_time if i == 0 else current_time + timedelta(days=6)
+                        events.append({
+                            "id": f"flight_{i+1}_{str(uuid.uuid4())[:8]}",
+                            "title": f"Flight to {destination}" if i == 0 else f"Return Flight",
+                            "description": f"Flight details: {getattr(flight, 'airline', 'TBA')} - Duration: {getattr(flight, 'duration', 'TBA')} minutes",
+                            "event_type": "flight",
+                            "start_time": flight_time.isoformat(),
+                            "end_time": (flight_time + timedelta(hours=6)).isoformat(),
+                            "location": f"Airport → {destination}" if i == 0 else f"{destination} → Home",
+                            "coordinates": {"lat": 40.7128, "lng": -74.0060},
+                            "details": {
+                                "source": "flight_search",
+                                "airline": getattr(flight, 'airline', 'TBA'),
+                                "price": {"amount": getattr(flight, 'price', 500), "currency": "USD"}
+                            }
+                        })
+            
+            # Add hotel events
+            if "hotel_search" in tool_results:
+                hotel_result = tool_results["hotel_search"]
+                if hasattr(hotel_result, 'hotels') and hotel_result.hotels:
+                    hotel = hotel_result.hotels[0]  # Use first hotel
+                    checkin_time = current_time.replace(hour=15, minute=0)  # 3 PM check-in
+                    checkout_time = checkin_time + timedelta(days=6, hours=-4)  # 11 AM checkout
+                    
+                    events.append({
+                        "id": f"hotel_stay_{str(uuid.uuid4())[:8]}",
+                        "title": f"Hotel: {getattr(hotel, 'name', 'Hotel in ' + destination)}",
+                        "description": f"Accommodation in {destination}",
+                        "event_type": "hotel",
+                        "start_time": checkin_time.isoformat(),
+                        "end_time": checkout_time.isoformat(),
+                        "location": getattr(hotel, 'location', destination),
+                        "coordinates": {"lat": 40.7589, "lng": -73.9851},
+                        "details": {
+                            "source": "hotel_search",
+                            "rating": getattr(hotel, 'rating', 4.0),
+                            "price_per_night": {"amount": getattr(hotel, 'price_per_night', 150), "currency": "USD"}
+                        }
+                    })
+            
+            # Add attraction events (spread across days 2-4)
+            if "attraction_search" in tool_results:
+                attraction_result = tool_results["attraction_search"]
+                if hasattr(attraction_result, 'attractions'):
+                    attractions = attraction_result.attractions[:3]  # Limit to 3
+                    for i, attraction in enumerate(attractions):
+                        visit_day = start_date + timedelta(days=i+1)
+                        visit_time = visit_day.replace(hour=10 + i*2, minute=0)  # 10 AM, 12 PM, 2 PM
+                        
+                        events.append({
+                            "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
+                            "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
+                            "description": getattr(attraction, 'category', 'Sightseeing activity'),
+                            "event_type": "attraction",
+                            "start_time": visit_time.isoformat(),
+                            "end_time": (visit_time + timedelta(hours=2)).isoformat(),
+                            "location": getattr(attraction, 'location', destination),
+                            "coordinates": {"lat": 40.7484, "lng": -73.9857},
+                            "details": {
+                                "source": "attraction_search",
+                                "rating": getattr(attraction, 'rating', 4.5),
+                                "category": getattr(attraction, 'category', 'Tourism')
+                            }
+                        })
+            
+            # Add meal events if no specific events were created
+            if not events:
+                # Create default sightseeing events
+                for i in range(3):
+                    day = start_date + timedelta(days=i+1)
+                    event_time = day.replace(hour=10 + i*3, minute=0)
+                    events.append({
+                        "id": f"activity_{i+1}_{str(uuid.uuid4())[:8]}",
+                        "title": f"Explore {destination} - Day {i+1}",
+                        "description": f"Discover the best of {destination}",
+                        "event_type": "activity",
+                        "start_time": event_time.isoformat(),
+                        "end_time": (event_time + timedelta(hours=3)).isoformat(),
+                        "location": destination,
+                        "coordinates": {"lat": 40.7484, "lng": -73.9857},
+                        "details": {
+                            "source": "default_generation",
+                            "recommendations": ["Bring camera", "Wear comfortable shoes"]
+                        }
+                    })
+            
+            logger.info(f"Created {len(events)} events from tool results")
+            return events
+            
+        except Exception as e:
+            logger.error(f"Error creating events from tool results: {e}")
+            # Return basic fallback event
+            return [{
+                "id": f"basic_trip_{str(uuid.uuid4())[:8]}",
+                "title": f"Trip to {destination}",
+                "description": f"Travel to {destination}",
+                "event_type": "activity",
+                "start_time": current_time.isoformat(),
+                "end_time": (current_time + timedelta(hours=4)).isoformat(),
+                "location": destination,
+                "coordinates": {"lat": 40.7484, "lng": -73.9857},
+                "details": {"source": "fallback_generation"}
+            }]
+    
+    def _create_natural_plan_response(
+        self, destination: str, events: List[Dict], tool_results: Dict[str, Any]
+    ) -> str:
+        """Create a natural language description of the generated plan"""
+        event_count = len(events)
+        
+        # Count event types
+        flight_events = len([e for e in events if e.get("event_type") == "flight"])
+        hotel_events = len([e for e in events if e.get("event_type") == "hotel"]) 
+        attraction_events = len([e for e in events if e.get("event_type") == "attraction"])
+        activity_events = len([e for e in events if e.get("event_type") == "activity"])
+        
+        response = f"🗺️ **Your {destination} Travel Plan is Ready!**\n\n"
+        response += f"I've created a detailed {event_count}-event itinerary for your trip to {destination}.\n\n"
+        
+        if flight_events > 0:
+            response += f"✈️ **Flights**: {flight_events} flight{'s' if flight_events > 1 else ''} scheduled\n"
+        if hotel_events > 0:
+            response += f"🏨 **Accommodation**: {hotel_events} hotel stay{'s' if hotel_events > 1 else ''} arranged\n"
+        if attraction_events > 0:
+            response += f"🎯 **Attractions**: {attraction_events} sightseeing activit{'ies' if attraction_events > 1 else 'y'} planned\n"
+        if activity_events > 0:
+            response += f"🌟 **Activities**: {activity_events} experience{'s' if activity_events > 1 else ''} included\n"
+        
+        response += f"\n📅 **Check your calendar** to see the complete schedule with times, locations, and details!\n"
+        response += f"💡 You can chat with me to modify any part of your itinerary."
+        
+        return response
 
     def _generate_template_based_plan(
         self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
