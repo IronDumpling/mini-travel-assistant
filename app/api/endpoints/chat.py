@@ -121,18 +121,31 @@ async def chat_with_agent(message: ChatMessage):
         else:
             response = await agent.process_message(agent_message)
 
-        # 🆕 NEW: Update plan based on chat response (before storing)
+        # Update plan based on chat response (before storing)
+        # Prioritize structured plan data when available
         plan_update_result = None
         try:
             from app.core.plan_manager import get_plan_manager
             plan_manager = get_plan_manager()
             
-            plan_update_result = await plan_manager.update_plan_from_chat_response(
-                session_id=message.session_id,
-                user_message=message.message,
-                agent_response=response.content,
-                response_metadata=response.metadata or {}
-            )
+            # Check if response has structured plan data
+            if (hasattr(response, 'structured_plan') and response.structured_plan) or \
+               (hasattr(response, 'plan_events') and response.plan_events):
+                # Use structured plan data for direct, accurate updates
+                logger.info(f"Using structured plan data for session {message.session_id}")
+                plan_update_result = await plan_manager.update_plan_from_structured_response(
+                    session_id=message.session_id,
+                    agent_response=response
+                )
+            else:
+                # Fallback to LLM-based parsing of natural language response
+                logger.info(f"Using LLM-based plan parsing for session {message.session_id}")
+                plan_update_result = await plan_manager.update_plan_from_chat_response(
+                    session_id=message.session_id,
+                    user_message=message.message,
+                    agent_response=response.content,
+                    response_metadata=response.metadata or {}
+                )
             
             logger.info(f"Plan update result for session {message.session_id}: {plan_update_result}")
             

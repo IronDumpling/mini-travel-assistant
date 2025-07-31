@@ -92,12 +92,13 @@ class TravelAgent(BaseAgent):
     def get_quality_dimensions(self) -> Dict[str, float]:
         """Enhanced travel-specific quality assessment dimensions with information fusion"""
         return {
-            "relevance": 0.20,  # How relevant to user's travel request
-            "information_fusion": 0.25,  # How well knowledge + tools are integrated
-            "completeness": 0.20,  # How complete the travel information is
+            "relevance": 0.15,  # How relevant to user's travel request
+            "information_fusion": 0.20,  # How well knowledge + tools are integrated
+            "completeness": 0.15,  # How complete the travel information is
             "accuracy": 0.15,  # How accurate the information is
             "actionability": 0.15,  # How actionable the recommendations are
             "personalization": 0.05,  # How well personalized to user preferences
+            "plan_structure_quality": 0.15,  # How well structured the travel plan is
         }
 
     async def _assess_dimension(
@@ -111,6 +112,8 @@ class TravelAgent(BaseAgent):
             return await self._assess_personalization(original_message, response)
         elif dimension == "feasibility":
             return await self._assess_feasibility(original_message, response)
+        elif dimension == "plan_structure_quality":
+            return await self._assess_plan_structure_quality(original_message, response)
         else:
             # Use base class implementation for standard dimensions
             return await super()._assess_dimension(
@@ -306,6 +309,80 @@ class TravelAgent(BaseAgent):
 
         return suggestions
 
+    def _is_plan_request(self, user_message: str) -> bool:
+        """Detect if user message is requesting plan generation or modification using keywords"""
+        message_lower = user_message.lower()
+        
+        # Plan generation keywords
+        plan_keywords = [
+            "plan", "itinerary", "schedule", "trip", "travel plan", "vacation plan",
+            "create plan", "make plan", "build itinerary", "plan my trip", 
+            "plan a trip", "travel itinerary", "day by day", "agenda"
+        ]
+        
+        # Plan modification keywords  
+        modification_keywords = [
+            "change", "modify", "update", "edit", "revise", "adjust", "alter",
+            "reschedule", "move", "cancel", "remove", "add to plan", "update plan",
+            "change plan", "modify itinerary", "adjust schedule"
+        ]
+        
+        # Check for plan generation
+        for keyword in plan_keywords:
+            if keyword in message_lower:
+                return True
+                
+        # Check for plan modification
+        for keyword in modification_keywords:
+            if keyword in message_lower:
+                return True
+                
+        return False
+
+    async def _assess_plan_structure_quality(
+        self, original_message: AgentMessage, response: AgentResponse
+    ) -> float:
+        """Assess the quality of travel plan structure"""
+        score = 0.0
+        
+        # Check if this is a plan-related request
+        if not self._is_plan_request(original_message.content):
+            return 1.0  # Non-plan requests get full score for this dimension
+        
+        # Check if structured plan data exists
+        if hasattr(response, 'structured_plan') and response.structured_plan:
+            score += 0.4
+            
+            # Check required plan fields
+            required_fields = ["destination", "duration", "events"]
+            if all(field in response.structured_plan for field in required_fields):
+                score += 0.2
+        
+        # Check if plan events exist
+        if hasattr(response, 'plan_events') and response.plan_events:
+            score += 0.3
+            
+            # Check event completeness
+            complete_events = 0
+            for event in response.plan_events:
+                if all(key in event for key in ["title", "start_time", "end_time", "location"]):
+                    complete_events += 1
+            
+            if complete_events > 0:
+                score += 0.1 * (complete_events / len(response.plan_events))
+        
+        # Check content structure indicators for plan requests
+        content = response.content.lower()
+        plan_indicators = ["day 1", "day 2", "morning", "afternoon", "evening", "itinerary", "schedule"]
+        indicators_found = sum(1 for indicator in plan_indicators if indicator in content)
+        
+        if indicators_found >= 3:
+            score = max(score, 0.7)  # Content shows plan structure
+        elif indicators_found >= 1:
+            score = max(score, 0.5)
+        
+        return min(score, 1.0)
+
     async def _refine_response(
         self,
         original_message: AgentMessage,
@@ -487,7 +564,7 @@ class TravelAgent(BaseAgent):
             result = await self._execute_action_plan(action_plan, execution_context)
 
             # 4. Structured response fusion (template-based, fast)
-            structured_response = self._generate_structured_response(result, intent, message.content)
+            structured_response = await self._generate_structured_response(result, intent, message.content)
 
             # 5. Fast quality assessment (heuristic, ~0.1s) - Skip if in refinement mode
             if skip_quality_check:
@@ -4141,12 +4218,12 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         return next_steps
 
-    def _generate_structured_response(
+    async def _generate_structured_response(
         self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
     ) -> AgentResponse:
         """
         Generate structured response using fast template-based fusion
-        No LLM calls - uses templates and rule-based content generation
+        Enhanced with plan generation capability for plan requests
         """
         try:
             # Extract key information
@@ -4156,8 +4233,17 @@ This will help me provide you with the most relevant travel guidance possible.""
             tool_results = execution_result.get("results", {})
             execution_success = execution_result.get("success", False)
             
+            # Check if this is a plan request
+            is_plan_request = self._is_plan_request(user_message) or intent_type in ["planning", "modification"]
+            
+            # If it's a plan request, generate structured plan data
+            if is_plan_request:
+                return await self._generate_plan_aware_response(
+                    execution_result, intent, user_message
+                )
+            
+            # For non-plan requests, use existing logic
             # Determine response success based on whether we can provide useful content
-            # Even if tools fail, we can still provide value with knowledge and guidance
             has_useful_content = (
                 destination != "unknown" or 
                 tool_results or 
@@ -4214,6 +4300,207 @@ This will help me provide you with the most relevant travel guidance possible.""
                 content=f"I apologize, but I encountered an issue processing your travel request about {destination}. Please try rephrasing your question.",
                 confidence=0.3,
                 metadata={"error": str(e), "response_method": "emergency_fallback"}
+            )
+
+    async def _generate_plan_aware_response(
+        self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
+    ) -> AgentResponse:
+        """Generate structured plan data for plan requests using LLM"""
+        try:
+            # Import required services
+            from app.core.llm_service import get_llm_service
+            from app.core.prompt_manager import prompt_manager, PromptType
+            
+            # Extract key information
+            intent_type = intent.get("type") or intent.get("intent_type", "planning")
+            destination = intent.get("destination", {})
+            if isinstance(destination, dict):
+                destination_name = destination.get("primary", "unknown")
+            else:
+                destination_name = str(destination)
+            
+            tool_results = execution_result.get("results", {})
+            knowledge_context = execution_result.get("knowledge_context", {})
+            
+            logger.info(f"Generating plan-aware response for destination: {destination_name}")
+            
+            # Get LLM service
+            llm_service = get_llm_service()
+            if not llm_service:
+                logger.warning("LLM service not available, falling back to template-based plan generation")
+                return self._generate_template_based_plan(execution_result, intent, user_message)
+            
+            # Use PLAN_GENERATION prompt
+            plan_prompt = prompt_manager.get_prompt(
+                PromptType.PLAN_GENERATION,
+                user_message=user_message,
+                destination=destination_name,
+                tool_results=str(tool_results),
+                knowledge_context=str(knowledge_context),
+                intent=str(intent)
+            )
+            
+            # Generate structured plan using LLM
+            schema = prompt_manager.get_schema(PromptType.PLAN_GENERATION)
+            plan_result = await llm_service.structured_completion(
+                messages=[{"role": "user", "content": plan_prompt}],
+                response_schema=schema,
+                temperature=0.3,
+                max_tokens=2000
+            )
+            
+            logger.info(f"LLM plan generation successful: {len(plan_result.get('plan_events', []))} events")
+            
+            # Create enhanced AgentResponse with structured plan data
+            response = AgentResponse(
+                success=True,
+                content=plan_result.get("natural_response", ""),
+                actions_taken=execution_result.get("actions", []),
+                next_steps=execution_result.get("next_steps", []),
+                confidence=0.92,
+                structured_plan=plan_result.get("structured_plan"),
+                plan_events=plan_result.get("plan_events", []),
+                metadata={
+                    **execution_result,
+                    "intent": intent,
+                    "response_type": "structured_plan",
+                    "plan_generation_method": "llm_based",
+                    "destination": destination_name,
+                    "intent_type": intent_type,
+                    "plan_events_count": len(plan_result.get("plan_events", []))
+                }
+            )
+            
+            logger.info(f"Plan-aware response generated successfully: {len(plan_result.get('plan_events', []))} events")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to generate LLM-based plan: {e}")
+            # Fallback to template-based plan generation
+            return self._generate_template_based_plan(execution_result, intent, user_message)
+
+    def _generate_template_based_plan(
+        self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
+    ) -> AgentResponse:
+        """Generate basic structured plan using template when LLM fails"""
+        try:
+            # Extract information
+            intent_type = intent.get("type") or intent.get("intent_type", "planning")
+            destination = intent.get("destination", {})
+            if isinstance(destination, dict):
+                destination_name = destination.get("primary", "unknown")
+            else:
+                destination_name = str(destination)
+            
+            tool_results = execution_result.get("results", {})
+            
+            # Create basic structured plan
+            structured_plan = {
+                "destination": destination_name,
+                "duration": 3,  # Default 3-day plan
+                "start_date": "2024-07-01",
+                "end_date": "2024-07-03",
+                "travelers": 2,
+                "budget_estimate": {"currency": "USD", "amount": 1500},
+                "metadata": {
+                    "generated_method": "template_fallback",
+                    "travel_style": "moderate"
+                }
+            }
+            
+            # Generate basic events from tool results
+            plan_events = []
+            event_id_counter = 1
+            
+            # Add flight events if available
+            if "flight_search" in tool_results:
+                flight_data = tool_results["flight_search"]
+                if isinstance(flight_data, dict) and flight_data.get("flights"):
+                    plan_events.append({
+                        "id": f"flight_{event_id_counter}",
+                        "title": f"Flight to {destination_name}",
+                        "description": "Outbound flight based on search results",
+                        "event_type": "flight",
+                        "start_time": "2024-07-01T08:00:00+00:00",
+                        "end_time": "2024-07-01T12:00:00+00:00",
+                        "location": f"Airport → {destination_name}",
+                        "details": {"source": "flight_search", "tool_data": flight_data}
+                    })
+                    event_id_counter += 1
+            
+            # Add hotel events if available
+            if "hotel_search" in tool_results:
+                hotel_data = tool_results["hotel_search"]
+                if isinstance(hotel_data, dict) and hotel_data.get("hotels"):
+                    plan_events.append({
+                        "id": f"hotel_{event_id_counter}",
+                        "title": f"Hotel Stay in {destination_name}",
+                        "description": "Accommodation based on search results",
+                        "event_type": "hotel",
+                        "start_time": "2024-07-01T15:00:00+00:00",
+                        "end_time": "2024-07-03T11:00:00+00:00",
+                        "location": destination_name,
+                        "details": {"source": "hotel_search", "tool_data": hotel_data}
+                    })
+                    event_id_counter += 1
+            
+            # Add attraction events if available
+            if "attraction_search" in tool_results:
+                attraction_data = tool_results["attraction_search"]
+                if isinstance(attraction_data, dict) and attraction_data.get("attractions"):
+                    attractions = attraction_data.get("attractions", [])[:3]  # Take first 3
+                    for i, attraction in enumerate(attractions):
+                        plan_events.append({
+                            "id": f"attraction_{event_id_counter}",
+                            "title": f"Visit {attraction.get('name', 'Attraction')}",
+                            "description": attraction.get("description", "Explore local attraction"),
+                            "event_type": "attraction",
+                            "start_time": f"2024-07-0{2+i//2}T{9+i*3}:00:00+00:00",
+                            "end_time": f"2024-07-0{2+i//2}T{12+i*3}:00:00+00:00",
+                            "location": attraction.get("location", destination_name),
+                            "details": {"source": "attraction_search", "attraction_data": attraction}
+                        })
+                        event_id_counter += 1
+            
+            # Generate natural response
+            natural_response = f"Here's a structured travel plan for {destination_name}! "
+            if plan_events:
+                natural_response += f"I've created a {structured_plan['duration']}-day itinerary with {len(plan_events)} planned activities including "
+                event_types = list(set([event["event_type"] for event in plan_events]))
+                natural_response += ", ".join(event_types) + ". "
+            natural_response += "This plan is based on your travel preferences and the available options I found. You can modify any part of this itinerary to better suit your needs!"
+            
+            # Create response
+            response = AgentResponse(
+                success=True,
+                content=natural_response,
+                actions_taken=execution_result.get("actions", []),
+                next_steps=execution_result.get("next_steps", []),
+                confidence=0.78,
+                structured_plan=structured_plan,
+                plan_events=plan_events,
+                metadata={
+                    **execution_result,
+                    "intent": intent,
+                    "response_type": "structured_plan",
+                    "plan_generation_method": "template_based",
+                    "destination": destination_name,
+                    "intent_type": intent_type,
+                    "plan_events_count": len(plan_events)
+                }
+            )
+            
+            logger.info(f"Template-based plan generated: {len(plan_events)} events for {destination_name}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to generate template-based plan: {e}")
+            # Ultimate fallback to basic response
+            return AgentResponse(
+                success=False,
+                content=f"I encountered an issue creating a detailed plan for {destination_name}. Please try rephrasing your request or provide more specific details about your travel preferences.",
+                confidence=0.4,
+                metadata={"error": str(e), "response_method": "plan_generation_fallback"}
             )
 
     def _build_structured_content(

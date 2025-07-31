@@ -21,6 +21,7 @@ class PromptType(Enum):
     RESPONSE_REFINEMENT = "response_refinement"
     RAG_GENERATION = "rag_generation"
     FUNCTION_CALLING = "function_calling"
+    PLAN_GENERATION = "plan_generation"
 
 
 class PromptManager:
@@ -42,6 +43,7 @@ class PromptManager:
             PromptType.RESPONSE_REFINEMENT.value: self._get_response_refinement_template(),
             PromptType.RAG_GENERATION.value: self._get_rag_generation_template(),
             PromptType.FUNCTION_CALLING.value: self._get_function_calling_template(),
+            PromptType.PLAN_GENERATION.value: self._get_plan_generation_template(),
         }
 
     def _initialize_schemas(self) -> Dict[str, Dict[str, Any]]:
@@ -283,6 +285,43 @@ class PromptManager:
                     "refined_actions",
                     "refined_next_steps",
                 ],
+            },
+            PromptType.PLAN_GENERATION.value: {
+                "type": "object",
+                "properties": {
+                    "natural_response": {"type": "string"},
+                    "structured_plan": {
+                        "type": "object",
+                        "properties": {
+                            "destination": {"type": "string"},
+                            "duration": {"type": "number"},
+                            "start_date": {"type": "string"},
+                            "end_date": {"type": "string"},
+                            "travelers": {"type": "number"},
+                            "budget_estimate": {"type": "object"},
+                            "metadata": {"type": "object"}
+                        }
+                    },
+                    "plan_events": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "title": {"type": "string"},
+                                "description": {"type": "string"},
+                                "event_type": {"type": "string"},
+                                "start_time": {"type": "string"},
+                                "end_time": {"type": "string"},
+                                "location": {"type": "string"},
+                                "coordinates": {"type": "object"},
+                                "details": {"type": "object"}
+                            },
+                            "required": ["title", "event_type", "start_time", "end_time", "location"]
+                        }
+                    }
+                },
+                "required": ["natural_response", "structured_plan", "plan_events"]
             },
         }
 
@@ -738,6 +777,119 @@ class PromptManager:
     def get_available_prompts(self) -> List[str]:
         """Get list of available prompt types"""
         return list(self.templates.keys())
+
+    def _get_plan_generation_template(self) -> str:
+        """Plan generation prompt template"""
+        return """
+        You are a professional travel planner generating a structured, detailed travel plan.
+        
+        <context>
+        User Request: {user_message}
+        Destination: {destination}
+        Tool Results: {tool_results}
+        Knowledge Context: {knowledge_context}
+        Intent: {intent}
+        </context>
+        
+        <requirements>
+        Generate a complete travel plan with:
+        1. Detailed daily itinerary with specific times
+        2. Flight, hotel, and attraction events from tool results
+        3. Precise event scheduling (hour-level precision)
+        4. Practical information and recommendations
+        5. Realistic timing and logistics
+        </requirements>
+        
+        <output_format>
+        Return JSON with three parts:
+        1. "natural_response": User-friendly description of the travel plan
+        2. "structured_plan": Complete plan metadata
+        3. "plan_events": Detailed list of events with precise timing
+        
+        {{
+            "natural_response": "Here's your detailed travel plan for [destination]...",
+            "structured_plan": {{
+                "destination": "Primary destination name",
+                "duration": 7,
+                "start_date": "2024-07-01",
+                "end_date": "2024-07-07",
+                "travelers": 2,
+                "budget_estimate": {{"currency": "USD", "amount": 2500}},
+                "metadata": {{
+                    "travel_style": "moderate",
+                    "season": "summer",
+                    "generated_at": "2024-01-15T10:00:00Z"
+                }}
+            }},
+            "plan_events": [
+                {{
+                    "id": "flight_outbound_001",
+                    "title": "Flight to [Destination]",
+                    "description": "Outbound flight details and travel instructions",
+                    "event_type": "flight",
+                    "start_time": "2024-07-01T08:00:00+00:00",
+                    "end_time": "2024-07-01T14:00:00+00:00",
+                    "location": "Departure Airport → Destination Airport",
+                    "coordinates": {{"lat": 40.7128, "lng": -74.0060}},
+                    "details": {{
+                        "source": "flight_search",
+                        "airline": "Airline name",
+                        "flight_number": "AA123",
+                        "price": {{"amount": 450, "currency": "USD"}},
+                        "booking_info": {{"booking_url": "...", "confirmation": "..."}},
+                        "recommendations": ["Arrive 2 hours early", "Check baggage restrictions"]
+                    }}
+                }},
+                {{
+                    "id": "hotel_checkin_001",
+                    "title": "Hotel Check-in: [Hotel Name]",
+                    "description": "Hotel accommodation details and check-in process",
+                    "event_type": "hotel",
+                    "start_time": "2024-07-01T15:00:00+00:00",
+                    "end_time": "2024-07-04T11:00:00+00:00",
+                    "location": "Hotel Address, City",
+                    "coordinates": {{"lat": 40.7589, "lng": -73.9851}},
+                    "details": {{
+                        "source": "hotel_search",
+                        "rating": 4.5,
+                        "price_per_night": {{"amount": 180, "currency": "USD"}},
+                        "amenities": ["WiFi", "Breakfast", "Gym"],
+                        "booking_info": {{"booking_url": "...", "cancellation_policy": "..."}},
+                        "recommendations": ["Request room with city view", "Join loyalty program"]
+                    }}
+                }},
+                {{
+                    "id": "attraction_visit_001",
+                    "title": "Visit [Famous Attraction]",
+                    "description": "Explore the famous landmark with guided tour",
+                    "event_type": "attraction",
+                    "start_time": "2024-07-02T09:00:00+00:00",
+                    "end_time": "2024-07-02T12:00:00+00:00",
+                    "location": "Attraction Address, City",
+                    "coordinates": {{"lat": 40.7484, "lng": -73.9857}},
+                    "details": {{
+                        "source": "attraction_search",
+                        "rating": 4.8,
+                        "price": {{"amount": 25, "currency": "USD"}},
+                        "opening_hours": "9:00 AM - 6:00 PM",
+                        "booking_info": {{"advance_booking_required": true, "ticket_url": "..."}},
+                        "recommendations": ["Book tickets in advance", "Bring camera", "Wear comfortable shoes"]
+                    }}
+                }}
+            ]
+        }}
+        </output_format>
+        
+        <important_notes>
+        1. Ensure all timestamps are in ISO 8601 format with timezone
+        2. Make realistic time allocations (travel time, meal breaks, etc.)
+        3. Use actual data from tool results when available
+        4. Include practical recommendations and tips
+        5. Coordinate events logically (check-in before activities, etc.)
+        6. Generate unique IDs for each event
+        7. Provide fallback events if tool results are insufficient
+        </important_notes>
+        """
 
 
 # Create global instance

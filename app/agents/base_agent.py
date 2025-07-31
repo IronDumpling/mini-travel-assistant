@@ -54,6 +54,11 @@ class AgentResponse(BaseModel):
     next_steps: List[str] = []
     confidence: float = 1.0
     metadata: Dict[str, Any] = {}
+    
+    # New structured plan fields for enhanced travel planning
+    structured_plan: Optional[Dict[str, Any]] = None  # Structured plan data
+    plan_events: List[Dict[str, Any]] = []  # Specific plan events
+    plan_modifications: Optional[Dict[str, Any]] = None  # Plan modification suggestions
 
 
 class QualityAssessment(BaseModel):

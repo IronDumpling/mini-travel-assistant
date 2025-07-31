@@ -171,6 +171,139 @@ class PlanManager:
                 "metadata_updated": False
             }
     
+    async def update_plan_from_structured_response(
+        self, 
+        session_id: str, 
+        agent_response: Any  # Changed from AgentResponse to Any to avoid import issues
+    ) -> Dict[str, Any]:
+        """Update plan directly from structured response data, avoiding LLM re-parsing"""
+        
+        try:
+            plan = self.get_plan_by_session(session_id)
+            if not plan:
+                logger.warning(f"No existing plan found for session {session_id}, creating new plan")
+                self.create_plan_for_session(session_id)
+                plan = self.get_plan_by_session(session_id)
+            
+            update_summary = {
+                "success": True,
+                "changes_made": [],
+                "events_added": 0,
+                "events_updated": 0,
+                "events_deleted": 0,
+                "metadata_updated": False,
+                "direct_structure_used": True
+            }
+            
+            logger.info(f"Processing structured response for session {session_id}")
+            
+            # Check if response has structured plan data
+            if hasattr(agent_response, 'structured_plan') and agent_response.structured_plan:
+                # Update plan metadata from structured data
+                plan_data = agent_response.structured_plan
+                if plan_data.get("destination"):
+                    plan.metadata.destination = plan_data["destination"]
+                if plan_data.get("duration"):
+                    plan.metadata.duration_days = plan_data["duration"]
+                if plan_data.get("travelers"):
+                    plan.metadata.travelers = plan_data["travelers"]
+                # Note: start_date and end_date are not fields in TravelPlanMetadata
+                # They are stored as plan_data in the structured_plan itself
+                
+                update_summary["metadata_updated"] = True
+                update_summary["changes_made"].append("Updated plan metadata from structured data")
+                logger.info(f"Updated plan metadata: destination={plan_data.get('destination')}")
+            
+            # Process structured plan events
+            if hasattr(agent_response, 'plan_events') and agent_response.plan_events:
+                new_events = []
+                for event_data in agent_response.plan_events:
+                    try:
+                        event = self._create_calendar_event_from_structured_data(event_data)
+                        if event:
+                            new_events.append(event)
+                            logger.debug(f"Created event: {event.title}")
+                    except Exception as e:
+                        logger.warning(f"Failed to create event from structured data: {e}")
+                        continue
+                
+                # Filter out duplicate events
+                filtered_events = self._filter_duplicate_events(new_events, plan.events or [])
+                
+                if filtered_events:
+                    if plan.events is None:
+                        plan.events = []
+                    plan.events.extend(filtered_events)
+                    update_summary["events_added"] = len(filtered_events)
+                    update_summary["changes_made"].append(f"Added {len(filtered_events)} events from structured data")
+                    logger.info(f"Added {len(filtered_events)} new events to plan {plan.plan_id}")
+                else:
+                    logger.info("No new events to add (all were duplicates or invalid)")
+            
+            # Save updated plan if any changes were made
+            if update_summary["changes_made"]:
+                plan.updated_at = datetime.now(timezone.utc)
+                self._save_plan(plan)
+                logger.info(f"Plan {plan.plan_id} updated successfully via structured data")
+            else:
+                logger.info(f"No changes needed for plan {plan.plan_id}")
+            
+            return update_summary
+            
+        except Exception as e:
+            logger.error(f"Failed to update plan from structured response: {e}")
+            # Fallback to original LLM-based method only if we have content to parse
+            if hasattr(agent_response, 'content') and agent_response.content.strip():
+                logger.info("Falling back to LLM-based plan parsing due to structured response failure")
+                return await self.update_plan_from_chat_response(
+                    session_id, "", agent_response.content, getattr(agent_response, 'metadata', {})
+                )
+            else:
+                logger.warning("No fallback content available, returning failure status")
+                return {
+                    "success": False,
+                    "error": f"Structured plan update failed and no fallback content available: {str(e)}",
+                    "changes_made": [],
+                    "events_added": 0,
+                    "events_updated": 0,
+                    "events_deleted": 0,
+                    "metadata_updated": False
+                }
+
+    def _create_calendar_event_from_structured_data(self, event_data: Dict[str, Any]):
+        """Create calendar event from structured event data"""
+        try:
+            # Import required classes
+            from app.api.schemas import CalendarEvent
+            import uuid
+            
+            # Parse timestamps
+            start_time = event_data.get("start_time")
+            end_time = event_data.get("end_time")
+            
+            if isinstance(start_time, str):
+                start_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+            if isinstance(end_time, str):
+                end_time = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+            
+            # Create event
+            event = CalendarEvent(
+                id=event_data.get("id", str(uuid.uuid4())),
+                title=event_data.get("title", ""),
+                description=event_data.get("description", ""),
+                event_type=event_data.get("event_type", "activity"),
+                start_time=start_time,
+                end_time=end_time,
+                location=event_data.get("location", ""),
+                details=event_data.get("details", {})
+            )
+            
+            return event
+            
+        except Exception as e:
+            logger.error(f"Failed to create calendar event from structured data: {e}")
+            return None
+
     async def _extract_plan_modifications(
         self, 
         user_message: str, 
@@ -261,6 +394,16 @@ If no changes are needed, return empty arrays for each section."""
             try:
                 # Extract content from LLMResponse object
                 response_content = response.content if hasattr(response, 'content') else str(response)
+                
+                # Add detailed logging for debugging
+                logger.debug(f"Raw LLM response: {repr(response)}")
+                logger.debug(f"Extracted content: {repr(response_content)}")
+                
+                # Check if response is empty or None
+                if not response_content or response_content.strip() == "":
+                    logger.warning("LLM returned empty response, falling back to heuristic extraction")
+                    return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
+                
                 modifications = json.loads(response_content.strip())
                 
                 logger.info(f"LLM plan modification extraction successful: {len(modifications.get('new_events', []))} new events, {len(modifications.get('updated_events', []))} updates, {len(modifications.get('deleted_event_ids', []))} deletions")
@@ -281,7 +424,7 @@ If no changes are needed, return empty arrays for each section."""
                 return modifications
                 
             except json.JSONDecodeError as e:
-                logger.warning(f"LLM response not valid JSON: {e}")
+                logger.warning(f"LLM response not valid JSON: {e}. Response content: {repr(response_content)}")
                 return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
                 
         except Exception as e:

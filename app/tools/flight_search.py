@@ -95,13 +95,10 @@ class FlightSearchTool(BaseTool):
     async def _execute(self, input_data: FlightSearchInput, context: ToolExecutionContext) -> FlightSearchOutput:
         """Execute flight search using Amadeus API or Inspiration Search API"""
         try:
-            # Validate input parameters
+            # Set default origin to Toronto (YYZ) if not provided or invalid
             if not input_data.origin or input_data.origin.lower() in ['unknown', '']:
-                return FlightSearchOutput(
-                    success=False,
-                    error="Invalid origin: origin is required and cannot be 'unknown'",
-                    flights=[]
-                )
+                input_data.origin = "YYZ"
+                logger.info(f"No valid origin provided, using default departure location: Toronto (YYZ)")
             
             if not input_data.inspiration_search and (not input_data.destination or input_data.destination.lower() in ['unknown', '']):
                 return FlightSearchOutput(
