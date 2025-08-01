@@ -2608,9 +2608,17 @@ Please analyze the current message considering the conversation history for bett
                     elif tool_name == "hotel_search":
                         # For hotel search, we need proper date handling
                         # Since we don't have specific dates, we'll provide basic search
-                        # Convert destination to IATA code(s) for AMADEUS API
                         destination = tool_params.get("location", "unknown")  # hotel_search uses "location" key
-                        iata_result = self._convert_city_to_iata_code(destination)
+                        
+                        # Check if destination is already converted to list of IATA codes
+                        if isinstance(destination, list):
+                            # Already converted to IATA codes, use directly
+                            iata_result = destination
+                            logger.info(f"🏨 Travel agent - Using pre-converted IATA codes: {destination}")
+                        else:
+                            # Convert destination to IATA code(s) for AMADEUS API
+                            iata_result = self._convert_city_to_iata_code(destination)
+                            logger.info(f"🏨 Travel agent - Converted '{destination}' to IATA: {iata_result}")
                         
                         hotel_params = {
                             "location": iata_result,  # Use IATA code(s) for AMADEUS API
@@ -2643,9 +2651,17 @@ Please analyze the current message considering the conversation history for bett
                         # Use a future date for the search
                         future_date = datetime.now() + timedelta(days=30)
                         
-                        # Convert destination to IATA code(s) for AMADEUS API
                         destination = tool_params.get("destination", "unknown")
-                        destination_result = self._convert_city_to_iata_code(destination)
+                        
+                        # ✅ Fix: Check if destination is already converted to list of IATA codes
+                        if isinstance(destination, list):
+                            # Already converted to IATA codes, use directly
+                            destination_result = destination
+                            logger.info(f"✈️ Travel agent - Using pre-converted IATA codes: {destination}")
+                        else:
+                            # Convert destination to IATA code(s) for AMADEUS API
+                            destination_result = self._convert_city_to_iata_code(destination)
+                            logger.info(f"✈️ Travel agent - Converted '{destination}' to IATA: {destination_result}")
                         
                         flight_params = {
                             "origin": tool_params.get("origin", "PAR"),
@@ -3882,8 +3898,11 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         for tool_name in selected_tools:
             if tool_name == "attraction_search":
+                # Convert destination to IATA code(s) for consistent multi-location support
+                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                
                 tool_parameters[tool_name] = {
-                    "location": destination if destination != "unknown" else "Tokyo",  # Safe fallback
+                    "location": destination_result,  # Can be single IATA code or list for multi-location
                     "query": None,  # Let tool use location-based search
                     "max_results": 10,
                     "include_photos": True,
@@ -3904,8 +3923,11 @@ This will help me provide you with the most relevant travel guidance possible.""
                 if check_out_date in ["unknown", "", None]:
                     check_out_date = default_check_out
                 
+                # Convert destination to IATA code(s) for consistent multi-location support  
+                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                
                 tool_parameters[tool_name] = {
-                    "location": destination if destination != "unknown" else "Tokyo",  # Safe fallback
+                    "location": destination_result,  # Can be single IATA code or list for multi-location
                     "check_in": check_in_date,
                     "check_out": check_out_date,
                     "guests": max(travel_details.get("travelers", 1), 1),
@@ -3932,9 +3954,12 @@ This will help me provide you with the most relevant travel guidance possible.""
                 # For origin, we always use the first code if it's a list (shouldn't happen for origin)
                 origin_iata = origin_result[0] if isinstance(origin_result, list) else origin_result
                 
+                # Convert destination to IATA code(s) for consistent multi-location support
+                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                
                 tool_parameters[tool_name] = {
                     "origin": origin_iata,  # Use extracted origin converted to IATA code
-                    "destination": destination if destination != "unknown" else "Tokyo",
+                    "destination": destination_result,  # Can be single IATA code or list for multi-location
                     "start_date": departure_date,
                     "passengers": max(travel_details.get("travelers", 1), 1),
                     "class_type": "economy",

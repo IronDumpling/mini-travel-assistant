@@ -12,7 +12,7 @@ TODO: Improve the following features
 import os
 from amadeus import Client, ResponseError
 import asyncio
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 import aiohttp
 import os
@@ -38,7 +38,7 @@ class Hotel(BaseModel):
 
 class HotelSearchInput(ToolInput):
     """Hotel search input"""
-    location: str  # This should be a 3-character IATA city code (e.g., "PAR", "LON")
+    location: Union[str, List[str]]  # Can be single IATA city code or list of codes for multi-location search
     check_in: datetime
     check_out: datetime
     guests: int = 1

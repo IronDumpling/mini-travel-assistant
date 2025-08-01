@@ -6,7 +6,7 @@ Features include text search, nearby search, place details, and photo retrieval.
 """
 
 import os
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 import aiohttp
 import json
 from pydantic import BaseModel, Field
@@ -45,7 +45,7 @@ class Attraction(BaseModel):
 class AttractionSearchInput(ToolInput):
     """Attraction search input parameters"""
 
-    location: str = Field(description="Location to search for attractions")
+    location: Union[str, List[str]] = Field(description="Location(s) to search for attractions - can be single location or list")
     query: Optional[str] = Field(
         default=None, description="Search query for specific attractions"
     )

@@ -6,7 +6,7 @@ Integrated with Amadeus API for real flight search functionality
 """
 
 import os
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, timedelta
 import aiohttp
 from pydantic import BaseModel, Field
@@ -31,7 +31,7 @@ class Flight(BaseModel):
 class FlightSearchInput(ToolInput):
     """Flight search input"""
     origin: str = Field(description="IATA code or city of departure")
-    destination: Optional[str] = Field(default=None, description="IATA code or city of arrival (optional for inspiration search)")
+    destination: Optional[Union[str, List[str]]] = Field(default=None, description="IATA code/city of arrival or list of destinations for multi-destination search")
     start_date: Optional[datetime] = Field(default=None, description="Departure date (YYYY-MM-DD)")
     end_date: Optional[datetime] = Field(default=None, description="Return date (YYYY-MM-DD), if round trip")
     passengers: int = Field(default=1, description="Number of passengers")
