@@ -615,9 +615,27 @@ class PlanManager:
             else:
                 logger.info(f"🛫 Multi-city trip starting from: {origin}")
             
-            # ✅ Calculate days per destination
-            days_per_destination = max(1, duration // len(destinations))
-            logger.info(f"📅 Allocating {days_per_destination} days per destination")
+            # ✅ Calculate days per destination with proper distribution
+            # Ensure total days equals requested duration, not compressed by destination count
+            base_days_per_destination = max(1, duration // len(destinations))
+            extra_days = duration % len(destinations)  # Distribute remaining days
+            
+            logger.info(f"📅 Distributing {duration} days across {len(destinations)} destinations:")
+            logger.info(f"   Base allocation: {base_days_per_destination} days per destination")
+            if extra_days > 0:
+                logger.info(f"   Extra days to distribute: {extra_days}")
+            
+            # Create a list of days for each destination
+            days_allocation = [base_days_per_destination] * len(destinations)
+            # Distribute extra days to first few destinations
+            for i in range(extra_days):
+                days_allocation[i] += 1
+            
+            logger.info(f"   Final allocation: {days_allocation}")
+            
+            # Verify total days
+            total_allocated_days = sum(days_allocation)
+            logger.info(f"   Total days allocated: {total_allocated_days} (requested: {duration})")
             
             current_date = start_date
             
@@ -626,7 +644,9 @@ class PlanManager:
             logger.info(f"✈️ Flight chain: {' → '.join(flight_chain)}")
             
             for i, destination in enumerate(destinations):  # ✅ Process ALL destinations, no limit
-                logger.info(f"🏙️ Planning destination {i+1}/{len(destinations)}: {destination}")
+                # ✅ Get the specific number of days for this destination
+                destination_days = days_allocation[i]
+                logger.info(f"🏙️ Planning destination {i+1}/{len(destinations)}: {destination} ({destination_days} days)")
                 
                 # ✅ Create flight to this destination
                 # ✅ Get proper city names from IATA codes
@@ -680,7 +700,7 @@ class PlanManager:
                 
                 # ✅ Hotel for each destination
                 checkin_time = current_date.replace(hour=15, minute=0)
-                checkout_time = (current_date + timedelta(days=days_per_destination)).replace(hour=11, minute=0)
+                checkout_time = (current_date + timedelta(days=destination_days)).replace(hour=11, minute=0)
                 
                 # ✅ Get proper city name from IATA code
                 from app.knowledge.geographical_data import GeographicalMappings
@@ -691,7 +711,7 @@ class PlanManager:
                 hotel_location = city_name
                 hotel_details = {
                     "source": "multi_destination_planning",
-                    "nights": days_per_destination,
+                    "nights": destination_days,
                     "destination_sequence": i + 1
                 }
                 
@@ -728,7 +748,7 @@ class PlanManager:
                 hotel_event = self._create_calendar_event_from_data({
                     "id": f"hotel_{destination}_{str(uuid.uuid4())[:8]}",
                     "title": hotel_name,
-                    "description": f"Accommodation in {city_name} for {days_per_destination} nights",
+                    "description": f"Accommodation in {city_name} for {destination_days} nights",
                     "event_type": "hotel",
                     "start_time": checkin_time.isoformat(),
                     "end_time": checkout_time.isoformat(),
@@ -739,7 +759,7 @@ class PlanManager:
                     events.append(hotel_event)
                 
                 # ✅ Attractions for each destination
-                for day in range(days_per_destination):
+                for day in range(destination_days):
                     activity_date = current_date + timedelta(days=day)
                     activity_time = activity_date.replace(hour=10, minute=0)
                     
@@ -755,6 +775,7 @@ class PlanManager:
                             "source": "multi_destination_planning",
                             "day_in_destination": day + 1,
                             "destination_sequence": i + 1,
+                            "total_days_in_destination": destination_days,  # ✅ Add this for better tracking
                             "recommendations": ["Visit main attractions", "Try local cuisine", "Explore cultural sites"]
                         }
                     })
@@ -762,7 +783,7 @@ class PlanManager:
                         events.append(activity_event)
                 
                 # Move to next destination period
-                current_date += timedelta(days=days_per_destination)
+                current_date += timedelta(days=destination_days)
             
             # ✅ Final return flight: Last Destination → Origin
             final_destination = destinations[-1]
@@ -805,7 +826,8 @@ class PlanManager:
             logger.info(f"   📍 {len(destinations)} destinations: {', '.join(destinations)}")
             logger.info(f"   ✈️ {len(destinations) + 1} flights: {' → '.join(flight_chain)}")
             logger.info(f"   🏨 {len(destinations)} hotel stays")
-            logger.info(f"   🎯 {len(destinations) * days_per_destination} activities")
+            logger.info(f"   🎯 {sum(days_allocation)} total activity days ({total_allocated_days} days total)")
+            logger.info(f"   Days distribution: {dict(zip(destinations, days_allocation))}")
             
             return events
             
@@ -1240,10 +1262,20 @@ AGENT RESPONSE: {agent_response}
 
 TASK: Determine what modifications should be made to the existing plan based on this conversation.
 
+CRITICAL DELETION RULES:
+- If user wants to REMOVE a city/destination, you MUST delete ALL related events:
+  * ALL hotel events for that city
+  * ALL activity/attraction events for that city
+  * ALL connecting flights to/from that city
+- Look for phrases like "remove", "delete", "skip", "don't go to", "take out", "exclude"
+- When removing destinations from multi-city trips, be thorough in cleaning up ALL related events
+
 Analyze for:
 1. NEW events to add (flights, hotels, attractions, restaurants, activities)
 2. UPDATES to existing events (time changes, location changes, details updates)
 3. DELETIONS of existing events (if user wants to remove something)
+   - Pay special attention to city/destination removals
+   - Include ALL events related to removed destinations
 4. PLAN METADATA changes (destination, dates, budget, etc.)
 
 For each event, determine:
@@ -1252,6 +1284,13 @@ For each event, determine:
 - Start and end times (use ISO format: YYYY-MM-DDTHH:MM:SS+00:00)
 - Location
 - Any specific details mentioned
+
+When identifying events to delete:
+- Check event titles for city names mentioned in removal requests
+- Check event locations for city names
+- Check event details for destination codes (LON, PAR, etc.)
+- Look for hotel events that mention the removed city
+- Look for activities/attractions in the removed city
 
 Return ONLY a valid JSON response with this exact structure:
 {{
@@ -1420,10 +1459,28 @@ If no changes are needed, return empty arrays for each section."""
         if is_modification_request:
             logger.info(f"Detected modification request in user message: {user_message[:100]}...")
             
-            # For modifications, be conservative and don't add new events
-            # Instead, log what we would need to analyze
-            logger.warning(f"Modification request detected but LLM analysis failed. Manual review may be needed.")
-            modifications["plan_modifications"]["impact"] = "Modification request detected but could not be processed automatically"
+            # ✅ Try to handle destination removal heuristically
+            removal_keywords = ["remove", "delete", "skip", "don't go", "take out", "exclude", "without"]
+            city_removal_detected = any(keyword in user_lower for keyword in removal_keywords)
+            
+            if city_removal_detected and existing_plan and existing_plan.events:
+                logger.info("Attempting heuristic destination removal...")
+                deleted_event_ids = self._heuristic_remove_destination_events(
+                    user_message, existing_plan.events
+                )
+                if deleted_event_ids:
+                    modifications["deleted_event_ids"] = deleted_event_ids
+                    modifications["plan_modifications"]["reason"] = "Heuristic destination removal based on user request"
+                    modifications["plan_modifications"]["impact"] = f"Removed {len(deleted_event_ids)} events related to destinations mentioned for removal"
+                    logger.info(f"Heuristically identified {len(deleted_event_ids)} events for removal")
+                else:
+                    logger.warning(f"Could not identify specific events to remove heuristically")
+                    modifications["plan_modifications"]["impact"] = "Modification request detected but could not be processed automatically"
+            else:
+                # For modifications, be conservative and don't add new events
+                # Instead, log what we would need to analyze
+                logger.warning(f"Modification request detected but LLM analysis failed. Manual review may be needed.")
+                modifications["plan_modifications"]["impact"] = "Modification request detected but could not be processed automatically"
             
         else:
             # Only add new events if this seems like a request for additional activities
@@ -1449,6 +1506,98 @@ If no changes are needed, return empty arrays for each section."""
                 modifications["plan_modifications"]["impact"] = "No clear plan modifications detected in conversation"
         
         return modifications
+    
+    def _heuristic_remove_destination_events(self, user_message: str, existing_events: List) -> List[str]:
+        """Heuristically identify events to remove based on destination removal requests"""
+        import re
+        
+        deleted_event_ids = []
+        user_lower = user_message.lower()
+        
+        # Extract city names mentioned for removal
+        # Look for patterns like "remove Paris", "delete London", "skip Amsterdam"
+        removal_patterns = [
+            r'(?:remove|delete|skip|exclude|without|take out|don\'t go to)\s+([a-zA-Z\s]+?)(?:\s+and|\s*,|\s*$|\s+from)',
+            r'(?:not|no)\s+([a-zA-Z\s]+?)(?:\s+and|\s*,|\s*$)',
+            r'(?:without|excluding)\s+([a-zA-Z\s]+?)(?:\s+and|\s*,|\s*$)',
+        ]
+        
+        cities_to_remove = set()
+        for pattern in removal_patterns:
+            matches = re.findall(pattern, user_lower)
+            for match in matches:
+                city = match.strip().title()
+                if len(city) >= 3:  # Valid city name
+                    cities_to_remove.add(city)
+                    # Also add common variations
+                    if city == "Amsterdam":
+                        cities_to_remove.update(["Amsterdam", "AMS"])
+                    elif city == "Vienna":
+                        cities_to_remove.update(["Vienna", "VIE"])
+                    elif city == "London":
+                        cities_to_remove.update(["London", "LON"])
+                    elif city == "Paris":
+                        cities_to_remove.update(["Paris", "PAR"])
+                    elif city == "Berlin":
+                        cities_to_remove.update(["Berlin", "BER"])
+                    elif city == "Rome":
+                        cities_to_remove.update(["Rome", "ROM"])
+                    elif city == "Barcelona":
+                        cities_to_remove.update(["Barcelona", "BCN"])
+                    elif city == "Prague":
+                        cities_to_remove.update(["Prague", "PRG"])
+        
+        logger.info(f"Cities identified for removal: {cities_to_remove}")
+        
+        if not cities_to_remove:
+            return deleted_event_ids
+        
+        # Check each event for removal criteria
+        for event in existing_events:
+            should_remove = False
+            
+            # Check event title for city names
+            event_title = (event.title or '').lower()
+            for city in cities_to_remove:
+                if city.lower() in event_title:
+                    should_remove = True
+                    logger.info(f"Marking event '{event.title}' for removal (title contains '{city}')")
+                    break
+            
+            # Check event location for city names
+            if not should_remove:
+                event_location = (event.location or '').lower()
+                for city in cities_to_remove:
+                    if city.lower() in event_location:
+                        should_remove = True
+                        logger.info(f"Marking event '{event.title}' for removal (location contains '{city}')")
+                        break
+            
+            # Check event details for destination codes or city names
+            if not should_remove and hasattr(event, 'details') and event.details:
+                event_details_str = str(event.details).lower()
+                for city in cities_to_remove:
+                    if city.lower() in event_details_str:
+                        should_remove = True
+                        logger.info(f"Marking event '{event.title}' for removal (details contain '{city}')")
+                        break
+                
+                # Check for destination field specifically
+                if not should_remove and isinstance(event.details, dict):
+                    destination_field = event.details.get('destination', '').upper()
+                    origin_field = event.details.get('origin', '').upper()
+                    for city in cities_to_remove:
+                        city_upper = city.upper()
+                        if city_upper == destination_field or city_upper == origin_field:
+                            should_remove = True
+                            logger.info(f"Marking event '{event.title}' for removal (destination/origin field matches '{city}')")
+                            break
+            
+            if should_remove:
+                deleted_event_ids.append(event.id)
+        
+        logger.info(f"Identified {len(deleted_event_ids)} events for heuristic removal")
+        return deleted_event_ids
     
     def _filter_duplicate_events(self, new_events: List, existing_events: List) -> List:
         """Filter out events that might be duplicates of existing ones"""
