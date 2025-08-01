@@ -444,7 +444,8 @@ class PlanManager:
                             "source": "flight_search",
                             "airline": getattr(outbound_flight, 'airline', 'TBA'),
                             "price": {"amount": getattr(outbound_flight, 'price', 500), "currency": "USD"},
-                            "flight_number": getattr(outbound_flight, 'flight_number', 'TBA')
+                            "flight_number": getattr(outbound_flight, 'flight_number', 'TBA'),
+                            "duration_minutes": getattr(outbound_flight, 'duration', 360)
                         }
                     })
                     if event:
@@ -468,7 +469,9 @@ class PlanManager:
                         "details": {
                             "source": "flight_search",
                             "airline": getattr(return_flight, 'airline', 'TBA'),
-                            "price": {"amount": getattr(return_flight, 'price', 500), "currency": "USD"}
+                            "price": {"amount": getattr(return_flight, 'price', 500), "currency": "USD"},
+                            "flight_number": getattr(return_flight, 'flight_number', 'TBA'),
+                            "duration_minutes": getattr(return_flight, 'duration', 360)
                         }
                     })
                     if event:
@@ -574,7 +577,7 @@ class PlanManager:
         travelers: int,
         user_message: str
     ) -> List:
-        """Create calendar events for multi-destination trips"""
+        """Create calendar events for multi-destination trips with complete flight chain"""
         events = []
         from datetime import timedelta
         import uuid
@@ -582,60 +585,89 @@ class PlanManager:
         try:
             logger.info(f"🗺️ Creating multi-destination itinerary for {len(destinations)} cities: {destinations}")
             
+            # ✅ Extract origin from user message, flight search data, or use default
+            origin = self._extract_origin_from_message(user_message)
+            
+            # ✅ If no origin found in message, try to get it from flight search data
+            if not origin and "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                if hasattr(flight_result, 'data') and flight_result.data:
+                    flight_data = flight_result.data
+                    if flight_data.get("search_type") == "flight_chain":
+                        flight_chain = flight_data.get("flight_chain", [])
+                        if len(flight_chain) > 0:
+                            origin = flight_chain[0]  # First city in chain is origin
+                            logger.info(f"🛫 Extracted origin from flight chain: {origin}")
+            
+            # ✅ Final fallback
+            if not origin:
+                origin = "YYZ"  # Default to Toronto
+                logger.warning(f"🛫 No origin found, using default: {origin}")
+            else:
+                logger.info(f"🛫 Multi-city trip starting from: {origin}")
+            
             # ✅ Calculate days per destination
             days_per_destination = max(1, duration // len(destinations))
             logger.info(f"📅 Allocating {days_per_destination} days per destination")
             
             current_date = start_date
             
-            for i, destination in enumerate(destinations[:5]):  # Limit to 5 destinations max
-                logger.info(f"🏙️ Planning destination {i+1}: {destination}")
+            # ✅ Create complete flight chain: Start → A → B → C → ... → N → Start
+            flight_chain = [origin] + destinations + [origin]
+            logger.info(f"✈️ Flight chain: {' → '.join(flight_chain)}")
+            
+            for i, destination in enumerate(destinations):  # ✅ Process ALL destinations, no limit
+                logger.info(f"🏙️ Planning destination {i+1}/{len(destinations)}: {destination}")
                 
-                # ✅ Arrival/departure events for each city
+                # ✅ Create flight to this destination
                 if i == 0:
-                    # First destination - arrival flight
-                    arrival_time = current_date.replace(hour=10, minute=0)
-                    event = self._create_calendar_event_from_data({
-                        "id": f"arrival_{destination}_{str(uuid.uuid4())[:8]}",
-                        "title": f"Arrive in {destination.title()}",
-                        "description": f"Arrival in {destination.title()} - Start of multi-city adventure",
-                        "event_type": "flight",
-                        "start_time": arrival_time.isoformat(),
-                        "end_time": (arrival_time + timedelta(hours=2)).isoformat(),
-                        "location": destination.title(),
-                        "details": {
-                            "source": "multi_destination_planning",
-                            "destination_sequence": i + 1,
-                            "total_destinations": len(destinations)
-                        }
-                    })
-                    if event:
-                        events.append(event)
+                    # First flight: Origin → First Destination
+                    departure_city = origin
+                    flight_time = current_date.replace(hour=8, minute=0)
+                    flight_title = f"Flight: {departure_city} → {destination.title()}"
+                    flight_description = f"Departure from {departure_city} to {destination.title()} - Start of multi-city adventure"
+                    flight_sequence = 1  # First flight in chain
                 else:
-                    # Travel between cities
-                    travel_time = current_date.replace(hour=14, minute=0)
-                    prev_destination = destinations[i-1]
-                    event = self._create_calendar_event_from_data({
-                        "id": f"travel_{prev_destination}_to_{destination}_{str(uuid.uuid4())[:8]}",
-                        "title": f"Travel: {prev_destination.title()} → {destination.title()}",
-                        "description": f"Journey from {prev_destination.title()} to {destination.title()}",
-                        "event_type": "transportation",
-                        "start_time": travel_time.isoformat(),
-                        "end_time": (travel_time + timedelta(hours=3)).isoformat(),
-                        "location": f"{prev_destination.title()} to {destination.title()}",
-                        "details": {
-                            "source": "multi_destination_planning",
-                            "travel_type": "intercity_transport"
-                        }
-                    })
-                    if event:
-                        events.append(event)
+                    # Connecting flights: Previous Destination → Current Destination
+                    departure_city = destinations[i-1]
+                    flight_time = current_date.replace(hour=14, minute=0)
+                    flight_title = f"Flight: {departure_city.title()} → {destination.title()}"
+                    flight_description = f"Connecting flight from {departure_city.title()} to {destination.title()}"
+                    flight_sequence = i + 1  # Sequence number in chain
+                
+                # Get flight info from tool results if available
+                flight_details = self._extract_flight_details_for_route(
+                    tool_results, departure_city, destination, flight_sequence
+                )
+                
+                flight_event = self._create_calendar_event_from_data({
+                    "id": f"flight_{departure_city}_to_{destination}_{str(uuid.uuid4())[:8]}",
+                    "title": flight_title,
+                    "description": flight_description,
+                    "event_type": "flight",
+                    "start_time": flight_time.isoformat(),
+                    "end_time": (flight_time + timedelta(hours=flight_details.get('duration_hours', 3))).isoformat(),
+                    "location": f"{departure_city} → {destination.title()}",
+                    "details": {
+                        "source": "multi_destination_planning",
+                        "flight_sequence": flight_sequence,  # ✅ Use correct sequence
+                        "total_flights": len(destinations) + 1,  # +1 for return flight
+                        "origin": departure_city,
+                        "destination": destination,
+                        "airline": flight_details.get("airline", "TBA"),
+                        "price": flight_details.get("price", {"amount": "TBA", "currency": "USD"}),
+                        "flight_number": flight_details.get("flight_number", "TBA"),
+                        "duration_minutes": flight_details.get("duration_hours", 3) * 60
+                    }
+                })
+                if flight_event:
+                    events.append(flight_event)
                 
                 # ✅ Hotel for each destination
                 checkin_time = current_date.replace(hour=15, minute=0)
                 checkout_time = (current_date + timedelta(days=days_per_destination)).replace(hour=11, minute=0)
                 
-                event = self._create_calendar_event_from_data({
+                hotel_event = self._create_calendar_event_from_data({
                     "id": f"hotel_{destination}_{str(uuid.uuid4())[:8]}",
                     "title": f"Hotel in {destination.title()}",
                     "description": f"Accommodation in {destination.title()} for {days_per_destination} nights",
@@ -649,15 +681,15 @@ class PlanManager:
                         "destination_sequence": i + 1
                     }
                 })
-                if event:
-                    events.append(event)
+                if hotel_event:
+                    events.append(hotel_event)
                 
                 # ✅ Attractions for each destination
                 for day in range(days_per_destination):
                     activity_date = current_date + timedelta(days=day)
                     activity_time = activity_date.replace(hour=10, minute=0)
                     
-                    event = self._create_calendar_event_from_data({
+                    activity_event = self._create_calendar_event_from_data({
                         "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
                         "title": f"Explore {destination.title()} - Day {day+1}",
                         "description": f"Discover attractions and culture in {destination.title()}",
@@ -672,33 +704,53 @@ class PlanManager:
                             "recommendations": ["Visit main attractions", "Try local cuisine", "Explore cultural sites"]
                         }
                     })
-                    if event:
-                        events.append(event)
+                    if activity_event:
+                        events.append(activity_event)
                 
                 # Move to next destination period
                 current_date += timedelta(days=days_per_destination)
             
-            # ✅ Final departure flight
-            departure_time = current_date.replace(hour=18, minute=0)
+            # ✅ Final return flight: Last Destination → Origin
             final_destination = destinations[-1]
-            event = self._create_calendar_event_from_data({
-                "id": f"departure_{final_destination}_{str(uuid.uuid4())[:8]}",
-                "title": f"Departure from {final_destination.title()}",
-                "description": f"Return journey from {final_destination.title()} - End of multi-city trip",
+            return_flight_time = current_date.replace(hour=18, minute=0)
+            
+            # Get return flight details
+            return_flight_sequence = len(destinations) + 1  # ✅ Correct sequence for return flight
+            return_flight_details = self._extract_flight_details_for_route(
+                tool_results, final_destination, origin, return_flight_sequence
+            )
+            
+            return_flight_event = self._create_calendar_event_from_data({
+                "id": f"flight_{final_destination}_to_{origin}_{str(uuid.uuid4())[:8]}",
+                "title": f"Return Flight: {final_destination.title()} → {origin}",
+                "description": f"Return journey from {final_destination.title()} to {origin} - End of multi-city trip",
                 "event_type": "flight",
-                "start_time": departure_time.isoformat(),
-                "end_time": (departure_time + timedelta(hours=6)).isoformat(),
-                "location": final_destination.title(),
+                "start_time": return_flight_time.isoformat(),
+                "end_time": (return_flight_time + timedelta(hours=return_flight_details.get('duration_hours', 6))).isoformat(),
+                "location": f"{final_destination.title()} → {origin}",
                 "details": {
                     "source": "multi_destination_planning",
+                    "flight_sequence": return_flight_sequence,  # ✅ Use correct sequence
+                    "total_flights": len(destinations) + 1,
+                    "origin": final_destination,
+                    "destination": origin,
                     "trip_conclusion": True,
-                    "cities_visited": destinations
+                    "cities_visited": destinations,
+                    "airline": return_flight_details.get("airline", "TBA"),
+                    "price": return_flight_details.get("price", {"amount": "TBA", "currency": "USD"}),
+                    "flight_number": return_flight_details.get("flight_number", "TBA"),
+                    "duration_minutes": return_flight_details.get("duration_hours", 6) * 60
                 }
             })
-            if event:
-                events.append(event)
+            if return_flight_event:
+                events.append(return_flight_event)
             
-            logger.info(f"✅ Created {len(events)} events for multi-destination trip covering {len(destinations)} cities")
+            logger.info(f"✅ Created {len(events)} events for multi-destination trip:")
+            logger.info(f"   📍 {len(destinations)} destinations: {', '.join(destinations)}")
+            logger.info(f"   ✈️ {len(destinations) + 1} flights: {' → '.join(flight_chain)}")
+            logger.info(f"   🏨 {len(destinations)} hotel stays")
+            logger.info(f"   🎯 {len(destinations) * days_per_destination} activities")
+            
             return events
             
         except Exception as e:
@@ -706,6 +758,145 @@ class PlanManager:
             # Fallback to single destination
             return self._create_single_destination_fallback(destinations[0], start_date, duration)
     
+    def _extract_origin_from_message(self, user_message: str) -> Optional[str]:
+        """Extract origin city/airport from user message"""
+        import re
+        
+        user_lower = user_message.lower()
+        
+        # Look for common origin patterns
+        origin_patterns = [
+            r'from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→)',
+            r'starting\s+from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→|\s+and)',
+            r'departing\s+from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→)',
+            r'leave\s+from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→)',
+            r'fly\s+from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→)',
+        ]
+        
+        for pattern in origin_patterns:
+            match = re.search(pattern, user_lower)
+            if match:
+                origin = match.group(1).strip().title()
+                # Clean up common words
+                origin = re.sub(r'\b(the|city|airport)\b', '', origin, flags=re.IGNORECASE).strip()
+                if len(origin) >= 2:  # Valid city name
+                    logger.info(f"🛫 Extracted origin from message: {origin}")
+                    return origin
+        
+        # Default origins based on common patterns
+        if any(word in user_lower for word in ['singapore', 'sin', 'changi']):
+            return "SIN"  # ✅ Add Singapore support
+        elif any(word in user_lower for word in ['toronto', 'yyz', 'pearson']):
+            return "YYZ"  # ✅ Use IATA code for consistency
+        elif any(word in user_lower for word in ['vancouver', 'yvr']):
+            return "YVR"
+        elif any(word in user_lower for word in ['montreal', 'yul']):
+            return "YUL"
+        elif any(word in user_lower for word in ['new york', 'nyc', 'jfk', 'lga']):
+            return "JFK"
+        elif any(word in user_lower for word in ['london', 'lhr', 'heathrow']):
+            return "LHR"
+        elif any(word in user_lower for word in ['paris', 'cdg']):
+            return "CDG"
+        elif any(word in user_lower for word in ['tokyo', 'nrt', 'hnd']):
+            return "NRT"
+        
+        logger.info(f"🛫 No origin found in message, using default")
+        return None
+
+    def _extract_flight_details_for_route(
+        self, tool_results: Dict[str, Any], origin: str, destination: str, sequence: int
+    ) -> Dict[str, Any]:
+        """Extract flight details for a specific route from tool results"""
+        default_details = {
+            "duration_hours": 3,
+            "airline": "TBA",
+            "price": {"amount": "TBA", "currency": "USD"},
+            "flight_number": "TBA"
+        }
+        
+        try:
+            # Check if we have flight search results
+            if "flight_search" not in tool_results:
+                return default_details
+            
+            flight_result = tool_results["flight_search"]
+            if not hasattr(flight_result, 'flights') or not flight_result.flights:
+                return default_details
+            
+            # ✅ For flight chain searches, match by route_name in details
+            expected_route = f"{origin.upper()} → {destination.upper()}"
+            logger.debug(f"🔍 Looking for flight route: {expected_route} (sequence: {sequence})")
+            
+            # Try to find a flight for this specific route
+            for flight in flight_result.flights:
+                # ✅ First check if this is a flight chain result with details
+                if hasattr(flight, 'details') and flight.details:
+                    route_name = flight.details.get('route_name', '')
+                    route_sequence = flight.details.get('route_sequence', 0)
+                    
+                    # Match by exact route name or sequence number
+                    if (route_name == expected_route or 
+                        route_sequence == sequence):
+                        
+                        duration_minutes = getattr(flight, 'duration', 180)
+                        duration_hours = max(1, duration_minutes // 60)
+                        
+                        logger.info(f"✅ Found flight chain match: {route_name} (seq: {route_sequence})")
+                        return {
+                            "duration_hours": duration_hours,
+                            "airline": getattr(flight, 'airline', 'TBA'),
+                            "price": {
+                                "amount": getattr(flight, 'price', 'TBA'),
+                                "currency": getattr(flight, 'currency', 'USD')
+                            },
+                            "flight_number": getattr(flight, 'flight_number', 'TBA')
+                        }
+                
+                # ✅ Fallback: Match by destination (search_destination is set by flight_search.py)
+                flight_origin = getattr(flight, 'origin', '').lower()
+                flight_dest = getattr(flight, 'destination', '').lower()
+                search_dest = getattr(flight, 'search_destination', '').lower()
+                
+                if (destination.lower() in search_dest or 
+                    destination.lower() in flight_dest):
+                    
+                    duration_minutes = getattr(flight, 'duration', 180)  # 3 hours default
+                    duration_hours = max(1, duration_minutes // 60)
+                    
+                    logger.info(f"✅ Found flight destination match: {search_dest}")
+                    return {
+                        "duration_hours": duration_hours,
+                        "airline": getattr(flight, 'airline', 'TBA'),
+                        "price": {
+                            "amount": getattr(flight, 'price', 'TBA'),
+                            "currency": getattr(flight, 'currency', 'USD')
+                        },
+                        "flight_number": getattr(flight, 'flight_number', 'TBA')
+                    }
+            
+            # If no specific match, use first flight as template
+            if flight_result.flights:
+                first_flight = flight_result.flights[0]
+                duration_minutes = getattr(first_flight, 'duration', 180)
+                duration_hours = max(1, duration_minutes // 60)
+                
+                logger.warning(f"⚠️ No specific match found for {expected_route}, using first flight as template")
+                return {
+                    "duration_hours": duration_hours,
+                    "airline": getattr(first_flight, 'airline', 'TBA'),
+                    "price": {
+                        "amount": getattr(first_flight, 'price', 'TBA'),
+                        "currency": getattr(first_flight, 'currency', 'USD')
+                    },
+                    "flight_number": getattr(first_flight, 'flight_number', 'TBA')
+                }
+                
+        except Exception as e:
+            logger.warning(f"Error extracting flight details for {origin} → {destination}: {e}")
+        
+        return default_details
+
     def _create_single_destination_fallback(self, destination: str, start_date: datetime, duration: int) -> List:
         """Create a simple single-destination fallback plan"""
         events = []

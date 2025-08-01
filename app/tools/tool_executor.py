@@ -1186,8 +1186,10 @@ class ToolExecutor:
                     "start_date": start_date,
                     "passengers": input_data.get("passengers", 1),
                     "class_type": input_data.get("class_type", "economy"),
-                    "end_date": end_date,  # Fix parameter name (was return_date)
+                    "end_date": end_date,  
                     "max_price": input_data.get("max_price"),
+                    "flight_chain": input_data.get("flight_chain", False),  
+                    "inspiration_search": input_data.get("inspiration_search", False),  
                 }
                 # Remove None values
                 cleaned_data = {k: v for k, v in cleaned_data.items() if v is not None}

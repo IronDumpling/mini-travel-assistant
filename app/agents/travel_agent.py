@@ -2480,6 +2480,13 @@ Please analyze the current message considering the conversation history for bett
                             destination_result = self._convert_city_to_iata_code(destination)
                             logger.info(f"✈️ Travel agent - Converted '{destination}' to IATA: {destination_result}")
                         
+                        # ✅ NEW: Enable flight_chain for multi-destination searches
+                        is_multi_destination = isinstance(destination_result, list) and len(destination_result) > 1
+                        flight_chain_enabled = is_multi_destination
+                        
+                        if flight_chain_enabled:
+                            logger.info(f"🔗 Enabling flight chain search for {len(destination_result)} destinations")
+                        
                         flight_params = {
                             "origin": tool_params.get("origin", "PAR"),
                             "destination": destination_result,  # Use IATA code(s) for AMADEUS API
@@ -2487,6 +2494,7 @@ Please analyze the current message considering the conversation history for bett
                             "passengers": tool_params.get("passengers", 1),  # flight_search uses "passengers" key
                             "class_type": "ECONOMY",
                             "budget_level": tool_params.get("budget_level", "mid-range"),
+                            "flight_chain": flight_chain_enabled,  # Enable flight chain for multi-city trips
                         }
                         tool_calls.append(
                             ToolCall(
@@ -2764,22 +2772,52 @@ Please analyze the current message considering the conversation history for bett
                 logger.info(f"Tool {tool_name} success: {result.success}")
                 if result.success:
                     if tool_name == "flight_search" and hasattr(result, 'flights'):
-                        flights = result.flights[:3]  # Top 3
-                        logger.info(f"Found {len(flights)} flights for {tool_name}")
-                        if flights:
-                            tool_parts.append(f"**Current Flights ({len(flights)} found)**:")
-                            for flight in flights:
-                                airline = flight.airline
-                                price = f"{flight.price} {flight.currency}"
-                                duration = f"{flight.duration} minutes"
-                                tool_parts.append(f"- {airline}: {price} ({duration})")
-                                logger.info(f"Added flight: {airline} - {price} ({duration})")
+                        # ✅ Check if this is a flight chain search
+                        is_flight_chain = (hasattr(result, 'data') and result.data and 
+                                         result.data.get("search_type") == "flight_chain")
+                        
+                        if is_flight_chain:
+                            # ✅ For flight chain, show representative flights from each route
+                            flight_chain_routes = result.data.get("successful_routes", [])
+                            route_flights = {}
+                            
+                            # Group flights by route
+                            for flight in result.flights:
+                                if hasattr(flight, 'details') and flight.details:
+                                    route_name = flight.details.get('route_name', '')
+                                    if route_name and route_name not in route_flights:
+                                        route_flights[route_name] = flight
+                            
+                            logger.info(f"Found flight chain with {len(route_flights)} routes covering {len(result.flights)} total flights")
+                            
+                            if route_flights:
+                                tool_parts.append(f"**Flight Chain ({len(route_flights)} routes, {len(result.flights)} flights total)**:")
+                                for route_name, flight in route_flights.items():
+                                    airline = flight.airline
+                                    price = f"{flight.price} {flight.currency}"
+                                    duration = f"{flight.duration} minutes"
+                                    tool_parts.append(f"- {route_name}: {airline} {flight.flight_number} • {price} • {duration}")
+                                    logger.info(f"Added flight chain route: {route_name} - {airline} {flight.flight_number}")
+                            else:
+                                tool_parts.append("**Flight Chain**: No valid flight routes found.")
                         else:
-                            tool_parts.append("**Flight Search**: No flights found for the specified route.")
-                            logger.info("No flights found for flight_search")
+                            # ✅ For regular flight search, use top 5
+                            flights = result.flights[:5]  # Top 5
+                            logger.info(f"Found {len(flights)} flights for {tool_name}")
+                            if flights:
+                                tool_parts.append(f"**Current Flights ({len(flights)} found)**:")
+                                for flight in flights:
+                                    airline = flight.airline
+                                    price = f"{flight.price} {flight.currency}"
+                                    duration = f"{flight.duration} minutes"
+                                    tool_parts.append(f"- {airline}: {price} ({duration})")
+                                    logger.info(f"Added flight: {airline} - {price} ({duration})")
+                            else:
+                                tool_parts.append("**Flight Search**: No flights found for the specified route.")
+                                logger.info("No flights found for flight_search")
                     
                     elif tool_name == "attraction_search" and hasattr(result, 'attractions'):
-                        attractions = result.attractions[:3]  # Top 3
+                        attractions = result.attractions[:10]  # Top 10
                         tool_parts.append(f"**Current Attractions ({len(attractions)} found)**:")
                         for attr in attractions:
                             name = attr.get("name", "Unknown")
@@ -2788,7 +2826,7 @@ Please analyze the current message considering the conversation history for bett
                             tool_parts.append(f"- {name} (Rating: {rating}): {desc}")
 
                     elif tool_name == "hotel_search" and hasattr(result, 'hotels'):
-                        hotels = result.hotels[:3]  # Top 3
+                        hotels = result.hotels[:5]  # Top 5
                         logger.info(f"Found {len(hotels)} hotels for {tool_name}")
                         if hotels:
                             tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
@@ -3801,13 +3839,21 @@ This will help me provide you with the most relevant travel guidance possible.""
                 # Convert destination to IATA code(s) for consistent multi-location support
                 destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
                 
+                # ✅ NEW: Enable flight_chain for multi-destination searches
+                is_multi_destination = isinstance(destination_result, list) and len(destination_result) > 1
+                flight_chain_enabled = is_multi_destination
+                
+                if flight_chain_enabled:
+                    logger.info(f"🔗 Multi-destination detected: enabling flight chain for {len(destination_result)} destinations")
+                
                 tool_parameters[tool_name] = {
                     "origin": origin_iata,  # Use extracted origin converted to IATA code
                     "destination": destination_result,  # Can be single IATA code or list for multi-location
                     "start_date": departure_date,
                     "passengers": max(travel_details.get("travelers", 1), 1),
                     "class_type": "economy",
-                    "budget_level": travel_details.get("budget", {}).get("level", "mid-range")
+                    "budget_level": travel_details.get("budget", {}).get("level", "mid-range"),
+                    "flight_chain": flight_chain_enabled,  # Enable flight chain for multi-city trips
                 }
         
         logger.info(f"Generated tool parameters: {tool_parameters}")
@@ -4046,14 +4092,55 @@ This will help me provide you with the most relevant travel guidance possible.""
             destination = intent.get("destination", {})
             if isinstance(destination, dict):
                 destination_name = destination.get("primary", "unknown")
+                # Extract multi-destinations from intent
+                multi_destinations = destination.get("secondary", [])
+                if not multi_destinations and "all" in destination:
+                    # Handle case where all destinations are in one list
+                    all_destinations = destination.get("all", [])
+                    if len(all_destinations) > 1:
+                        destination_name = all_destinations[0]
+                        multi_destinations = all_destinations
+                    else:
+                        multi_destinations = None
             else:
                 destination_name = str(destination)
+                multi_destinations = None
             
             tool_results = execution_result.get("results", {})
             
-            logger.info(f"Generating plan-aware response for destination: {destination_name}")
+            # Also check tool results for multi-destination info from flight search
+            if not multi_destinations and "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                logger.info(f"🔍 Checking flight search result for multi-destinations...")
+                logger.info(f"   Flight result type: {type(flight_result)}")
+                logger.info(f"   Has data attribute: {hasattr(flight_result, 'data')}")
+                
+                if hasattr(flight_result, 'data') and flight_result.data:
+                    flight_data = flight_result.data
+                    search_type = flight_data.get("search_type")
+                    logger.info(f"   Search type: {search_type}")
+                    
+                    if search_type == "flight_chain":
+                        flight_chain = flight_data.get("flight_chain", [])
+                        logger.info(f"   Flight chain found: {flight_chain}")
+                        
+                        if len(flight_chain) > 3:  # Start + destinations + end
+                            multi_destinations = flight_chain[1:-1]  # Remove start and end
+                            logger.info(f"🔗 Detected flight chain destinations from tool results: {multi_destinations}")
+                        else:
+                            logger.warning(f"   Flight chain too short: {len(flight_chain)} cities")
+                    else:
+                        logger.info(f"   Not a flight chain search, search type: {search_type}")
+                else:
+                    logger.warning(f"   Flight result has no data attribute or data is empty")
             
-            # ✅ Use plan_manager for centralized plan generation
+            logger.info(f"Generating plan-aware response for destination: {destination_name}")
+            if multi_destinations:
+                logger.info(f"🌍 Multi-destinations detected: {multi_destinations}")
+            else:
+                logger.info(f"🏙️ Single destination planning: {destination_name}")
+            
+            # Use plan_manager for centralized plan generation
             from app.core.plan_manager import get_plan_manager
             plan_manager = get_plan_manager()
             
@@ -4066,7 +4153,8 @@ This will help me provide you with the most relevant travel guidance possible.""
                 tool_results=tool_results,
                 destination=destination_name,
                 user_message=user_message,
-                intent=intent
+                intent=intent,
+                multi_destinations=multi_destinations
             )
             
             events_count = plan_result.get("events_added", 0)

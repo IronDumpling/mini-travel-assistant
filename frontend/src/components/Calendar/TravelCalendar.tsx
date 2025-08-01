@@ -39,17 +39,103 @@ const EventComponent = ({ event }: { event: any }) => {
     }
   };
 
-  // Show "All Day" label for all all-day events
-  const isAllDay = event.allDay;
-  const displayTitle = isAllDay 
-    ? `All Day - ${event.title}` 
-    : event.title;
+  // ✅ Enhanced flight event display with airline and flight details
+  const renderFlightDetails = () => {
+    const details = event.resource?.details || {};
+    const airline = details.airline || 'TBA';
+    const flightNumber = details.flight_number || '';
+    const price = details.price?.amount || 'TBA';
+    const currency = details.price?.currency || 'USD';
+    const durationMinutes = details.duration_minutes || null;
+    
+    // Extract route from location or title
+    const route = event.location || '';
+    
+    // Build compact flight info
+    const parts = [];
+    
+    // Add airline and flight number
+    if (airline !== 'TBA' && flightNumber && flightNumber !== 'TBA') {
+      parts.push(`${airline} ${flightNumber}`);
+    } else if (airline !== 'TBA') {
+      parts.push(airline);
+    }
+    
+    // Add route if available
+    if (route) {
+      parts.push(route);
+    }
+    
+    // Add duration if available
+    if (durationMinutes && durationMinutes > 0) {
+      const hours = Math.floor(durationMinutes / 60);
+      const minutes = durationMinutes % 60;
+      if (hours > 0 && minutes > 0) {
+        parts.push(`${hours}h${minutes}m`);
+      } else if (hours > 0) {
+        parts.push(`${hours}h`);
+      } else if (minutes > 0) {
+        parts.push(`${minutes}m`);
+      }
+    }
+    
+    // Add price if available
+    if (price !== 'TBA' && price !== undefined && price !== null) {
+      parts.push(`${price} ${currency}`);
+    }
+    
+    return parts.length > 0 ? parts.join(' • ') : event.title;
+  };
+
+  // ✅ Enhanced hotel event display
+  const renderHotelDetails = () => {
+    const details = event.resource?.details || {};
+    const rating = details.rating;
+    const nights = details.nights;
+    const pricePerNight = details.price_per_night?.amount;
+    const currency = details.price_per_night?.currency || 'USD';
+    
+    const parts = [event.title];
+    
+    if (rating) {
+      parts.push(`★${rating}`);
+    }
+    
+    if (nights) {
+      parts.push(`${nights}n`);
+    }
+    
+    if (pricePerNight) {
+      parts.push(`${pricePerNight}${currency}/n`);
+    }
+    
+    return parts.join(' • ');
+  };
+
+  // ✅ Smart display title based on event type
+  const getDisplayContent = () => {
+    const isAllDay = event.allDay;
+    
+    if (event.type === 'flight') {
+      const flightInfo = renderFlightDetails();
+      return isAllDay ? `All Day - ${flightInfo}` : flightInfo;
+    }
+    
+    if (event.type === 'hotel') {
+      const hotelInfo = renderHotelDetails();
+      return isAllDay ? `All Day - ${hotelInfo}` : hotelInfo;
+    }
+    
+    // Default display for other event types
+    const defaultTitle = event.title;
+    return isAllDay ? `All Day - ${defaultTitle}` : defaultTitle;
+  };
 
   return (
     <div className="flex items-center gap-1 text-xs leading-tight">
       {getEventIcon(event.type)}
       <span className="flex-1 whitespace-normal break-words text-wrap leading-tight">
-        {displayTitle}
+        {getDisplayContent()}
       </span>
     </div>
   );

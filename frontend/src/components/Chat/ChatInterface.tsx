@@ -211,6 +211,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [showDetailedProgress, setShowDetailedProgress] = useState(false);
   const [enableRefinement, setEnableRefinement] = useState(false); // 默认关闭 refinement loop
+  const [currentTime, setCurrentTime] = useState(Date.now()); // 用于实时更新计时器
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { data: chatHistory, isLoading: historyLoading } = useChatHistory(sessionId);
@@ -223,6 +224,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   useEffect(() => {
     scrollToBottom();
   }, [chatHistory, isTyping]);
+
+  // ✅ 实时更新计时器
+  useEffect(() => {
+    if (!processingStartTime || !sendMessageMutation.isPending) return;
+
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [processingStartTime, sendMessageMutation.isPending]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,6 +266,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
       setIsTyping(false);
       setProcessingStartTime(null);
       setShowDetailedProgress(false);
+      setCurrentTime(Date.now()); // ✅ 重置计时器
     }
   };
 
@@ -287,7 +300,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
             <div className="flex items-center gap-1 text-blue-600">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="text-sm">
-                {showDetailedProgress ? `Processing (${Math.floor((Date.now() - (processingStartTime || Date.now())) / 1000)}s)` : 'Processing...'}
+                {processingStartTime ? `Processing (${Math.floor((currentTime - processingStartTime) / 1000)}s)` : 'Processing...'}
               </span>
             </div>
           )}
@@ -400,7 +413,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
           )}
         </div>
         
-        {sendMessageMutation.isPending && !isTyping && processingStartTime && (Date.now() - processingStartTime) > 200000 && (
+        {sendMessageMutation.isPending && !isTyping && processingStartTime && (currentTime - processingStartTime) > 200000 && (
           <div className="mt-2 flex items-center gap-2 text-orange-600 text-sm">
             <AlertCircle className="w-4 h-4" />
             <span>The AI is taking longer than usual. Your request is still being processed...</span>
