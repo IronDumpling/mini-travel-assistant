@@ -808,9 +808,18 @@ Please analyze the current message considering the conversation history for bett
                 return await self._enhanced_fallback_intent_analysis(user_message)
 
         # Convert to legacy format for backward compatibility
+        # ✅ Fix: Ensure destination is always a string, not a list
+        destination_primary = llm_analysis["destination"]["primary"]
+        if isinstance(destination_primary, list):
+            # If it's a list, take the first item or default to "unknown"
+            destination_str = destination_primary[0] if destination_primary else "unknown"
+            logger.warning(f"LLM returned destination as list {destination_primary}, using first item: {destination_str}")
+        else:
+            destination_str = destination_primary if destination_primary else "unknown"
+        
         legacy_format = {
             "type": llm_analysis["intent_type"],
-            "destination": llm_analysis["destination"]["primary"],
+            "destination": destination_str,
             "time_info": {
                 "duration_days": llm_analysis["travel_details"].get("duration", 0)
             },
@@ -821,7 +830,7 @@ Please analyze the current message considering the conversation history for bett
             },
             "urgency": llm_analysis["urgency"],
             "extracted_info": {
-                "destination": llm_analysis["destination"]["primary"],
+                "destination": destination_str,
                 "time_info": llm_analysis["travel_details"],
                 "budget_info": llm_analysis["travel_details"]["budget"],
             },
@@ -2823,6 +2832,12 @@ Please analyze the current message considering the conversation history for bett
             else:
                 # Handle error cases
                 error_msg = execution_result.get("error", "Unknown error")
+                
+                # ✅ Fix: Ensure error message is never None
+                if error_msg is None:
+                    error_msg = "Unexpected processing error"
+                    logger.warning("Error message was None, using default")
+                
                 intent_type = intent.get("type") or intent.get("intent_type", "travel")
                 error_response = f"I encountered an issue while processing your {intent_type} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
 
@@ -3826,7 +3841,14 @@ This will help me provide you with the most relevant travel guidance possible.""
         import datetime
         
         tool_parameters = {}
-        destination = intent.get("destination", "unknown")
+        destination_raw = intent.get("destination", "unknown")
+        
+        # ✅ Fix: Ensure destination is always a string, not a list
+        if isinstance(destination_raw, list):
+            destination = destination_raw[0] if destination_raw else "unknown"
+            logger.warning(f"Intent contained destination as list {destination_raw}, using first item: {destination}")
+        else:
+            destination = destination_raw if destination_raw else "unknown"
         
         # Generate safe default dates (30 days from now)
         default_check_in = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")

@@ -123,7 +123,11 @@ class AttractionSearchTool(BaseTool):
     ) -> AttractionSearchOutput:
         """Execute attraction search using Google Places API (New)"""
         try:
-            # Validate input parameters
+            # ✅ Enhanced: Support multiple locations by iterating through list
+            if isinstance(input_data.location, list):
+                return await self._execute_multi_location_search(input_data, context)
+            
+            # Validate input parameters for single location
             if not input_data.location or input_data.location.lower() in ['unknown', '']:
                 return AttractionSearchOutput(
                     success=False,
@@ -179,6 +183,154 @@ class AttractionSearchTool(BaseTool):
                 total_results=0,
                 search_location=input_data.location,
             )
+
+    async def _execute_multi_location_search(
+        self, input_data: AttractionSearchInput, context: ToolExecutionContext
+    ) -> AttractionSearchOutput:
+        """Execute attraction search for multiple locations and merge results"""
+        
+        locations = input_data.location
+        if not locations:
+            return AttractionSearchOutput(
+                success=False,
+                error="No valid locations provided in list",
+                attractions=[],
+                total_results=0,
+                search_location="empty_list"
+            )
+        
+        logger.info(f"🌍 Executing multi-location attraction search for {len(locations)} locations: {locations}")
+        
+        all_attractions = []
+        successful_locations = []
+        failed_locations = []
+        
+        # Execute search for each location
+        for location in locations:
+            if not location or location.lower() in ['unknown', '']:
+                failed_locations.append(location or "unknown")
+                continue
+                
+            try:
+                # Create a copy of input_data with single location
+                single_location_input = AttractionSearchInput(
+                    location=location,
+                    query=input_data.query,
+                    category=input_data.category,
+                    radius_meters=input_data.radius_meters,
+                    min_rating=input_data.min_rating,
+                    max_results=input_data.max_results,
+                    include_photos=input_data.include_photos,
+                    price_levels=input_data.price_levels
+                )
+                
+                logger.info(f"🔍 Searching attractions in: {location}")
+                
+                # Execute single location search by calling the main logic
+                result = await self._execute_single_location_search(single_location_input, context)
+                
+                if result.success and result.attractions:
+                    # Add location context to each attraction
+                    for attraction in result.attractions:
+                        attraction.search_location = location
+                    all_attractions.extend(result.attractions)
+                    successful_locations.append(location)
+                    logger.info(f"✅ Found {len(result.attractions)} attractions in {location}")
+                else:
+                    failed_locations.append(location)
+                    logger.warning(f"⚠️ No attractions found in {location}: {result.error}")
+                    
+            except Exception as e:
+                failed_locations.append(location)
+                logger.error(f"❌ Error searching attractions in {location}: {e}")
+        
+        # Prepare result summary
+        total_results = len(all_attractions)
+        search_summary = f"Searched {len(locations)} locations: {successful_locations}"
+        
+        if failed_locations:
+            search_summary += f" (failed: {failed_locations})"
+        
+        if total_results == 0:
+            return AttractionSearchOutput(
+                success=False,
+                error=f"No attractions found in any of the {len(locations)} locations",
+                attractions=[],
+                total_results=0,
+                search_location=search_summary
+            )
+        
+        # Sort by rating and limit results if needed
+        all_attractions.sort(key=lambda x: x.rating or 0, reverse=True)
+        
+        # Apply global limit across all locations
+        max_total_results = input_data.max_results * len(successful_locations) if input_data.max_results else len(all_attractions)
+        limited_attractions = all_attractions[:max_total_results]
+        
+        logger.info(f"🎯 Multi-location search completed: {total_results} total attractions from {len(successful_locations)} locations")
+        
+        return AttractionSearchOutput(
+            success=True,
+            attractions=limited_attractions,
+            total_results=total_results,
+            search_location=search_summary,
+            data={
+                "searched_locations": len(locations),
+                "successful_locations": successful_locations,
+                "failed_locations": failed_locations,
+                "results_per_location": {loc: len([a for a in limited_attractions if hasattr(a, 'search_location') and a.search_location == loc]) for loc in successful_locations}
+            }
+        )
+
+    async def _execute_single_location_search(
+        self, input_data: AttractionSearchInput, context: ToolExecutionContext
+    ) -> AttractionSearchOutput:
+        """Execute attraction search for a single location (extracted from main logic)"""
+        logger.info(f"Searching attractions in {input_data.location}, query: {input_data.query or 'nearby search'}")
+        
+        # Ensure API key is available before proceeding
+        self._ensure_api_key()
+
+        # Determine search strategy based on input
+        if input_data.query:
+            # Use text search for specific queries
+            logger.debug(f"Using text search for query: {input_data.query}")
+            attractions = await self._text_search(input_data)
+        else:
+            # Use nearby search for location-based discovery
+            logger.debug(f"Using nearby search for location: {input_data.location}")
+            attractions = await self._nearby_search(input_data)
+
+        if not attractions:
+            logger.warning(f"No attractions found for location: {input_data.location}")
+            return AttractionSearchOutput(
+                success=True,
+                attractions=[],
+                total_results=0,
+                search_location=input_data.location,
+                data={"message": "No attractions found matching criteria"}
+            )
+
+        # Apply filters and sorting
+        filtered_attractions = self._filter_and_sort_attractions(
+            attractions, input_data
+        )
+
+        logger.info(
+            f"Found {len(filtered_attractions)} attractions in {input_data.location}"
+        )
+
+        return AttractionSearchOutput(
+            success=True,
+            attractions=filtered_attractions,
+            total_results=len(filtered_attractions),
+            search_location=input_data.location,
+            data={
+                "search_method": "text_search" if input_data.query else "nearby_search",
+                "total_found": len(attractions),
+                "after_filtering": len(filtered_attractions),
+            }
+        )
 
     async def _text_search(self, input_data: AttractionSearchInput) -> List[Attraction]:
         """Perform text search using Google Places API (New)"""

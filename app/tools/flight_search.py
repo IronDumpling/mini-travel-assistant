@@ -95,6 +95,15 @@ class FlightSearchTool(BaseTool):
     async def _execute(self, input_data: FlightSearchInput, context: ToolExecutionContext) -> FlightSearchOutput:
         """Execute flight search using Amadeus API or Inspiration Search API"""
         try:
+            # ✅ Enhanced: Support multiple destinations by iterating through list
+            if isinstance(input_data.destination, list):
+                return await self._execute_multi_destination_search(input_data, context)
+            
+            # Handle origin as list (take first item as primary origin)
+            if isinstance(input_data.origin, list):
+                input_data.origin = input_data.origin[0] if input_data.origin else "YYZ"
+                logger.warning(f"Flight search received origin as list, using first item: {input_data.origin}")
+            
             # Set default origin to Toronto (YYZ) if not provided or invalid
             if not input_data.origin or input_data.origin.lower() in ['unknown', '']:
                 input_data.origin = "YYZ"
@@ -155,6 +164,156 @@ class FlightSearchTool(BaseTool):
                 success=False,
                 error=str(e),
                 flights=[]
+            )
+
+    async def _execute_multi_destination_search(
+        self, input_data: FlightSearchInput, context: ToolExecutionContext
+    ) -> FlightSearchOutput:
+        """Execute flight search for multiple destinations and merge results"""
+        
+        destinations = input_data.destination
+        if not destinations:
+            return FlightSearchOutput(
+                success=False,
+                error="No valid destinations provided in list",
+                flights=[]
+            )
+        
+        # Handle origin as list (use first item)
+        if isinstance(input_data.origin, list):
+            origin = input_data.origin[0] if input_data.origin else "YYZ"
+        else:
+            origin = input_data.origin or "YYZ"
+        
+        logger.info(f"🌍 Executing multi-destination flight search from {origin} to {len(destinations)} destinations: {destinations}")
+        
+        all_flights = []
+        successful_destinations = []
+        failed_destinations = []
+        
+        # Execute search for each destination
+        for destination in destinations:
+            if not destination or destination.lower() in ['unknown', '']:
+                failed_destinations.append(destination or "unknown")
+                continue
+                
+            # Skip if origin and destination are the same
+            if origin.upper() == destination.upper():
+                failed_destinations.append(destination)
+                logger.warning(f"⚠️ Skipping destination {destination} - same as origin {origin}")
+                continue
+                
+            try:
+                # Create a copy of input_data with single destination
+                single_destination_input = FlightSearchInput(
+                    origin=origin,
+                    destination=destination,
+                    start_date=input_data.start_date,
+                    end_date=input_data.end_date,
+                    passengers=input_data.passengers,
+                    class_type=input_data.class_type,
+                    max_price=input_data.max_price,
+                    inspiration_search=input_data.inspiration_search
+                )
+                
+                logger.info(f"✈️ Searching flights from {origin} to {destination}")
+                
+                # Execute single destination search by calling the main logic
+                result = await self._execute_single_destination_search(single_destination_input, context)
+                
+                if result.success and result.flights:
+                    # Add destination context to each flight
+                    for flight in result.flights:
+                        flight.search_destination = destination
+                    all_flights.extend(result.flights)
+                    successful_destinations.append(destination)
+                    logger.info(f"✅ Found {len(result.flights)} flights to {destination}")
+                else:
+                    failed_destinations.append(destination)
+                    logger.warning(f"⚠️ No flights found to {destination}: {result.error}")
+                    
+            except Exception as e:
+                failed_destinations.append(destination)
+                logger.error(f"❌ Error searching flights to {destination}: {e}")
+        
+        # Prepare result summary
+        total_results = len(all_flights)
+        search_summary = f"Searched flights from {origin} to {len(destinations)} destinations: {successful_destinations}"
+        
+        if failed_destinations:
+            search_summary += f" (failed: {failed_destinations})"
+        
+        if total_results == 0:
+            return FlightSearchOutput(
+                success=False,
+                error=f"No flights found to any of the {len(destinations)} destinations from {origin}",
+                flights=[]
+            )
+        
+        # Sort by price and departure time
+        all_flights.sort(key=lambda x: (x.price or float('inf'), x.departure_time or datetime(1900, 1, 1)))
+        
+        logger.info(f"🎯 Multi-destination flight search completed: {total_results} total flights to {len(successful_destinations)} destinations")
+        
+        return FlightSearchOutput(
+            success=True,
+            flights=all_flights,
+            data={
+                "searched_destinations": len(destinations),
+                "successful_destinations": successful_destinations,
+                "failed_destinations": failed_destinations,
+                "results_per_destination": {dest: len([f for f in all_flights if f.search_destination == dest]) for dest in successful_destinations},
+                "search_summary": search_summary,
+                "origin": origin
+            }
+        )
+
+    async def _execute_single_destination_search(
+        self, input_data: FlightSearchInput, context: ToolExecutionContext
+    ) -> FlightSearchOutput:
+        """Execute flight search for a single destination (extracted from main logic)"""
+        
+        # Check for O/D overlap - origin and destination cannot be the same
+        if not input_data.inspiration_search and input_data.origin and input_data.destination:
+            if input_data.origin.upper() == input_data.destination.upper():
+                logger.warning(f"⚠️ Origin and destination are the same ('{input_data.origin}') - O/D overlap detected")
+                return FlightSearchOutput(
+                    success=False,
+                    error=f"Invalid flight search: origin and destination cannot be the same ('{input_data.origin}')",
+                    flights=[]
+                )
+        
+        # Validate that origin and destination are 3-letter codes or valid city names
+        if input_data.origin and (len(input_data.origin) != 3 or not input_data.origin.isalpha()):
+            logger.warning(f"Origin '{input_data.origin}' may not be a valid IATA code")
+        
+        if input_data.destination and (len(input_data.destination) != 3 or not input_data.destination.isalpha()):
+            logger.warning(f"Destination '{input_data.destination}' may not be a valid IATA code")
+        
+        token = await self._get_access_token()
+        if input_data.inspiration_search:
+            flights = await self._search_flight_destinations(input_data, token)
+            return FlightSearchOutput(
+                success=True,
+                flights=flights,
+                data={
+                    "total_results": len(flights),
+                    "search_type": "inspiration",
+                    "search_parameters": input_data.model_dump(),
+                }
+            )
+        else:
+            flights = await self._search_flights_amadeus(input_data, token)
+            filtered_flights = self._filter_flights(flights, input_data)
+            return FlightSearchOutput(
+                success=True,
+                flights=filtered_flights,
+                data={
+                    "total_results": len(flights),
+                    "filtered_results": len(filtered_flights),
+                    "search_type": "offers",
+                    "search_parameters": input_data.model_dump(),
+                }
             )
 
     async def _search_flights_amadeus(self, input_data: FlightSearchInput, token: str) -> List[Flight]:
