@@ -4222,29 +4222,8 @@ This will help me provide you with the most relevant travel guidance possible.""
                             }
                         })
             
-            # Add hotel events
-            if "hotel_search" in tool_results:
-                hotel_result = tool_results["hotel_search"]
-                if hasattr(hotel_result, 'hotels') and hotel_result.hotels:
-                    hotel = hotel_result.hotels[0]  # Use first hotel
-                    checkin_time = current_time.replace(hour=15, minute=0)  # 3 PM check-in
-                    checkout_time = checkin_time + timedelta(days=6, hours=-4)  # 11 AM checkout
-                    
-                    events.append({
-                        "id": f"hotel_stay_{str(uuid.uuid4())[:8]}",
-                        "title": f"Hotel: {getattr(hotel, 'name', 'Hotel in ' + destination)}",
-                        "description": f"Accommodation in {destination}",
-                        "event_type": "hotel",
-                        "start_time": checkin_time.isoformat(),
-                        "end_time": checkout_time.isoformat(),
-                        "location": getattr(hotel, 'location', destination),
-                        "coordinates": {"lat": 40.7589, "lng": -73.9851},
-                        "details": {
-                            "source": "hotel_search",
-                            "rating": getattr(hotel, 'rating', 4.0),
-                            "price_per_night": {"amount": getattr(hotel, 'price_per_night', 150), "currency": "USD"}
-                        }
-                    })
+            # ✅ Hotel events are now handled by plan_manager.py for consistency
+            # Removed duplicate hotel creation logic to avoid conflicts
             
             # Add attraction events (spread across days 2-4)
             if "attraction_search" in tool_results:
@@ -4397,21 +4376,8 @@ This will help me provide you with the most relevant travel guidance possible.""
                     })
                     event_id_counter += 1
             
-            # Add hotel events if available
-            if "hotel_search" in tool_results:
-                hotel_data = tool_results["hotel_search"]
-                if isinstance(hotel_data, dict) and hotel_data.get("hotels"):
-                    plan_events.append({
-                        "id": f"hotel_{event_id_counter}",
-                        "title": f"Hotel Stay in {destination_name}",
-                        "description": "Accommodation based on search results",
-                        "event_type": "hotel",
-                        "start_time": "2024-07-01T15:00:00+00:00",
-                        "end_time": "2024-07-03T11:00:00+00:00",
-                        "location": destination_name,
-                        "details": {"source": "hotel_search", "tool_data": hotel_data}
-                    })
-                    event_id_counter += 1
+            # ✅ Hotel events are now handled by plan_manager.py for consistency
+            # Removed duplicate hotel creation logic to avoid conflicts
             
             # Add attraction events if available
             if "attraction_search" in tool_results:
