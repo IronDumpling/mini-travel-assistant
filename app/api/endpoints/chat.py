@@ -112,7 +112,7 @@ class ChatMessage(BaseModel):
     """Chat message for conversational travel planning"""
     message: str
     session_id: Optional[str] = None
-    enable_refinement: bool = True
+    enable_refinement: bool = False  # 默认关闭 refinement loop
 
 class ChatResponse(BaseModel):
     """Response from the travel agent"""

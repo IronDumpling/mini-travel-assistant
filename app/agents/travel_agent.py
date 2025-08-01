@@ -2569,9 +2569,13 @@ Please analyze the current message considering the conversation history for bett
                     logger.info("Attempting LLM-based information fusion...")
                     try:
                         # Format information for fusion prompt
-                        formatted_knowledge = self._format_knowledge_for_fusion(
-                            knowledge_context.get("relevant_docs", [])
-                        )
+                        relevant_docs = knowledge_context.get("relevant_docs", [])
+                        logger.info(f"🧠 Knowledge context docs available: {len(relevant_docs)}")
+                        
+                        formatted_knowledge = self._format_knowledge_for_fusion(relevant_docs)
+                        logger.info(f"🧠 Formatted knowledge length: {len(formatted_knowledge) if formatted_knowledge else 0}")
+                        logger.debug(f"🧠 Formatted knowledge preview: {formatted_knowledge[:200] if formatted_knowledge else 'None'}...")
+                        
                         formatted_tools = self._format_tools_for_fusion(tool_results)
                         formatted_intent = self._format_intent_for_fusion(intent)
 
@@ -2583,10 +2587,14 @@ Please analyze the current message considering the conversation history for bett
                             )
                         else:
                             # Use information fusion template from prompt manager
+                            # Ensure knowledge_context is never None or empty
+                            safe_knowledge_context = formatted_knowledge or "No specific knowledge context available for this request."
+                            logger.info(f"🧠 Passing knowledge_context to template: {len(safe_knowledge_context)} chars")
+                            
                             fusion_prompt = prompt_manager.get_prompt(
                                 PromptType.INFORMATION_FUSION,
                                 user_message=user_message,
-                                knowledge_context=formatted_knowledge,
+                                knowledge_context=safe_knowledge_context,
                                 tool_results=formatted_tools,
                                 intent_analysis=formatted_intent,
                             )
@@ -2691,8 +2699,12 @@ Please analyze the current message considering the conversation history for bett
 
     def _format_knowledge_for_fusion(self, relevant_docs: List[Dict]) -> str:
         """Format knowledge context for information fusion"""
+        logger.info(f"🧠 Formatting knowledge: {len(relevant_docs)} docs provided")
+        
         if not relevant_docs:
-            return "No specific knowledge context available."
+            fallback_msg = "No specific knowledge context available for this request."
+            logger.info(f"🧠 No relevant docs, returning fallback: {fallback_msg}")
+            return fallback_msg
 
         knowledge_parts = []
         for i, doc in enumerate(relevant_docs[:3]):  # Top 3 most relevant
@@ -2709,7 +2721,11 @@ Please analyze the current message considering the conversation history for bett
 
             knowledge_parts.append(formatted_doc)
 
-        return "\n\n".join(knowledge_parts)
+        result = "\n\n".join(knowledge_parts)
+        logger.info(f"🧠 Knowledge formatting complete: {len(result)} chars, {len(knowledge_parts)} parts")
+        
+        # Ensure we always return something
+        return result if result.strip() else "Knowledge context processed but no content available."
 
     def _format_tools_for_fusion(self, tool_results: Dict) -> str:
         """Format tool results for information fusion"""
@@ -2778,8 +2794,13 @@ Please analyze the current message considering the conversation history for bett
                             tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
                             for hotel in hotels:
                                 name = getattr(hotel, 'name', 'Unknown')
-                                price = getattr(hotel, 'price_per_night', 'Price unavailable')
-                                rating = getattr(hotel, 'rating', 'No rating')
+                                # Defensive: try price_per_night first, never access 'price' directly for hotels
+                                price = getattr(hotel, 'price_per_night', None)
+                                if price is None:
+                                    price = 'Price unavailable'
+                                rating = getattr(hotel, 'rating', None)
+                                if rating is None:
+                                    rating = 'No rating'
                                 currency = getattr(hotel, 'currency', '')
                                 price_str = f"{price} {currency}" if price and price != 'Price unavailable' else 'Price unavailable'
                                 tool_parts.append(f"- {name} (Rating: {rating}): {price_str}")
@@ -2813,6 +2834,7 @@ Please analyze the current message considering the conversation history for bett
                         tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
                         for hotel in hotels:
                             name = hotel.get("name", "Unknown")
+                            # Defensive: only access price_per_night, never 'price' for hotels
                             price = hotel.get("price_per_night", "Price unavailable")
                             rating = hotel.get("rating", "No rating")
                             currency = hotel.get("currency", "")
@@ -4517,16 +4539,16 @@ This will help me provide you with the most relevant travel guidance possible.""
             for i, hotel in enumerate(hotels[:5], 1):  # Top 5
                 # Handle both Pydantic models and dictionaries
                 if hasattr(hotel, 'name'):
-                    # Pydantic model
+                    # Pydantic model - Only access price_per_night, never 'price' for hotels
                     name = getattr(hotel, 'name', 'Unknown Hotel')
                     price = getattr(hotel, 'price_per_night', 'Price available')
                     rating = getattr(hotel, 'rating', 'No rating')
                     location = getattr(hotel, 'location', destination)
                     currency = getattr(hotel, 'currency', '')
                 else:
-                    # Dictionary
+                    # Dictionary - Only access price_per_night for hotels, removed fallback to 'price'
                     name = hotel.get("name", "Unknown Hotel")
-                    price = hotel.get("price_per_night", hotel.get("price", "Price available"))
+                    price = hotel.get("price_per_night", "Price available")  # Removed price fallback to avoid confusion
                     rating = hotel.get("rating", "No rating")
                     location = hotel.get("location", destination)
                     currency = hotel.get("currency", "")

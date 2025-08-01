@@ -210,6 +210,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [showDetailedProgress, setShowDetailedProgress] = useState(false);
+  const [enableRefinement, setEnableRefinement] = useState(false); // 默认关闭 refinement loop
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { data: chatHistory, isLoading: historyLoading } = useChatHistory(sessionId);
@@ -242,7 +243,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
       const chatMessage: ChatMessageType = {
         message: userMessage,
         session_id: sessionId,
-        enable_refinement: true,
+        enable_refinement: enableRefinement,
       };
 
       await sendMessageMutation.mutateAsync(chatMessage);
@@ -377,6 +378,27 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
             </button>
           </div>
         </form>
+        
+        {/* Refinement Loop Option */}
+        <div className="mt-2 flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enableRefinement}
+              onChange={(e) => setEnableRefinement(e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              disabled={sendMessageMutation.isPending}
+            />
+            <span className="select-none">
+              Enable AI Refinement Loop
+            </span>
+          </label>
+          {enableRefinement && (
+            <div className="text-xs text-gray-500">
+              ✨ AI will refine responses for higher quality (slower)
+            </div>
+          )}
+        </div>
         
         {sendMessageMutation.isPending && !isTyping && processingStartTime && (Date.now() - processingStartTime) > 200000 && (
           <div className="mt-2 flex items-center gap-2 text-orange-600 text-sm">

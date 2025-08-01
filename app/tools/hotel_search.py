@@ -36,6 +36,15 @@ class Hotel(BaseModel):
     longitude: Optional[float] = None
     address: Optional[Dict[str, Any]] = None
     search_location: Optional[str] = None  # For multi-location search tracking
+    
+    def __getattr__(self, name):
+        """Prevent accidental access to 'price' field - should use 'price_per_night'"""
+        if name == 'price':
+            raise AttributeError(
+                f"Hotel object has no attribute 'price'. Use 'price_per_night' instead. "
+                f"Available fields: {', '.join(self.__fields__.keys())}"
+            )
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 class HotelSearchInput(ToolInput):
     """Hotel search input"""
@@ -468,7 +477,7 @@ class HotelSearchTool(BaseTool):
                 address=address,
                 # Note: AMADEUS Hotel List API doesn't provide pricing, rating, or amenities
                 # These would need to be fetched from additional API calls
-                price_per_night=None,
+                price_per_night=None,  # Explicitly set to avoid any price vs price_per_night confusion
                 currency=None,
                 rating=None,
                 amenities=[]
