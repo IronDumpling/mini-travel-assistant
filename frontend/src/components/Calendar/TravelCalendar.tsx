@@ -111,17 +111,65 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
       background-color: #4b5563 !important; /* darker gray for default */
     }
     
-    /* Disable click/selection styling */
-    .rbc-calendar .rbc-event.rbc-selected {
+    /* ✅ Ultra-strong override for all selection states */
+    .rbc-calendar .rbc-event.rbc-selected,
+    .rbc-calendar .rbc-event.rbc-selected:hover,
+    .rbc-calendar .rbc-event.rbc-selected:focus,
+    .rbc-calendar .rbc-event.rbc-selected:active {
       background-color: inherit !important;
+      color: white !important;
       border: inherit !important;
       outline: none !important;
       box-shadow: none !important;
+      opacity: 1 !important;
+      filter: none !important;
     }
     
     .rbc-calendar .rbc-event:focus {
       outline: none !important;
       box-shadow: none !important;
+      opacity: 1 !important;
+      color: white !important;
+    }
+    
+    /* ✅ Specific override for travel calendar events */
+    .rbc-calendar .rbc-event.travel-calendar-event.rbc-selected,
+    .rbc-calendar .rbc-event.travel-calendar-event.rbc-selected:hover,
+    .rbc-calendar .rbc-event.travel-calendar-event.rbc-selected:focus,
+    .rbc-calendar .rbc-event.travel-calendar-event.rbc-selected:active {
+      background-color: inherit !important;
+      color: white !important;
+      border: inherit !important;
+      border-radius: inherit !important;
+      opacity: 1 !important;
+      filter: none !important;
+    }
+    
+    /* ✅ Override any potential inline styles from react-big-calendar */
+    .rbc-calendar .rbc-event[style] {
+      opacity: 1 !important;
+    }
+    
+    .rbc-calendar .rbc-event.rbc-selected[style] {
+      opacity: 1 !important;
+      filter: none !important;
+    }
+    
+    /* ✅ Disable any selection overlay effects */
+    .rbc-calendar .rbc-selected-overlay {
+      display: none !important;
+    }
+    
+    /* ✅ Ensure active/clicked states don't change appearance */
+    .rbc-calendar .rbc-event:active,
+    .rbc-calendar .rbc-event:active:focus {
+      background-color: inherit !important;
+      color: white !important;
+      border: inherit !important;
+      outline: none !important;
+      box-shadow: none !important;
+      opacity: 1 !important;
+      filter: none !important;
     }
     
     /* ✅ Fix event title wrapping and overlapping layout */
@@ -359,8 +407,8 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     return [];
   }, [travelPlans]);
 
-  // Custom event style getter
-  const eventStyleGetter = (event: any) => {
+  // Custom event style getter with forced selection state handling
+  const eventStyleGetter = (event: any, _start: Date, _end: Date, _isSelected: boolean) => {
     let backgroundColor = '#3174ad';
     let color = 'white';
 
@@ -394,22 +442,25 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         backgroundColor = '#6b7280'; // gray
     }
 
-    // ✅ Special styling for all-day events (hotels, meals, transportation passes, etc.)
+    // ✅ Force same styling regardless of selection state
     const baseStyle = {
-      backgroundColor,
-      color,
+      backgroundColor: backgroundColor, // ✅ Force original color even when selected
+      color: color, // ✅ Force white text even when selected
       border: 'none',
       borderRadius: '4px',
       fontSize: '12px',
       cursor: 'pointer',
       transition: 'background-color 0.2s ease',
-      outline: 'none !important',
-      boxShadow: 'none !important',
+      outline: 'none',
+      boxShadow: 'none',
       whiteSpace: 'normal' as 'normal',
       wordBreak: 'break-word' as 'break-word',
       lineHeight: '1.2',
       overflow: 'visible' as 'visible',
-      textOverflow: 'clip' as 'clip'
+      textOverflow: 'clip' as 'clip',
+      // ✅ Force these properties to override any selection styling
+      opacity: '1',
+      filter: 'none'
     };
 
     if (event.allDay) {
@@ -423,6 +474,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
           // Slightly different styling for all-day events
           borderLeft: `4px solid ${backgroundColor}`,
           backgroundColor: `${backgroundColor}f0`, // Add transparency
+          color: color, // ✅ Ensure text stays white
         },
         className: 'travel-calendar-event rbc-all-day-event'
       };
@@ -433,6 +485,8 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
           ...baseStyle,
           padding: '2px 4px',
           minHeight: '20px',
+          backgroundColor: backgroundColor, // ✅ Force background color
+          color: color, // ✅ Force text color
         },
         className: 'travel-calendar-event'
       };
@@ -561,7 +615,13 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               eventPropGetter={eventStyleGetter}
               popup
               popupOffset={{ x: 30, y: 20 }}
-              onSelectEvent={() => {}} // Disable click selection
+              onSelectEvent={() => {
+                // ✅ Immediately clear any selection to prevent styling changes
+                return false;
+              }}
+              selectable={false} // ✅ Completely disable selection
+              onSelectSlot={() => {}} // ✅ Disable slot selection
+              selected={[]} // ✅ Force empty selection array
             />
           </div>
         )}
