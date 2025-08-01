@@ -6,7 +6,7 @@ It also tracks user preferences and updates the travel plan accordingly.
 It also uses a rule-based approach to generate actions based on the user's intent and selected tools.
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 import time
 from datetime import datetime
 from app.agents.base_agent import (
@@ -2176,15 +2176,15 @@ Please analyze the current message considering the conversation history for bett
     ) -> Dict[str, Any]:
         """Extract hotel search parameters intelligently"""
 
-        # Get destination and convert to IATA code for AMADEUS API
+        # Get destination and convert to IATA code(s) for AMADEUS API
         destination = requirements.get("destination", "unknown")
-        iata_code = self._convert_city_to_iata_code(destination)
+        iata_result = self._convert_city_to_iata_code(destination)
         
         # Add debugging information
         logger.info(f"🏨 Hotel search - Original destination: '{destination}'")
-        logger.info(f"🏨 Hotel search - Converted IATA code: '{iata_code}'")
-        logger.info(f"🏨 Hotel search - IATA code type: {type(iata_code)}")
-        logger.info(f"🏨 Hotel search - IATA code length: {len(iata_code) if iata_code else 0}")
+        logger.info(f"🏨 Hotel search - Converted IATA result: '{iata_result}'")
+        logger.info(f"🏨 Hotel search - IATA result type: {type(iata_result)}")
+        logger.info(f"🏨 Hotel search - IATA result length: {len(iata_result) if iata_result else 0}")
 
         # Set default dates (7 days from now for check-in, 10 days from now for check-out)
         from datetime import datetime, timedelta
@@ -2192,7 +2192,7 @@ Please analyze the current message considering the conversation history for bett
         default_check_out = datetime.now() + timedelta(days=10)
         
         params = {
-            "location": iata_code,  # Use IATA code for AMADEUS API
+            "location": iata_result,  # Use IATA code(s) for AMADEUS API
             "destination": destination,  # Keep original for display
             "check_in": default_check_in.strftime("%Y-%m-%d"),
             "check_out": default_check_out.strftime("%Y-%m-%d"),
@@ -2608,12 +2608,12 @@ Please analyze the current message considering the conversation history for bett
                     elif tool_name == "hotel_search":
                         # For hotel search, we need proper date handling
                         # Since we don't have specific dates, we'll provide basic search
-                        # Convert destination to IATA code for AMADEUS API
+                        # Convert destination to IATA code(s) for AMADEUS API
                         destination = tool_params.get("location", "unknown")  # hotel_search uses "location" key
-                        iata_code = self._convert_city_to_iata_code(destination)
+                        iata_result = self._convert_city_to_iata_code(destination)
                         
                         hotel_params = {
-                            "location": iata_code,  # Use IATA code for AMADEUS API
+                            "location": iata_result,  # Use IATA code(s) for AMADEUS API
                             "check_in": tool_params.get(
                                 "check_in", "2024-06-01"
                             ),  # Default dates
@@ -2627,7 +2627,7 @@ Please analyze the current message considering the conversation history for bett
 
                         logger.info(f"🏨 Travel agent - Creating hotel search ToolCall")
                         logger.info(f"🏨 Travel agent - Original destination: '{destination}'")
-                        logger.info(f"🏨 Travel agent - Converted IATA code: '{iata_code}'")
+                        logger.info(f"🏨 Travel agent - Converted IATA result: '{iata_result}'")
                         logger.info(f"🏨 Travel agent - Hotel params being sent: {hotel_params}")
                         tool_calls.append(
                             ToolCall(
@@ -2643,13 +2643,13 @@ Please analyze the current message considering the conversation history for bett
                         # Use a future date for the search
                         future_date = datetime.now() + timedelta(days=30)
                         
-                        # Convert destination to IATA code for AMADEUS API
+                        # Convert destination to IATA code(s) for AMADEUS API
                         destination = tool_params.get("destination", "unknown")
-                        destination_iata = self._convert_city_to_iata_code(destination)
+                        destination_result = self._convert_city_to_iata_code(destination)
                         
                         flight_params = {
                             "origin": tool_params.get("origin", "PAR"),
-                            "destination": destination_iata,  # Use IATA code for AMADEUS API
+                            "destination": destination_result,  # Use IATA code(s) for AMADEUS API
                             "start_date": future_date,
                             "passengers": tool_params.get("passengers", 1),  # flight_search uses "passengers" key
                             "class_type": "ECONOMY",
@@ -3574,8 +3574,8 @@ This will help me provide you with the most relevant travel guidance possible.""
 
         return structured_plan
 
-    def _convert_city_to_iata_code(self, city_name: str) -> str:
-        """Convert city name to IATA city code for AMADEUS API"""
+    def _convert_city_to_iata_code(self, city_name: str) -> Union[str, List[str]]:
+        """Convert city/region name to IATA code(s), handling regions that map to multiple cities"""
         # Add debugging information
         logger.info(f"🌍 Converting city to IATA code - Input: '{city_name}'")
         
@@ -3590,9 +3590,29 @@ This will help me provide you with the most relevant travel guidance possible.""
         # Normalize input and check for region mapping first
         normalized_input = city_name.lower().strip()
         if normalized_input in region_to_cities:
-            mapped_city = region_to_cities[normalized_input]
-            logger.info(f"🗺️ Mapped region '{city_name}' to city '{mapped_city}'")
-            city_name = mapped_city  # Replace the region with the mapped city
+            mapped_cities = region_to_cities[normalized_input]
+            logger.info(f"🗺️ Mapped region '{city_name}' to cities '{mapped_cities}'")
+            
+            # Convert each city in the list to IATA code
+            iata_codes = []
+            city_to_iata = GeographicalMappings.CITY_TO_IATA
+            
+            for city in mapped_cities:
+                normalized_city = city.lower().strip()
+                iata_code = city_to_iata.get(normalized_city)
+                if iata_code:
+                    clean_iata = iata_code.strip().upper()
+                    iata_codes.append(clean_iata)
+                    logger.info(f"✅ Converted '{city}' to IATA '{clean_iata}'")
+                else:
+                    logger.warning(f"⚠️ Could not convert '{city}' to IATA code")
+            
+            if iata_codes:
+                logger.info(f"🌍 Successfully converted region '{city_name}' to {len(iata_codes)} IATA codes: {iata_codes}")
+                return iata_codes
+            else:
+                logger.error(f"❌ No valid IATA codes found for region '{city_name}'")
+                return ''
         
         # ✅ Use centralized city to IATA mapping from config
         city_to_iata = GeographicalMappings.CITY_TO_IATA
@@ -3907,8 +3927,10 @@ This will help me provide you with the most relevant travel guidance possible.""
                 if origin == "Unknown":
                     origin = "Singapore"  # Default fallback for Singapore
                 
-                # Convert origin to IATA code
-                origin_iata = self._convert_city_to_iata_code(origin)
+                # Convert origin to IATA code (should be single for origin)
+                origin_result = self._convert_city_to_iata_code(origin)
+                # For origin, we always use the first code if it's a list (shouldn't happen for origin)
+                origin_iata = origin_result[0] if isinstance(origin_result, list) else origin_result
                 
                 tool_parameters[tool_name] = {
                     "origin": origin_iata,  # Use extracted origin converted to IATA code
