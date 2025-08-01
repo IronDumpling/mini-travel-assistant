@@ -39,10 +39,18 @@ const EventComponent = ({ event }: { event: any }) => {
     }
   };
 
+  // Show "All Day" label for all all-day events
+  const isAllDay = event.allDay;
+  const displayTitle = isAllDay 
+    ? `All Day - ${event.title}` 
+    : event.title;
+
   return (
     <div className="flex items-center gap-1 text-xs leading-tight">
       {getEventIcon(event.type)}
-      <span className="flex-1 whitespace-normal break-words text-wrap leading-tight">{event.title}</span>
+      <span className="flex-1 whitespace-normal break-words text-wrap leading-tight">
+        {displayTitle}
+      </span>
     </div>
   );
 };
@@ -147,6 +155,33 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     .rbc-calendar .rbc-event + .rbc-event {
       margin-left: 1px !important;
     }
+    
+    /* ✅ All-day events styling - applies to all event types */
+    .rbc-calendar .rbc-allday-cell {
+      min-height: 40px !important;
+    }
+    
+    .rbc-calendar .rbc-event.rbc-all-day-event {
+      margin-bottom: 2px !important;
+      border-radius: 4px !important;
+      font-size: 12px !important;
+      padding: 4px 6px !important;
+      min-height: 24px !important;
+    }
+    
+    /* ✅ Ensure proper stacking of multiple all-day events */
+    .rbc-calendar .rbc-row-segment.rbc-all-day-event {
+      margin-bottom: 1px !important;
+    }
+    
+    /* ✅ All-day event container */
+    .rbc-calendar .rbc-row-content {
+      overflow: visible !important;
+    }
+    
+    .rbc-calendar .rbc-addons-dnd .rbc-addons-dnd-row-body {
+      overflow: visible !important;
+    }
   `;
 
   const calendarEvents = useMemo(() => {
@@ -187,15 +222,53 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               return null;
             }
             
+            // Determine if this should be an all-day event
+            const eventType = (event as any).event_type || (event as any).type;
+            
+            // Check multiple conditions for all-day events
+            const isAllDayEvent = 
+              // Hotel/accommodation events
+              eventType === 'hotel' || 
+              eventType === 'accommodation' ||
+              (event.title && event.title.toLowerCase().includes('hotel')) ||
+              
+              // Meal/food budget events (typically all-day)
+              eventType === 'meal' ||
+              eventType === 'food' ||
+              eventType === 'budget' ||
+              (event.title && (
+                event.title.toLowerCase().includes('budget') ||
+                event.title.toLowerCase().includes('food') ||
+                event.title.toLowerCase().includes('meal') ||
+                event.title.toLowerCase().includes('dining')
+              )) ||
+              
+              // Transportation (some may be all-day like train passes)
+              (eventType === 'transportation' && 
+               event.title && (
+                 event.title.toLowerCase().includes('pass') ||
+                 event.title.toLowerCase().includes('card') ||
+                 event.title.toLowerCase().includes('metro')
+               )) ||
+              
+              // General all-day activities
+              eventType === 'all_day' ||
+              eventType === 'full_day' ||
+              
+              // Events explicitly marked as all-day in backend
+              (event as any).all_day === true ||
+              (event as any).allDay === true;
+
             return {
               id: event.id,
               title: event.title,
               start: startDate,
               end: endDate,
-              type: (event as any).event_type || (event as any).type,
+              type: eventType,
               location: event.location,
               description: event.description,
-              resource: event
+              resource: event,
+              allDay: isAllDayEvent // ✅ Mark hotel events as all-day
             };
           } catch (error) {
             console.warn('Error processing event dates:', event, error);
@@ -228,21 +301,41 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
           });
         });
 
-        // Add hotels (assume check-in at 3 PM, check-out at 11 AM)
+        // Add hotels as all-day events
         plan.hotels?.forEach((hotel: any, index: number) => {
-          const checkIn = addHours(startOfDay(today), 15); // 3 PM
-          const checkOut = addHours(startOfDay(addDays(today, 1)), 11); // 11 AM next day
+          const checkInDate = startOfDay(today);
+          const checkOutDate = startOfDay(addDays(today, 1));
           
           events.push({
             id: `hotel-${plan.id}-${index}`,
             title: hotel.name,
-            start: checkIn,
-            end: checkOut,
+            start: checkInDate,
+            end: checkOutDate,
             type: 'hotel',
             location: hotel.location,
             description: `$${hotel.price_per_night}/night`,
+            allDay: true // ✅ Mark as all-day event
           });
         });
+
+        // Add meals/food budget as all-day events if they exist
+        const planWithMeals = plan as any;
+        if (planWithMeals.meals) {
+          planWithMeals.meals.forEach((meal: any, index: number) => {
+            const mealDate = startOfDay(today);
+            
+            events.push({
+              id: `meal-${plan.id}-${index}`,
+              title: meal.name || `Budget for Food`,
+              start: mealDate,
+              end: mealDate,
+              type: 'meal',
+              location: meal.location || planWithMeals.destination || 'Unknown',
+              description: meal.description || `Daily food budget`,
+              allDay: true // ✅ Mark meal budgets as all-day events
+            });
+          });
+        }
 
         // Add attractions (assume 2-hour visits starting at various times)
         plan.attractions?.forEach((attraction: any, index: number) => {
@@ -301,29 +394,49 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         backgroundColor = '#6b7280'; // gray
     }
 
-    return {
-      style: {
-        backgroundColor,
-        color,
-        border: 'none',
-        borderRadius: '4px',
-        fontSize: '12px',
-        padding: '2px 4px',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s ease',
-        // Override react-big-calendar's default selection styling
-        outline: 'none !important',
-        boxShadow: 'none !important',
-        // ✅ Better text wrapping and spacing
-        whiteSpace: 'normal' as 'normal',
-        wordBreak: 'break-word' as 'break-word',
-        lineHeight: '1.2',
-        minHeight: '20px',
-        overflow: 'visible' as 'visible',
-        textOverflow: 'clip' as 'clip'
-      },
-      className: 'travel-calendar-event'
+    // ✅ Special styling for all-day events (hotels, meals, transportation passes, etc.)
+    const baseStyle = {
+      backgroundColor,
+      color,
+      border: 'none',
+      borderRadius: '4px',
+      fontSize: '12px',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s ease',
+      outline: 'none !important',
+      boxShadow: 'none !important',
+      whiteSpace: 'normal' as 'normal',
+      wordBreak: 'break-word' as 'break-word',
+      lineHeight: '1.2',
+      overflow: 'visible' as 'visible',
+      textOverflow: 'clip' as 'clip'
     };
+
+    if (event.allDay) {
+      // All-day event styling (applies to all event types marked as all-day)
+      return {
+        style: {
+          ...baseStyle,
+          padding: '4px 8px',
+          minHeight: '24px',
+          fontWeight: '500',
+          // Slightly different styling for all-day events
+          borderLeft: `4px solid ${backgroundColor}`,
+          backgroundColor: `${backgroundColor}f0`, // Add transparency
+        },
+        className: 'travel-calendar-event rbc-all-day-event'
+      };
+    } else {
+      // Regular timed event styling
+      return {
+        style: {
+          ...baseStyle,
+          padding: '2px 4px',
+          minHeight: '20px',
+        },
+        className: 'travel-calendar-event'
+      };
+    }
   };
 
   if (!sessionId) {
