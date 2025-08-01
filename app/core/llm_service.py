@@ -76,7 +76,7 @@ class BaseLLMService(ABC):
         self,
         messages: List[Dict[str, str]],
         response_schema: Dict[str, Any],
-        max_retries: int = 2,  # Reduced retries for performance
+        max_retries: int = 1, 
         **kwargs,
     ) -> Dict[str, Any]:
         """
@@ -89,8 +89,8 @@ class BaseLLMService(ABC):
         enhanced_messages = self._add_schema_instruction(messages, schema_instruction)
 
         # Set optimal parameters for structured output
-        kwargs.setdefault('temperature', 0.1)  # Lower temperature for more consistent JSON
-        kwargs.setdefault('max_tokens', 800)   # Reasonable limit for structured responses
+        kwargs.setdefault('temperature', 0.05)  # Lower temperature for more consistent JSON
+        kwargs.setdefault('max_tokens', 1200)   # Reasonable limit for structured responses
 
         for attempt in range(max_retries):
             try:
@@ -155,36 +155,89 @@ class BaseLLMService(ABC):
         return self._add_schema_instruction(messages, correction)
 
     def _extract_json_from_response(self, content: str) -> Dict[str, Any]:
-        """Extract JSON from LLM response"""
-        # Try to find JSON in the response
-        json_match = re.search(r"\{.*\}", content, re.DOTALL)
-        if json_match:
-            json_str = json_match.group(0)
-            try:
-                return json.loads(json_str)
-            except json.JSONDecodeError:
-                pass
-
-        # Try to parse the entire content as JSON
+        """Extract JSON from LLM response with improved error handling"""
+        logger.debug(f"Extracting JSON from response: {content[:200]}...")
+        
+        # Step 1: Clean up markdown code blocks first
+        cleaned_content = self._clean_json_string(content)
+        
+        # Step 2: Try to parse the cleaned content directly
         try:
-            return json.loads(content.strip())
-        except json.JSONDecodeError:
-            # Try to clean up common JSON issues
-            cleaned_content = self._clean_json_string(content)
-            return json.loads(cleaned_content)
+            result = json.loads(cleaned_content.strip())
+            logger.debug("Successfully parsed cleaned JSON content")
+            return result
+        except json.JSONDecodeError as e:
+            logger.debug(f"Direct parsing failed: {e}")
+        
+        # Step 3: Try to find JSON object in the content
+        json_patterns = [
+            r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}',  # Nested JSON objects
+            r'\{.*?\}',  # Simple JSON objects
+        ]
+        
+        for pattern in json_patterns:
+            json_matches = re.findall(pattern, cleaned_content, re.DOTALL)
+            for json_str in json_matches:
+                try:
+                    result = json.loads(json_str.strip())
+                    logger.debug(f"Successfully parsed JSON from pattern match")
+                    return result
+                except json.JSONDecodeError:
+                    continue
+        
+        # Step 4: Try more aggressive cleaning
+        aggressively_cleaned = self._aggressively_clean_json(content)
+        try:
+            result = json.loads(aggressively_cleaned)
+            logger.debug("Successfully parsed aggressively cleaned JSON")
+            return result
+        except json.JSONDecodeError as e:
+            logger.warning(f"All JSON parsing attempts failed: {e}")
+            raise json.JSONDecodeError(f"Could not extract valid JSON from: {content[:500]}...", content, 0)
 
     def _clean_json_string(self, content: str) -> str:
         """Clean up common JSON formatting issues"""
         # Remove markdown code blocks
-        content = re.sub(r"```json\s*", "", content)
+        content = re.sub(r"```json\s*", "", content, flags=re.IGNORECASE)
         content = re.sub(r"```\s*", "", content)
-
-        # Find the JSON object
+        
+        # Remove common prefixes and suffixes
+        content = re.sub(r"^[^{]*", "", content)  # Remove text before first {
+        content = re.sub(r"[^}]*$", "", content)  # Remove text after last }
+        
+        # Find the JSON object with better pattern
         json_match = re.search(r"\{.*\}", content, re.DOTALL)
         if json_match:
             return json_match.group(0)
 
         return content.strip()
+    
+    def _aggressively_clean_json(self, content: str) -> str:
+        """More aggressive JSON cleaning for problematic responses"""
+        # Start with basic cleaning
+        cleaned = self._clean_json_string(content)
+        
+        # Fix common JSON syntax errors
+        # Fix trailing commas
+        cleaned = re.sub(r',\s*}', '}', cleaned)
+        cleaned = re.sub(r',\s*]', ']', cleaned)
+        
+        # Fix missing quotes around keys
+        cleaned = re.sub(r'(\w+):', r'"\1":', cleaned)
+        
+        # Fix single quotes to double quotes
+        cleaned = re.sub(r"'([^']*)'", r'"\1"', cleaned)
+        
+        # Fix unescaped quotes in strings
+        cleaned = re.sub(r'("(?:[^"\\]|\\.)*")([^",}]*)(")', r'\1\3', cleaned)
+        
+        # Remove any remaining non-JSON characters
+        start = cleaned.find('{')
+        end = cleaned.rfind('}')
+        if start >= 0 and end >= 0 and end > start:
+            cleaned = cleaned[start:end+1]
+        
+        return cleaned
 
     def _create_fallback_response(
         self, response_schema: Dict[str, Any], messages: List[Dict[str, str]]
@@ -235,6 +288,21 @@ class BaseLLMService(ABC):
             
         if "selected_tools" in fallback:
             fallback["selected_tools"] = ["attraction_search"]  # Safe default
+        
+        # Special handling for plan generation schema
+        if "natural_response" in fallback:
+            fallback["natural_response"] = "I've created a travel plan based on your request. Please see the structured plan details below."
+        
+        if "structured_plan" in fallback:
+            fallback["structured_plan"] = {
+                "destination": "Unknown",
+                "duration": 3,
+                "travelers": 2,
+                "budget_estimate": {"currency": "USD", "amount": 1000}
+            }
+        
+        if "plan_events" in fallback:
+            fallback["plan_events"] = []
             
         logger.info(f"Generated fallback response with {len(fallback)} fields")
         return fallback

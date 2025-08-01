@@ -171,6 +171,1059 @@ class PlanManager:
                 "metadata_updated": False
             }
     
+    async def generate_plan_from_tool_results(
+        self, 
+        session_id: str, 
+        tool_results: Dict[str, Any], 
+        destination: str, 
+        user_message: str,
+        intent: Dict[str, Any] = None,
+        multi_destinations: List[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate travel plan events directly from tool results (Fast non-LLM approach)
+        Moved from travel_agent to centralize plan generation logic
+        """
+        from datetime import datetime, timedelta
+        import uuid
+        
+        try:
+            logger.info(f"Generating plan from tool results for destination: {destination}")
+            if multi_destinations and len(multi_destinations) > 1:
+                logger.info(f"🌍 Planning multi-destination trip with {len(multi_destinations)} destinations")
+            
+            # Get existing plan
+            plan = self.get_plan_by_session(session_id)
+            if not plan:
+                logger.warning(f"No plan found for session {session_id}, creating new one")
+                plan_id = self.create_plan_for_session(session_id)
+                plan = self.get_plan_by_id(plan_id)
+            
+            # ✅ Extract duration from user intent or message, not hardcoded
+            duration = self._extract_trip_duration(user_message, intent)
+            travelers = self._extract_travelers_count(user_message, intent)
+            
+            # ✅ Extract dates from user message or use smart defaults
+            start_date = self._extract_trip_start_date(user_message, intent)
+            
+            logger.info(f"Plan parameters: destination={destination}, duration={duration}, travelers={travelers}, start_date={start_date}")
+            
+            # Generate events from tool results
+            events = self._create_events_from_tools(
+                tool_results, 
+                destination, 
+                start_date, 
+                duration, 
+                travelers, 
+                user_message,
+                multi_destinations
+            )
+            
+            # Update plan metadata (TravelPlanMetadata is a Pydantic model, not a dict)
+            plan.metadata.destination = destination
+            plan.metadata.duration_days = duration
+            plan.metadata.travelers = travelers
+            plan.metadata.budget = self._estimate_budget(duration, travelers)
+            plan.metadata.budget_currency = "USD"
+            plan.metadata.last_updated = datetime.now()
+            plan.metadata.completion_status = "complete"
+            plan.metadata.confidence = 0.88
+            
+            # Add events to plan (filter out None events)
+            events_added = 0
+            for event in events:
+                if event is not None:  # _create_calendar_event_from_data can return None
+                    plan.events.append(event)
+                    events_added += 1
+            
+            # Save plan
+            self._save_plan(plan)
+            
+            logger.info(f"Generated {events_added} events for {duration}-day trip to {destination}")
+            
+            return {
+                "success": True,
+                "changes_made": [f"Generated {events_added} events from tool results"],
+                "events_added": events_added,
+                "events_updated": 0,
+                "events_deleted": 0,
+                "metadata_updated": True,
+                "plan_generation_method": "fast_tool_based",
+                "duration": duration,
+                "travelers": travelers
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate plan from tool results: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "changes_made": []
+            }
+
+    def _extract_trip_duration(self, user_message: str, intent: Dict[str, Any] = None) -> int:
+        """Extract trip duration from user message or intent, with smart defaults"""
+        import re
+        
+        # Try to extract from intent first
+        if intent and "travel_details" in intent:
+            duration = intent["travel_details"].get("duration")
+            if duration and isinstance(duration, (int, float)) and duration > 0:
+                return int(duration)
+        
+        # Extract from user message using regex
+        user_message_lower = user_message.lower()
+        
+        # Look for explicit day mentions
+        day_patterns = [
+            r'(\d+)[- ]days?',
+            r'(\d+)[- ]day trip',
+            r'for (\d+) days?',
+            r'spend (\d+) days?',
+            r'stay (\d+) days?'
+        ]
+        
+        for pattern in day_patterns:
+            match = re.search(pattern, user_message_lower)
+            if match:
+                duration = int(match.group(1))
+                if 1 <= duration <= 30:  # Reasonable range
+                    logger.info(f"Extracted duration from message: {duration} days")
+                    return duration
+        
+        # Look for week mentions
+        week_patterns = [
+            r'(\d+)[- ]weeks?',
+            r'for (\d+) weeks?',
+            r'spend (\d+) weeks?'
+        ]
+        
+        for pattern in week_patterns:
+            match = re.search(pattern, user_message_lower)
+            if match:
+                duration = int(match.group(1)) * 7
+                if duration <= 30:  # Max 30 days
+                    logger.info(f"Extracted duration from message: {duration} days ({match.group(1)} weeks)")
+                    return duration
+        
+        # Look for weekend/trip keywords
+        if any(word in user_message_lower for word in ['weekend', 'short trip', 'quick trip']):
+            logger.info("Detected weekend/short trip: defaulting to 3 days")
+            return 3
+        elif any(word in user_message_lower for word in ['vacation', 'holiday', 'long trip']):
+            logger.info("Detected vacation/holiday: defaulting to 7 days")
+            return 7
+        
+        # Default based on destination type or general default
+        logger.info("No duration specified, defaulting to 5 days")
+        return 5
+
+    def _extract_travelers_count(self, user_message: str, intent: Dict[str, Any] = None) -> int:
+        """Extract number of travelers from user message or intent"""
+        import re
+        
+        # Try to extract from intent first
+        if intent and "travel_details" in intent:
+            travelers = intent["travel_details"].get("travelers")
+            if travelers and isinstance(travelers, (int, float)) and travelers > 0:
+                return int(travelers)
+        
+        # Extract from user message
+        user_message_lower = user_message.lower()
+        
+        # Look for explicit numbers
+        patterns = [
+            r'for (\d+) people',
+            r'(\d+) travelers?',
+            r'(\d+) persons?',
+            r'(\d+) adults?',
+            r'group of (\d+)',
+            r'(\d+) of us'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, user_message_lower)
+            if match:
+                count = int(match.group(1))
+                if 1 <= count <= 20:  # Reasonable range
+                    logger.info(f"Extracted travelers count: {count}")
+                    return count
+        
+        # Look for couple/pair indicators
+        if any(word in user_message_lower for word in ['couple', 'romantic', 'honeymoon', 'anniversary', 'two of us', 'my partner']):
+            logger.info("Detected couple trip: 2 travelers")
+            return 2
+        
+        # Look for family indicators
+        if any(word in user_message_lower for word in ['family', 'kids', 'children']):
+            logger.info("Detected family trip: 4 travelers")
+            return 4
+        
+        # Default to solo travel
+        logger.info("No traveler count specified, defaulting to 1")
+        return 1
+
+    def _extract_trip_start_date(self, user_message: str, intent: Dict[str, Any] = None) -> datetime:
+        """Extract start date from user message or use smart default"""
+        from datetime import datetime, timedelta
+        import re
+        
+        # Try to extract from intent first
+        if intent and "travel_details" in intent and "dates" in intent["travel_details"]:
+            departure = intent["travel_details"]["dates"].get("departure")
+            if departure and departure != "unknown":
+                try:
+                    return datetime.strptime(departure, "%Y-%m-%d")
+                except:
+                    pass
+        
+        # ✅ Look for explicit date mentions in user message
+        user_message_lower = user_message.lower()
+        
+        # Check for "today", "tomorrow", "next week" etc.
+        if 'today' in user_message_lower:
+            return datetime.now()
+        elif 'tomorrow' in user_message_lower:
+            return datetime.now() + timedelta(days=1)
+        elif 'next week' in user_message_lower:
+            return datetime.now() + timedelta(days=7)
+        elif 'next month' in user_message_lower:
+            return datetime.now() + timedelta(days=30)
+        
+        # ✅ Default to tomorrow instead of next week for immediate planning
+        default_start = datetime.now() + timedelta(days=1)
+        logger.info(f"Using default start date: {default_start.strftime('%Y-%m-%d')} (tomorrow)")
+        return default_start
+
+    def _estimate_budget(self, duration: int, travelers: int) -> int:
+        """Estimate budget based on duration and travelers"""
+        base_per_day_per_person = 150  # $150 per day per person
+        total = base_per_day_per_person * duration * travelers
+        return max(500, min(total, 10000))  # Cap between $500-$10000
+
+    def _create_events_from_tools(
+        self, 
+        tool_results: Dict[str, Any], 
+        destination: str, 
+        start_date: datetime, 
+        duration: int, 
+        travelers: int,
+        user_message: str,
+        multi_destinations: List[str] = None
+    ) -> List:
+        """Create calendar events from tool results with accurate timing"""
+        events = []
+        from datetime import timedelta
+        import uuid
+        
+        current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)
+        
+
+        
+        # ✅ Handle multi-destination trips (passed as parameter)
+        if multi_destinations and len(multi_destinations) > 1:
+            logger.info(f"🌍 Planning multi-destination trip: {multi_destinations}")
+            return self._create_multi_destination_events(
+                tool_results, multi_destinations, start_date, duration, travelers, user_message
+            )
+        else:
+            if multi_destinations:
+                logger.warning(f"⚠️ Multi-destinations provided but too short: {multi_destinations}")
+            else:
+                logger.info(f"🏙️ No multi-destinations provided, creating single destination events")
+        
+        try:
+            # Add flight events (outbound and return)
+            if "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                if hasattr(flight_result, 'flights') and len(flight_result.flights) > 0:
+                    # Outbound flight
+                    outbound_flight = flight_result.flights[0]
+                    outbound_time = current_time.replace(hour=10, minute=0)  # 10 AM departure
+                    
+                    event = self._create_calendar_event_from_data({
+                        "id": f"flight_outbound_{str(uuid.uuid4())[:8]}",
+                        "title": f"Flight to {destination}",
+                        "description": f"Flight details: {getattr(outbound_flight, 'airline', 'TBA')} - Duration: {getattr(outbound_flight, 'duration', 'TBA')} minutes",
+                        "event_type": "flight",
+                        "start_time": outbound_time.isoformat(),
+                        "end_time": (outbound_time + timedelta(hours=int(getattr(outbound_flight, 'duration', 360) / 60))).isoformat(),
+                        "location": f"Airport → {destination}",
+                        "details": {
+                            "source": "flight_search",
+                            "airline": getattr(outbound_flight, 'airline', 'TBA'),
+                            "price": {"amount": getattr(outbound_flight, 'price', 500), "currency": "USD"},
+                            "flight_number": getattr(outbound_flight, 'flight_number', 'TBA'),
+                            "duration_minutes": getattr(outbound_flight, 'duration', 360)
+                        }
+                    })
+                    if event:
+                        events.append(event)
+                    
+                    # Return flight (on last day)
+                    return_time = (start_date + timedelta(days=duration-1)).replace(hour=18, minute=0)
+                    if len(flight_result.flights) > 1:
+                        return_flight = flight_result.flights[1]
+                    else:
+                        return_flight = outbound_flight  # Use same flight as template
+                    
+                    event = self._create_calendar_event_from_data({
+                        "id": f"flight_return_{str(uuid.uuid4())[:8]}",
+                        "title": f"Return Flight",
+                        "description": f"Return flight: {getattr(return_flight, 'airline', 'TBA')}",
+                        "event_type": "flight",
+                        "start_time": return_time.isoformat(),
+                        "end_time": (return_time + timedelta(hours=int(getattr(return_flight, 'duration', 360) / 60))).isoformat(),
+                        "location": f"{destination} → Home",
+                        "details": {
+                            "source": "flight_search",
+                            "airline": getattr(return_flight, 'airline', 'TBA'),
+                            "price": {"amount": getattr(return_flight, 'price', 500), "currency": "USD"},
+                            "flight_number": getattr(return_flight, 'flight_number', 'TBA'),
+                            "duration_minutes": getattr(return_flight, 'duration', 360)
+                        }
+                    })
+                    if event:
+                        events.append(event)
+            
+            # Add hotel events (full duration - 1 day to account for departure)
+            if "hotel_search" in tool_results:
+                hotel_result = tool_results["hotel_search"]
+                if hasattr(hotel_result, 'hotels') and len(hotel_result.hotels) > 0:
+                    hotel = hotel_result.hotels[0]
+                    checkin_time = current_time.replace(hour=15, minute=0)  # 3 PM check-in
+                    checkout_time = (start_date + timedelta(days=duration-1)).replace(hour=11, minute=0)  # 11 AM checkout
+                    
+                    event = self._create_calendar_event_from_data({
+                        "id": f"hotel_stay_{str(uuid.uuid4())[:8]}",
+                        "title": f"Hotel: {getattr(hotel, 'name', 'Hotel in ' + destination)}",
+                        "description": f"Accommodation in {destination} for {duration-1} nights",
+                        "event_type": "hotel",
+                        "start_time": checkin_time.isoformat(),
+                        "end_time": checkout_time.isoformat(),
+                        "location": getattr(hotel, 'location', destination),
+                        "details": {
+                            "source": "hotel_search",
+                            "rating": getattr(hotel, 'rating', 4.0),
+                            "price_per_night": {"amount": getattr(hotel, 'price_per_night', 150), "currency": "USD"},
+                            "nights": duration - 1
+                        }
+                    })
+                    if event:
+                        events.append(event)
+            
+            # Add attraction events (spread across middle days)
+            if "attraction_search" in tool_results:
+                attraction_result = tool_results["attraction_search"]
+                if hasattr(attraction_result, 'attractions') and len(attraction_result.attractions) > 0:
+                    attractions = attraction_result.attractions[:min(3, duration-2)]  # Limit based on duration
+                    for i, attraction in enumerate(attractions):
+                        visit_day = start_date + timedelta(days=i+1)  # Start from day 2
+                        visit_time = visit_day.replace(hour=10 + i*2, minute=0)  # 10 AM, 12 PM, 2 PM
+                        
+                        event = self._create_calendar_event_from_data({
+                            "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
+                            "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
+                            "description": getattr(attraction, 'category', 'Sightseeing activity'),
+                            "event_type": "attraction",
+                            "start_time": visit_time.isoformat(),
+                            "end_time": (visit_time + timedelta(hours=2)).isoformat(),
+                            "location": getattr(attraction, 'location', destination),
+                            "details": {
+                                "source": "attraction_search",
+                                "rating": getattr(attraction, 'rating', 4.5),
+                                "category": getattr(attraction, 'category', 'Tourism')
+                            }
+                        })
+                        if event:
+                            events.append(event)
+            
+            # Add default activities if no specific events were created
+            if len(events) <= 2:  # Only flights
+                for i in range(min(3, duration-1)):
+                    day = start_date + timedelta(days=i+1)
+                    event_time = day.replace(hour=10 + i*3, minute=0)
+                    event = self._create_calendar_event_from_data({
+                        "id": f"activity_{i+1}_{str(uuid.uuid4())[:8]}",
+                        "title": f"Explore {destination} - Day {i+1}",
+                        "description": f"Discover the best of {destination}",
+                        "event_type": "activity",
+                        "start_time": event_time.isoformat(),
+                        "end_time": (event_time + timedelta(hours=3)).isoformat(),
+                        "location": destination,
+                        "details": {
+                            "source": "default_generation",
+                            "recommendations": ["Bring camera", "Wear comfortable shoes"]
+                        }
+                    })
+                    if event:
+                        events.append(event)
+            
+            logger.info(f"Created {len(events)} events for {duration}-day trip")
+            return events
+            
+        except Exception as e:
+            logger.error(f"Error creating events from tool results: {e}")
+            # Return basic fallback event
+            fallback_event = self._create_calendar_event_from_data({
+                "id": f"basic_trip_{str(uuid.uuid4())[:8]}",
+                "title": f"Trip to {destination}",
+                "description": f"{duration}-day travel to {destination}",
+                "event_type": "activity",
+                "start_time": current_time.isoformat(),
+                "end_time": (current_time + timedelta(hours=4)).isoformat(),
+                "location": destination,
+                "details": {"source": "fallback_generation"}
+            })
+            return [fallback_event] if fallback_event else []
+    
+    def _create_multi_destination_events(
+        self, 
+        tool_results: Dict[str, Any], 
+        destinations: List[str], 
+        start_date: datetime, 
+        duration: int, 
+        travelers: int,
+        user_message: str
+    ) -> List:
+        """Create calendar events for multi-destination trips with complete flight chain"""
+        events = []
+        from datetime import timedelta
+        import uuid
+        
+        try:
+            logger.info(f"🗺️ Creating multi-destination itinerary for {len(destinations)} cities: {destinations}")
+            
+            # ✅ Extract origin from user message, flight search data, or use default
+            origin = self._extract_origin_from_message(user_message)
+            
+            # ✅ If no origin found in message, try to get it from flight search data
+            if not origin and "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                if hasattr(flight_result, 'data') and flight_result.data:
+                    flight_data = flight_result.data
+                    if flight_data.get("search_type") == "flight_chain":
+                        flight_chain = flight_data.get("flight_chain", [])
+                        if len(flight_chain) > 0:
+                            origin = flight_chain[0]  # First city in chain is origin
+                            logger.info(f"🛫 Extracted origin from flight chain: {origin}")
+            
+            # ✅ Final fallback
+            if not origin:
+                origin = "YYZ"  # Default to Toronto
+                logger.warning(f"🛫 No origin found, using default: {origin}")
+            else:
+                logger.info(f"🛫 Multi-city trip starting from: {origin}")
+            
+            # ✅ Calculate days per destination with proper distribution
+            # Ensure total days equals requested duration, not compressed by destination count
+            base_days_per_destination = max(1, duration // len(destinations))
+            extra_days = duration % len(destinations)  # Distribute remaining days
+            
+            logger.info(f"📅 Distributing {duration} days across {len(destinations)} destinations:")
+            logger.info(f"   Base allocation: {base_days_per_destination} days per destination")
+            if extra_days > 0:
+                logger.info(f"   Extra days to distribute: {extra_days}")
+            
+            # Create a list of days for each destination
+            days_allocation = [base_days_per_destination] * len(destinations)
+            # Distribute extra days to first few destinations
+            for i in range(extra_days):
+                days_allocation[i] += 1
+            
+            logger.info(f"   Final allocation: {days_allocation}")
+            
+            # Verify total days
+            total_allocated_days = sum(days_allocation)
+            logger.info(f"   Total days allocated: {total_allocated_days} (requested: {duration})")
+            
+            current_date = start_date
+            
+            # ✅ Create complete flight chain: Start → A → B → C → ... → N → Start
+            flight_chain = [origin] + destinations + [origin]
+            logger.info(f"✈️ Flight chain: {' → '.join(flight_chain)}")
+            
+            for i, destination in enumerate(destinations):  # ✅ Process ALL destinations, no limit
+                # ✅ Get the specific number of days for this destination
+                destination_days = days_allocation[i]
+                logger.info(f"🏙️ Planning destination {i+1}/{len(destinations)}: {destination} ({destination_days} days)")
+                
+                # ✅ Create flight to this destination
+                # ✅ Get proper city names from IATA codes
+                from app.knowledge.geographical_data import GeographicalMappings
+                destination_city_name = GeographicalMappings.get_city_name(destination)
+                
+                if i == 0:
+                    # First flight: Origin → First Destination
+                    departure_city = origin
+                    departure_city_name = GeographicalMappings.get_city_name(departure_city)
+                    flight_time = current_date.replace(hour=8, minute=0)
+                    flight_title = f"Flight: {departure_city_name} → {destination_city_name}"
+                    flight_description = f"Departure from {departure_city_name} to {destination_city_name} - Start of multi-city adventure"
+                    flight_sequence = 1  # First flight in chain
+                else:
+                    # Connecting flights: Previous Destination → Current Destination
+                    departure_city = destinations[i-1]
+                    departure_city_name = GeographicalMappings.get_city_name(departure_city)
+                    flight_time = current_date.replace(hour=14, minute=0)
+                    flight_title = f"Flight: {departure_city_name} → {destination_city_name}"
+                    flight_description = f"Connecting flight from {departure_city_name} to {destination_city_name}"
+                    flight_sequence = i + 1  # Sequence number in chain
+                
+                # Get flight info from tool results if available
+                flight_details = self._extract_flight_details_for_route(
+                    tool_results, departure_city, destination, flight_sequence
+                )
+                
+                flight_event = self._create_calendar_event_from_data({
+                    "id": f"flight_{departure_city}_to_{destination}_{str(uuid.uuid4())[:8]}",
+                    "title": flight_title,
+                    "description": flight_description,
+                    "event_type": "flight",
+                    "start_time": flight_time.isoformat(),
+                    "end_time": (flight_time + timedelta(hours=flight_details.get('duration_hours', 3))).isoformat(),
+                    "location": f"{departure_city_name} → {destination_city_name}",
+                    "details": {
+                        "source": "multi_destination_planning",
+                        "flight_sequence": flight_sequence,  # ✅ Use correct sequence
+                        "total_flights": len(destinations) + 1,  # +1 for return flight
+                        "origin": departure_city,
+                        "destination": destination,
+                        "airline": flight_details.get("airline", "TBA"),
+                        "price": flight_details.get("price", {"amount": "TBA", "currency": "USD"}),
+                        "flight_number": flight_details.get("flight_number", "TBA"),
+                        "duration_minutes": flight_details.get("duration_hours", 3) * 60
+                    }
+                })
+                if flight_event:
+                    events.append(flight_event)
+                
+                # ✅ Hotel for each destination
+                checkin_time = current_date.replace(hour=15, minute=0)
+                checkout_time = (current_date + timedelta(days=destination_days)).replace(hour=11, minute=0)
+                
+                # ✅ Get proper city name from IATA code
+                from app.knowledge.geographical_data import GeographicalMappings
+                city_name = GeographicalMappings.get_city_name(destination)
+                
+                # ✅ Try to get hotel information from tool results
+                hotel_name = f"Hotel in {city_name}"
+                hotel_location = city_name
+                hotel_details = {
+                    "source": "multi_destination_planning",
+                    "nights": destination_days,
+                    "destination_sequence": i + 1
+                }
+                
+                # ✅ Check if we have hotel search results for this destination
+                if "hotel_search" in tool_results:
+                    hotel_result = tool_results["hotel_search"]
+                    if hasattr(hotel_result, 'hotels') and len(hotel_result.hotels) > 0:
+                        # Find hotel for this destination (hotels may be tagged with search_location)
+                        matching_hotel = None
+                        for hotel in hotel_result.hotels:
+                            # Check if hotel is for this destination
+                            hotel_search_location = getattr(hotel, 'search_location', '')
+                            if (hotel_search_location == destination or 
+                                hotel_search_location.upper() == destination.upper()):
+                                matching_hotel = hotel
+                                break
+                        
+                        # If no specific match, use first hotel as template
+                        if not matching_hotel and hotel_result.hotels:
+                            matching_hotel = hotel_result.hotels[0]
+                        
+                        if matching_hotel:
+                            hotel_name = getattr(matching_hotel, 'name', f"Hotel in {city_name}")
+                            hotel_location = getattr(matching_hotel, 'location', city_name)
+                            hotel_details.update({
+                                "source": "hotel_search",
+                                "rating": getattr(matching_hotel, 'rating', None),
+                                "price_per_night": {
+                                    "amount": getattr(matching_hotel, 'price_per_night', None), 
+                                    "currency": getattr(matching_hotel, 'currency', 'USD')
+                                }
+                            })
+                
+                hotel_event = self._create_calendar_event_from_data({
+                    "id": f"hotel_{destination}_{str(uuid.uuid4())[:8]}",
+                    "title": hotel_name,
+                    "description": f"Accommodation in {city_name} for {destination_days} nights",
+                    "event_type": "hotel",
+                    "start_time": checkin_time.isoformat(),
+                    "end_time": checkout_time.isoformat(),
+                    "location": hotel_location,
+                    "details": hotel_details
+                })
+                if hotel_event:
+                    events.append(hotel_event)
+                
+                # ✅ Attractions for each destination
+                for day in range(destination_days):
+                    activity_date = current_date + timedelta(days=day)
+                    activity_time = activity_date.replace(hour=10, minute=0)
+                    
+                    activity_event = self._create_calendar_event_from_data({
+                        "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
+                        "title": f"Explore {city_name} - Day {day+1}",
+                        "description": f"Discover attractions and culture in {city_name}",
+                        "event_type": "attraction",
+                        "start_time": activity_time.isoformat(),
+                        "end_time": (activity_time + timedelta(hours=4)).isoformat(),
+                        "location": city_name,
+                        "details": {
+                            "source": "multi_destination_planning",
+                            "day_in_destination": day + 1,
+                            "destination_sequence": i + 1,
+                            "total_days_in_destination": destination_days,  # ✅ Add this for better tracking
+                            "recommendations": ["Visit main attractions", "Try local cuisine", "Explore cultural sites"]
+                        }
+                    })
+                    if activity_event:
+                        events.append(activity_event)
+                
+                # Move to next destination period
+                current_date += timedelta(days=destination_days)
+            
+            # ✅ Final return flight: Last Destination → Origin
+            final_destination = destinations[-1]
+            final_destination_city_name = GeographicalMappings.get_city_name(final_destination)
+            origin_city_name = GeographicalMappings.get_city_name(origin)
+            return_flight_time = current_date.replace(hour=18, minute=0)
+            
+            # Get return flight details
+            return_flight_sequence = len(destinations) + 1  # ✅ Correct sequence for return flight
+            return_flight_details = self._extract_flight_details_for_route(
+                tool_results, final_destination, origin, return_flight_sequence
+            )
+            
+            return_flight_event = self._create_calendar_event_from_data({
+                "id": f"flight_{final_destination}_to_{origin}_{str(uuid.uuid4())[:8]}",
+                "title": f"Return Flight: {final_destination_city_name} → {origin_city_name}",
+                "description": f"Return journey from {final_destination_city_name} to {origin_city_name} - End of multi-city trip",
+                "event_type": "flight",
+                "start_time": return_flight_time.isoformat(),
+                "end_time": (return_flight_time + timedelta(hours=return_flight_details.get('duration_hours', 6))).isoformat(),
+                "location": f"{final_destination_city_name} → {origin_city_name}",
+                "details": {
+                    "source": "multi_destination_planning",
+                    "flight_sequence": return_flight_sequence,  # ✅ Use correct sequence
+                    "total_flights": len(destinations) + 1,
+                    "origin": final_destination,
+                    "destination": origin,
+                    "trip_conclusion": True,
+                    "cities_visited": destinations,
+                    "airline": return_flight_details.get("airline", "TBA"),
+                    "price": return_flight_details.get("price", {"amount": "TBA", "currency": "USD"}),
+                    "flight_number": return_flight_details.get("flight_number", "TBA"),
+                    "duration_minutes": return_flight_details.get("duration_hours", 6) * 60
+                }
+            })
+            if return_flight_event:
+                events.append(return_flight_event)
+            
+            logger.info(f"✅ Created {len(events)} events for multi-destination trip:")
+            logger.info(f"   📍 {len(destinations)} destinations: {', '.join(destinations)}")
+            logger.info(f"   ✈️ {len(destinations) + 1} flights: {' → '.join(flight_chain)}")
+            logger.info(f"   🏨 {len(destinations)} hotel stays")
+            logger.info(f"   🎯 {sum(days_allocation)} total activity days ({total_allocated_days} days total)")
+            logger.info(f"   Days distribution: {dict(zip(destinations, days_allocation))}")
+            
+            return events
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating multi-destination events: {e}")
+            # Fallback to single destination
+            return self._create_single_destination_fallback(destinations[0], start_date, duration)
+    
+    def _extract_origin_from_message(self, user_message: str) -> Optional[str]:
+        """Extract origin city/airport from user message"""
+        import re
+        
+        user_lower = user_message.lower()
+        
+        # Look for common origin patterns
+        origin_patterns = [
+            r'from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→)',
+            r'starting\s+from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→|\s+and)',
+            r'departing\s+from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→)',
+            r'leave\s+from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→)',
+            r'fly\s+from\s+([a-zA-Z\s]+?)(?:\s+to|\s+→)',
+        ]
+        
+        for pattern in origin_patterns:
+            match = re.search(pattern, user_lower)
+            if match:
+                origin = match.group(1).strip().title()
+                # Clean up common words
+                origin = re.sub(r'\b(the|city|airport)\b', '', origin, flags=re.IGNORECASE).strip()
+                if len(origin) >= 2:  # Valid city name
+                    logger.info(f"🛫 Extracted origin from message: {origin}")
+                    return origin
+        
+        # Default origins based on common patterns
+        if any(word in user_lower for word in ['singapore', 'sin', 'changi']):
+            return "SIN"  # ✅ Add Singapore support
+        elif any(word in user_lower for word in ['toronto', 'yyz', 'pearson']):
+            return "YYZ"  # ✅ Use IATA code for consistency
+        elif any(word in user_lower for word in ['vancouver', 'yvr']):
+            return "YVR"
+        elif any(word in user_lower for word in ['montreal', 'yul']):
+            return "YUL"
+        elif any(word in user_lower for word in ['new york', 'nyc', 'jfk', 'lga']):
+            return "JFK"
+        elif any(word in user_lower for word in ['london', 'lhr', 'heathrow']):
+            return "LHR"
+        elif any(word in user_lower for word in ['paris', 'cdg']):
+            return "CDG"
+        elif any(word in user_lower for word in ['tokyo', 'nrt', 'hnd']):
+            return "NRT"
+        
+        logger.info(f"🛫 No origin found in message, using default")
+        return None
+
+    def _extract_flight_details_for_route(
+        self, tool_results: Dict[str, Any], origin: str, destination: str, sequence: int
+    ) -> Dict[str, Any]:
+        """Extract flight details for a specific route from tool results"""
+        default_details = {
+            "duration_hours": 3,
+            "airline": "TBA",
+            "price": {"amount": "TBA", "currency": "USD"},
+            "flight_number": "TBA"
+        }
+        
+        try:
+            # Check if we have flight search results
+            if "flight_search" not in tool_results:
+                return default_details
+            
+            flight_result = tool_results["flight_search"]
+            if not hasattr(flight_result, 'flights') or not flight_result.flights:
+                return default_details
+            
+            # ✅ For flight chain searches, match by route_name in details
+            # ✅ Safe handling of origin and destination
+            safe_origin = str(origin).upper() if origin else 'UNKNOWN'
+            safe_destination = str(destination).upper() if destination else 'UNKNOWN'
+            expected_route = f"{safe_origin} → {safe_destination}"
+            logger.debug(f"Looking for flight route: {expected_route} (sequence: {sequence})")
+            
+            # Try to find a flight for this specific route
+            for flight in flight_result.flights:
+                # ✅ First check if this is a flight chain result with details
+                if hasattr(flight, 'details') and flight.details:
+                    route_name = flight.details.get('route_name', '')
+                    route_sequence = flight.details.get('route_sequence', 0)
+                    
+                    # Match by exact route name or sequence number
+                    if (route_name == expected_route or 
+                        route_sequence == sequence):
+                        
+                        duration_minutes = getattr(flight, 'duration', 180)
+                        duration_hours = max(1, duration_minutes // 60)
+                        
+                        logger.info(f"✅ Found flight chain match: {route_name} (seq: {route_sequence})")
+                        return {
+                            "duration_hours": duration_hours,
+                            "airline": getattr(flight, 'airline', 'TBA'),
+                            "price": {
+                                "amount": getattr(flight, 'price', 'TBA'),
+                                "currency": getattr(flight, 'currency', 'USD')
+                            },
+                            "flight_number": getattr(flight, 'flight_number', 'TBA')
+                        }
+                
+                # ✅ Fallback: Match by destination (search_destination is set by flight_search.py)
+                flight_origin = getattr(flight, 'origin', '') or ''
+                flight_dest = getattr(flight, 'destination', '') or ''
+                search_dest = getattr(flight, 'search_destination', '') or ''
+                
+                # ✅ Safe lower() calls with None checks
+                flight_origin_lower = flight_origin.lower() if flight_origin else ''
+                flight_dest_lower = flight_dest.lower() if flight_dest else ''
+                search_dest_lower = search_dest.lower() if search_dest else ''
+                
+                # ✅ Safe destination matching
+                safe_dest_lower = str(destination).lower() if destination else ''
+
+                
+                if (safe_dest_lower and (safe_dest_lower in search_dest_lower or 
+                    safe_dest_lower in flight_dest_lower)):
+                    
+                    duration_minutes = getattr(flight, 'duration', 180)  # 3 hours default
+                    duration_hours = max(1, duration_minutes // 60)
+                    
+                    logger.info(f"✅ Found flight destination match: {search_dest_lower}")
+                    return {
+                        "duration_hours": duration_hours,
+                        "airline": getattr(flight, 'airline', 'TBA'),
+                        "price": {
+                            "amount": getattr(flight, 'price', 'TBA'),
+                            "currency": getattr(flight, 'currency', 'USD')
+                        },
+                        "flight_number": getattr(flight, 'flight_number', 'TBA')
+                    }
+            
+            # If no specific match, use first flight as template
+            if flight_result.flights:
+                first_flight = flight_result.flights[0]
+                duration_minutes = getattr(first_flight, 'duration', 180)
+                duration_hours = max(1, duration_minutes // 60)
+                
+                logger.warning(f"⚠️ No specific match found for {expected_route}, using first flight as template")
+                return {
+                    "duration_hours": duration_hours,
+                    "airline": getattr(first_flight, 'airline', 'TBA'),
+                    "price": {
+                        "amount": getattr(first_flight, 'price', 'TBA'),
+                        "currency": getattr(first_flight, 'currency', 'USD')
+                    },
+                    "flight_number": getattr(first_flight, 'flight_number', 'TBA')
+                }
+                
+        except Exception as e:
+            logger.warning(f"Error extracting flight details for {origin} → {destination}: {e}")
+        
+        logger.info(f"🔄 Using default flight details for {safe_origin} → {safe_destination}")
+        return default_details
+
+    def _create_single_destination_fallback(self, destination: str, start_date: datetime, duration: int) -> List:
+        """Create a simple single-destination fallback plan"""
+        events = []
+        from datetime import timedelta
+        import uuid
+        
+        try:
+            # Simple 3-event plan
+            arrival_time = start_date.replace(hour=10, minute=0)
+            
+            # Arrival
+            event = self._create_calendar_event_from_data({
+                "id": f"fallback_arrival_{str(uuid.uuid4())[:8]}",
+                "title": f"Arrive in {destination.title()}",
+                "description": f"Begin your {duration}-day trip to {destination.title()}",
+                "event_type": "flight",
+                "start_time": arrival_time.isoformat(),
+                "end_time": (arrival_time + timedelta(hours=2)).isoformat(),
+                "location": destination.title(),
+                "details": {"source": "fallback_single_destination"}
+            })
+            if event:
+                events.append(event)
+            
+            # Stay
+            checkin_time = start_date.replace(hour=15, minute=0)
+            checkout_time = (start_date + timedelta(days=duration)).replace(hour=11, minute=0)
+            
+            event = self._create_calendar_event_from_data({
+                "id": f"fallback_stay_{str(uuid.uuid4())[:8]}",
+                "title": f"Stay in {destination.title()}",
+                "description": f"Accommodation for {duration} nights",
+                "event_type": "hotel",
+                "start_time": checkin_time.isoformat(),
+                "end_time": checkout_time.isoformat(),
+                "location": destination.title(),
+                "details": {"source": "fallback_single_destination"}
+            })
+            if event:
+                events.append(event)
+            
+            # Departure
+            departure_time = (start_date + timedelta(days=duration)).replace(hour=18, minute=0)
+            
+            event = self._create_calendar_event_from_data({
+                "id": f"fallback_departure_{str(uuid.uuid4())[:8]}",
+                "title": f"Depart from {destination.title()}",
+                "description": f"Return journey from {destination.title()}",
+                "event_type": "flight",
+                "start_time": departure_time.isoformat(),
+                "end_time": (departure_time + timedelta(hours=6)).isoformat(),
+                "location": destination.title(),
+                "details": {"source": "fallback_single_destination"}
+            })
+            if event:
+                events.append(event)
+            
+            return events
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating fallback events: {e}")
+            return []
+
+    async def update_plan_from_structured_response(
+        self, 
+        session_id: str, 
+        agent_response: Any  # Changed from AgentResponse to Any to avoid import issues
+    ) -> Dict[str, Any]:
+        """Update plan directly from structured response data, avoiding LLM re-parsing"""
+        
+        try:
+            plan = self.get_plan_by_session(session_id)
+            if not plan:
+                logger.warning(f"No existing plan found for session {session_id}, creating new plan")
+                self.create_plan_for_session(session_id)
+                plan = self.get_plan_by_session(session_id)
+            
+            update_summary = {
+                "success": True,
+                "changes_made": [],
+                "events_added": 0,
+                "events_updated": 0,
+                "events_deleted": 0,
+                "metadata_updated": False,
+                "direct_structure_used": True
+            }
+            
+            logger.info(f"Processing structured response for session {session_id}")
+            
+            # Check if response has structured plan data
+            if hasattr(agent_response, 'structured_plan') and agent_response.structured_plan:
+                # Update plan metadata from structured data
+                plan_data = agent_response.structured_plan
+                if plan_data.get("destination"):
+                    plan.metadata.destination = plan_data["destination"]
+                if plan_data.get("duration"):
+                    plan.metadata.duration_days = plan_data["duration"]
+                if plan_data.get("travelers"):
+                    plan.metadata.travelers = plan_data["travelers"]
+                # Note: start_date and end_date are not fields in TravelPlanMetadata
+                # They are stored as plan_data in the structured_plan itself
+                
+                update_summary["metadata_updated"] = True
+                update_summary["changes_made"].append("Updated plan metadata from structured data")
+                logger.info(f"Updated plan metadata: destination={plan_data.get('destination')}")
+            
+            # Process structured plan events
+            if hasattr(agent_response, 'plan_events') and agent_response.plan_events:
+                new_events = []
+                for event_data in agent_response.plan_events:
+                    try:
+                        event = self._create_calendar_event_from_structured_data(event_data)
+                        if event:
+                            new_events.append(event)
+                            logger.debug(f"Created event: {event.title}")
+                    except Exception as e:
+                        logger.warning(f"Failed to create event from structured data: {e}")
+                        continue
+                
+                # Filter out duplicate events
+                filtered_events = self._filter_duplicate_events(new_events, plan.events or [])
+                
+                if filtered_events:
+                    if plan.events is None:
+                        plan.events = []
+                    plan.events.extend(filtered_events)
+                    update_summary["events_added"] = len(filtered_events)
+                    update_summary["changes_made"].append(f"Added {len(filtered_events)} events from structured data")
+                    logger.info(f"Added {len(filtered_events)} new events to plan {plan.plan_id}")
+                else:
+                    logger.info("No new events to add (all were duplicates or invalid)")
+            
+            # Save updated plan if any changes were made
+            if update_summary["changes_made"]:
+                plan.updated_at = datetime.now(timezone.utc)
+                self._save_plan(plan)
+                logger.info(f"Plan {plan.plan_id} updated successfully via structured data")
+            else:
+                logger.info(f"No changes needed for plan {plan.plan_id}")
+            
+            return update_summary
+            
+        except Exception as e:
+            logger.error(f"Failed to update plan from structured response: {e}")
+            # Fallback to original LLM-based method only if we have content to parse
+            if hasattr(agent_response, 'content') and agent_response.content.strip():
+                logger.info("Falling back to LLM-based plan parsing due to structured response failure")
+                return await self.update_plan_from_chat_response(
+                    session_id, "", agent_response.content, getattr(agent_response, 'metadata', {})
+                )
+            else:
+                logger.warning("No fallback content available, returning failure status")
+                return {
+                    "success": False,
+                    "error": f"Structured plan update failed and no fallback content available: {str(e)}",
+                    "changes_made": [],
+                    "events_added": 0,
+                    "events_updated": 0,
+                    "events_deleted": 0,
+                    "metadata_updated": False
+                }
+
+    def _create_calendar_event_from_structured_data(self, event_data: Dict[str, Any]):
+        """Create calendar event from structured event data with event type validation"""
+        try:
+            # Import required classes
+            from app.api.schemas import CalendarEvent, CalendarEventType
+            import uuid
+            
+            # Parse timestamps
+            start_time = event_data.get("start_time")
+            end_time = event_data.get("end_time")
+            
+            if isinstance(start_time, str):
+                start_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+            if isinstance(end_time, str):
+                end_time = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+            
+            # Validate and map event type
+            raw_event_type = event_data.get("event_type", "activity")
+            validated_event_type = self._map_event_type(raw_event_type)
+            
+            # Create event
+            event = CalendarEvent(
+                id=event_data.get("id", str(uuid.uuid4())),
+                title=event_data.get("title", ""),
+                description=event_data.get("description", ""),
+                event_type=validated_event_type,
+                start_time=start_time,
+                end_time=end_time,
+                location=event_data.get("location", ""),
+                details=event_data.get("details", {})
+            )
+            
+            return event
+            
+        except Exception as e:
+            logger.error(f"Failed to create calendar event from structured data: {e}")
+            return None
+    
+    def _map_event_type(self, raw_type: str) -> str:
+        """Map and validate event types, providing fallbacks for invalid types"""
+        from app.api.schemas import CalendarEventType
+        
+        # Direct mapping for valid types
+        try:
+            return CalendarEventType(raw_type.lower())
+        except ValueError:
+            pass
+        
+        # Mapping for common variations
+        type_mappings = {
+            "dining": CalendarEventType.MEAL,
+            "food": CalendarEventType.MEAL,
+            "breakfast": CalendarEventType.MEAL,
+            "lunch": CalendarEventType.MEAL,
+            "dinner": CalendarEventType.MEAL,
+            "eat": CalendarEventType.MEAL,
+            "sightseeing": CalendarEventType.ATTRACTION,
+            "tour": CalendarEventType.ACTIVITY,
+            "visit": CalendarEventType.ATTRACTION,
+            "transport": CalendarEventType.TRANSPORTATION,
+            "travel": CalendarEventType.TRANSPORTATION,
+            "accommodation": CalendarEventType.HOTEL,
+            "stay": CalendarEventType.HOTEL
+        }
+        
+        mapped_type = type_mappings.get(raw_type.lower())
+        if mapped_type:
+            logger.info(f"Mapped event type '{raw_type}' to '{mapped_type}'")
+            return mapped_type
+        
+        # Default fallback
+        logger.warning(f"Unknown event type '{raw_type}', defaulting to 'activity'")
+        return CalendarEventType.ACTIVITY
+
     async def _extract_plan_modifications(
         self, 
         user_message: str, 
@@ -209,18 +1262,35 @@ AGENT RESPONSE: {agent_response}
 
 TASK: Determine what modifications should be made to the existing plan based on this conversation.
 
+CRITICAL DELETION RULES:
+- If user wants to REMOVE a city/destination, you MUST delete ALL related events:
+  * ALL hotel events for that city
+  * ALL activity/attraction events for that city
+  * ALL connecting flights to/from that city
+- Look for phrases like "remove", "delete", "skip", "don't go to", "take out", "exclude"
+- When removing destinations from multi-city trips, be thorough in cleaning up ALL related events
+
 Analyze for:
 1. NEW events to add (flights, hotels, attractions, restaurants, activities)
 2. UPDATES to existing events (time changes, location changes, details updates)
 3. DELETIONS of existing events (if user wants to remove something)
+   - Pay special attention to city/destination removals
+   - Include ALL events related to removed destinations
 4. PLAN METADATA changes (destination, dates, budget, etc.)
 
 For each event, determine:
-- Event type (flight/hotel/attraction/restaurant/activity)
+- Event type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
 - Title and description
 - Start and end times (use ISO format: YYYY-MM-DDTHH:MM:SS+00:00)
 - Location
 - Any specific details mentioned
+
+When identifying events to delete:
+- Check event titles for city names mentioned in removal requests
+- Check event locations for city names
+- Check event details for destination codes (LON, PAR, etc.)
+- Look for hotel events that mention the removed city
+- Look for activities/attractions in the removed city
 
 Return ONLY a valid JSON response with this exact structure:
 {{
@@ -228,7 +1298,7 @@ Return ONLY a valid JSON response with this exact structure:
         {{
             "title": "Event Title",
             "description": "Event description",
-            "event_type": "flight|hotel|attraction|restaurant|activity",
+            "event_type": "flight|hotel|attraction|restaurant|meal|transportation|activity|meeting|free_time",
             "start_time": "2025-07-27T10:00:00+00:00",
             "end_time": "2025-07-27T16:00:00+00:00",
             "location": "Location name",
@@ -261,7 +1331,27 @@ If no changes are needed, return empty arrays for each section."""
             try:
                 # Extract content from LLMResponse object
                 response_content = response.content if hasattr(response, 'content') else str(response)
-                modifications = json.loads(response_content.strip())
+                
+                # Add detailed logging for debugging
+                logger.debug(f"Raw LLM response: {repr(response)}")
+                logger.debug(f"Extracted content: {repr(response_content)}")
+                
+                # Check if response is empty or None
+                if not response_content or response_content.strip() == "":
+                    logger.warning("LLM returned empty response, falling back to heuristic extraction")
+                    return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
+                
+                # Clean up LLM response that might be wrapped in code blocks
+                cleaned_content = response_content.strip()
+                if cleaned_content.startswith("```json"):
+                    cleaned_content = cleaned_content[7:]  # Remove ```json
+                if cleaned_content.endswith("```"):
+                    cleaned_content = cleaned_content[:-3]  # Remove ending ```
+                cleaned_content = cleaned_content.strip()
+                
+                logger.debug(f"Cleaned JSON content: {cleaned_content[:200]}...")
+                
+                modifications = json.loads(cleaned_content)
                 
                 logger.info(f"LLM plan modification extraction successful: {len(modifications.get('new_events', []))} new events, {len(modifications.get('updated_events', []))} updates, {len(modifications.get('deleted_event_ids', []))} deletions")
                 
@@ -281,7 +1371,7 @@ If no changes are needed, return empty arrays for each section."""
                 return modifications
                 
             except json.JSONDecodeError as e:
-                logger.warning(f"LLM response not valid JSON: {e}")
+                logger.warning(f"LLM response not valid JSON: {e}. Response content: {repr(response_content)}")
                 return await self._fallback_extract_modifications(user_message, agent_response, metadata, existing_plan)
                 
         except Exception as e:
@@ -312,13 +1402,9 @@ If no changes are needed, return empty arrays for each section."""
                     logger.warning(f"Event missing required field '{field}': {event_data}")
                     return None
             
-            # Parse and validate event type
+            # Parse and validate event type using the mapping function
             event_type_str = event_data.get("event_type", "activity")
-            try:
-                event_type = CalendarEventType(event_type_str)
-            except ValueError:
-                logger.warning(f"Unknown event type '{event_type_str}', defaulting to activity")
-                event_type = CalendarEventType.ACTIVITY
+            event_type = self._map_event_type(event_type_str)
             
             # Parse and validate datetime fields
             try:
@@ -329,7 +1415,7 @@ If no changes are needed, return empty arrays for each section."""
                 return None
             
             event = CalendarEvent(
-                id=f"event_{uuid.uuid4().hex[:8]}",
+                id=event_data.get("id", f"event_{uuid.uuid4().hex[:8]}"),
                 title=event_data.get("title", "Travel Event"),
                 description=event_data.get("description"),
                 event_type=event_type,
@@ -373,10 +1459,28 @@ If no changes are needed, return empty arrays for each section."""
         if is_modification_request:
             logger.info(f"Detected modification request in user message: {user_message[:100]}...")
             
-            # For modifications, be conservative and don't add new events
-            # Instead, log what we would need to analyze
-            logger.warning(f"Modification request detected but LLM analysis failed. Manual review may be needed.")
-            modifications["plan_modifications"]["impact"] = "Modification request detected but could not be processed automatically"
+            # ✅ Try to handle destination removal heuristically
+            removal_keywords = ["remove", "delete", "skip", "don't go", "take out", "exclude", "without"]
+            city_removal_detected = any(keyword in user_lower for keyword in removal_keywords)
+            
+            if city_removal_detected and existing_plan and existing_plan.events:
+                logger.info("Attempting heuristic destination removal...")
+                deleted_event_ids = self._heuristic_remove_destination_events(
+                    user_message, existing_plan.events
+                )
+                if deleted_event_ids:
+                    modifications["deleted_event_ids"] = deleted_event_ids
+                    modifications["plan_modifications"]["reason"] = "Heuristic destination removal based on user request"
+                    modifications["plan_modifications"]["impact"] = f"Removed {len(deleted_event_ids)} events related to destinations mentioned for removal"
+                    logger.info(f"Heuristically identified {len(deleted_event_ids)} events for removal")
+                else:
+                    logger.warning(f"Could not identify specific events to remove heuristically")
+                    modifications["plan_modifications"]["impact"] = "Modification request detected but could not be processed automatically"
+            else:
+                # For modifications, be conservative and don't add new events
+                # Instead, log what we would need to analyze
+                logger.warning(f"Modification request detected but LLM analysis failed. Manual review may be needed.")
+                modifications["plan_modifications"]["impact"] = "Modification request detected but could not be processed automatically"
             
         else:
             # Only add new events if this seems like a request for additional activities
@@ -402,6 +1506,98 @@ If no changes are needed, return empty arrays for each section."""
                 modifications["plan_modifications"]["impact"] = "No clear plan modifications detected in conversation"
         
         return modifications
+    
+    def _heuristic_remove_destination_events(self, user_message: str, existing_events: List) -> List[str]:
+        """Heuristically identify events to remove based on destination removal requests"""
+        import re
+        
+        deleted_event_ids = []
+        user_lower = user_message.lower()
+        
+        # Extract city names mentioned for removal
+        # Look for patterns like "remove Paris", "delete London", "skip Amsterdam"
+        removal_patterns = [
+            r'(?:remove|delete|skip|exclude|without|take out|don\'t go to)\s+([a-zA-Z\s]+?)(?:\s+and|\s*,|\s*$|\s+from)',
+            r'(?:not|no)\s+([a-zA-Z\s]+?)(?:\s+and|\s*,|\s*$)',
+            r'(?:without|excluding)\s+([a-zA-Z\s]+?)(?:\s+and|\s*,|\s*$)',
+        ]
+        
+        cities_to_remove = set()
+        for pattern in removal_patterns:
+            matches = re.findall(pattern, user_lower)
+            for match in matches:
+                city = match.strip().title()
+                if len(city) >= 3:  # Valid city name
+                    cities_to_remove.add(city)
+                    # Also add common variations
+                    if city == "Amsterdam":
+                        cities_to_remove.update(["Amsterdam", "AMS"])
+                    elif city == "Vienna":
+                        cities_to_remove.update(["Vienna", "VIE"])
+                    elif city == "London":
+                        cities_to_remove.update(["London", "LON"])
+                    elif city == "Paris":
+                        cities_to_remove.update(["Paris", "PAR"])
+                    elif city == "Berlin":
+                        cities_to_remove.update(["Berlin", "BER"])
+                    elif city == "Rome":
+                        cities_to_remove.update(["Rome", "ROM"])
+                    elif city == "Barcelona":
+                        cities_to_remove.update(["Barcelona", "BCN"])
+                    elif city == "Prague":
+                        cities_to_remove.update(["Prague", "PRG"])
+        
+        logger.info(f"Cities identified for removal: {cities_to_remove}")
+        
+        if not cities_to_remove:
+            return deleted_event_ids
+        
+        # Check each event for removal criteria
+        for event in existing_events:
+            should_remove = False
+            
+            # Check event title for city names
+            event_title = (event.title or '').lower()
+            for city in cities_to_remove:
+                if city.lower() in event_title:
+                    should_remove = True
+                    logger.info(f"Marking event '{event.title}' for removal (title contains '{city}')")
+                    break
+            
+            # Check event location for city names
+            if not should_remove:
+                event_location = (event.location or '').lower()
+                for city in cities_to_remove:
+                    if city.lower() in event_location:
+                        should_remove = True
+                        logger.info(f"Marking event '{event.title}' for removal (location contains '{city}')")
+                        break
+            
+            # Check event details for destination codes or city names
+            if not should_remove and hasattr(event, 'details') and event.details:
+                event_details_str = str(event.details).lower()
+                for city in cities_to_remove:
+                    if city.lower() in event_details_str:
+                        should_remove = True
+                        logger.info(f"Marking event '{event.title}' for removal (details contain '{city}')")
+                        break
+                
+                # Check for destination field specifically
+                if not should_remove and isinstance(event.details, dict):
+                    destination_field = event.details.get('destination', '').upper()
+                    origin_field = event.details.get('origin', '').upper()
+                    for city in cities_to_remove:
+                        city_upper = city.upper()
+                        if city_upper == destination_field or city_upper == origin_field:
+                            should_remove = True
+                            logger.info(f"Marking event '{event.title}' for removal (destination/origin field matches '{city}')")
+                            break
+            
+            if should_remove:
+                deleted_event_ids.append(event.id)
+        
+        logger.info(f"Identified {len(deleted_event_ids)} events for heuristic removal")
+        return deleted_event_ids
     
     def _filter_duplicate_events(self, new_events: List, existing_events: List) -> List:
         """Filter out events that might be duplicates of existing ones"""
@@ -519,7 +1715,7 @@ If no changes are needed, return empty arrays for each section."""
             Extract any specific travel events mentioned (flights, hotels, attractions, restaurants, activities).
             For each event, determine:
             - Title
-            - Type (flight/hotel/attraction/restaurant/activity)
+            - Type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
             - Start time (estimate if not explicit)
             - Duration/end time
             - Location
@@ -687,7 +1883,11 @@ If no changes are needed, return empty arrays for each section."""
             # Create attractions for middle days of the trip
             for day in range(min(duration_days, 3)):  # Max 3 attractions
                 visit_date = start_date + timedelta(days=day)
-                visit_start = visit_date.replace(hour=9 + (day * 2), minute=0, second=0, microsecond=0)  # Stagger times
+                # Safe time calculation to avoid exceeding 24-hour format
+                base_hour = 9
+                hour_offset = min(day * 2, 12)  # Max offset 12 hours, avoiding past 21:00
+                target_hour = base_hour + hour_offset
+                visit_start = visit_date.replace(hour=target_hour, minute=0, second=0, microsecond=0)
                 visit_end = visit_start + timedelta(hours=2)  # 2 hour visits
                 
                 attraction_names = ["City Tour", "Local Attractions", "Cultural Sites"]
@@ -900,13 +2100,22 @@ If no changes are needed, return empty arrays for each section."""
             logger.error(f"Error loading plans: {e}")
     
     def _save_plan(self, plan: SessionTravelPlan):
-        """Save plan to storage"""
+        """Save plan to storage with proper datetime serialization"""
         try:
             plan_file = self.storage_path / f"{plan.plan_id}.json"
             with open(plan_file, 'w', encoding='utf-8') as f:
-                json.dump(plan.model_dump(), f, default=str, indent=2)
+                json.dump(plan.model_dump(), f, default=self._datetime_serializer, indent=2)
         except Exception as e:
             logger.error(f"Error saving plan {plan.plan_id}: {e}")
+    
+    def _datetime_serializer(self, obj):
+        """Custom serializer for datetime objects to ensure ISO format"""
+        if isinstance(obj, datetime):
+            # Ensure timezone info and return standard ISO format
+            if obj.tzinfo is None:
+                obj = obj.replace(tzinfo=timezone.utc)
+            return obj.isoformat()  # Produces "2025-03-10T10:00:00+00:00" format
+        return str(obj)
 
 
 # Global plan manager instance

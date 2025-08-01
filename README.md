@@ -2,6 +2,8 @@
 
 An intelligent travel planning system powered by **RAG (Retrieval-Augmented Generation)** and **LLM architecture**, featuring advanced semantic search, conversation memory, and intelligent tool orchestration with **self-refinement capabilities**.
 
+![Frontend Scrrenshot](frontend\assets\frontend_1.png)
+
 ## 🚀 Architecture Overview
 
 This project implements a sophisticated AI travel planning agent with the following core capabilities:

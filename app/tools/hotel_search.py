@@ -12,7 +12,7 @@ TODO: Improve the following features
 import os
 from amadeus import Client, ResponseError
 import asyncio
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 import aiohttp
 import os
@@ -35,10 +35,20 @@ class Hotel(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address: Optional[Dict[str, Any]] = None
+    search_location: Optional[str] = None  # For multi-location search tracking
+    
+    def __getattr__(self, name):
+        """Prevent accidental access to 'price' field - should use 'price_per_night'"""
+        if name == 'price':
+            raise AttributeError(
+                f"Hotel object has no attribute 'price'. Use 'price_per_night' instead. "
+                f"Available fields: {', '.join(self.__fields__.keys())}"
+            )
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 class HotelSearchInput(ToolInput):
     """Hotel search input"""
-    location: str  # This should be a 3-character IATA city code (e.g., "PAR", "LON")
+    location: Union[str, List[str]]  # Can be single IATA city code or list of codes for multi-location search
     check_in: datetime
     check_out: datetime
     guests: int = 1
@@ -62,7 +72,7 @@ class HotelSearchTool(BaseTool):
             description="Search for hotel accommodation information using AMADEUS API, with multiple filtering conditions",
             category="accommodation",
             tags=["hotel", "accommodation", "search", "booking", "amadeus"],
-            timeout=30
+            timeout=60  # Increased to 60 seconds for multi-location searches
         )
         super().__init__(metadata)
         
@@ -123,7 +133,11 @@ class HotelSearchTool(BaseTool):
     async def _execute(self, input_data: HotelSearchInput, context: ToolExecutionContext) -> HotelSearchOutput:
         """Execute hotel search using AMADEUS API"""
         try:
-            # Validate input parameters
+            # ✅ Enhanced: Support multiple locations by iterating through list
+            if isinstance(input_data.location, list):
+                return await self._execute_multi_location_search(input_data, context)
+            
+            # Validate input parameters for single location
             if not input_data.location or input_data.location.lower() in ['unknown', '']:
                 return HotelSearchOutput(
                     success=False,
@@ -190,6 +204,155 @@ class HotelSearchTool(BaseTool):
                 error=str(e),
                 hotels=[]
             )
+
+    async def _execute_multi_location_search(
+        self, input_data: HotelSearchInput, context: ToolExecutionContext
+    ) -> HotelSearchOutput:
+        """Execute hotel search for multiple locations and merge results"""
+        
+        locations = input_data.location
+        if not locations:
+            return HotelSearchOutput(
+                success=False,
+                error="No valid locations provided in list",
+                hotels=[]
+            )
+        
+        logger.info(f"🌍 Executing multi-location hotel search for {len(locations)} locations: {locations}")
+        
+        all_hotels = []
+        successful_locations = []
+        failed_locations = []
+        
+        # Execute search for each location
+        for location in locations:
+            if not location or location.lower() in ['unknown', '']:
+                failed_locations.append(location or "unknown")
+                continue
+                
+            try:
+                # Create a copy of input_data with single location
+                single_location_input = HotelSearchInput(
+                    location=location,
+                    check_in=input_data.check_in,
+                    check_out=input_data.check_out,
+                    guests=input_data.guests,
+                    rooms=input_data.rooms,
+                    min_rating=input_data.min_rating,
+                    max_price=input_data.max_price,
+                    required_amenities=input_data.required_amenities
+                )
+                
+                logger.info(f"🏨 Searching hotels in: {location}")
+                
+                # Execute single location search by calling the main logic
+                result = await self._execute_single_location_search(single_location_input, context)
+                
+                if result.success and result.hotels:
+                    # Add location context to each hotel
+                    for hotel in result.hotels:
+                        hotel.search_location = location
+        
+                    all_hotels.extend(result.hotels)
+                    successful_locations.append(location)
+                    logger.info(f"✅ Found {len(result.hotels)} hotels in {location}, tagged with search context")
+                else:
+                    failed_locations.append(location)
+                    logger.warning(f"⚠️ No hotels found in {location}: {result.error}")
+                    
+            except Exception as e:
+                failed_locations.append(location)
+                logger.error(f"❌ Error searching hotels in {location}: {e}")
+
+        
+        # Prepare result summary
+        total_results = len(all_hotels)
+        search_summary = f"Searched {len(locations)} locations: {successful_locations}"
+        
+        if failed_locations:
+            search_summary += f" (failed: {failed_locations})"
+        
+        if total_results == 0:
+            return HotelSearchOutput(
+                success=False,
+                error=f"No hotels found in any of the {len(locations)} locations",
+                hotels=[]
+            )
+        
+        # Sort by rating and price_per_night
+        all_hotels.sort(key=lambda x: (x.rating or 0, -(x.price_per_night or float('inf'))), reverse=True)
+        
+        logger.info(f"🎯 Multi-location hotel search completed: {total_results} total hotels from {len(successful_locations)} locations")
+        
+        return HotelSearchOutput(
+            success=True,
+            hotels=all_hotels,
+            data={
+                "searched_locations": len(locations),
+                "successful_locations": successful_locations,
+                "failed_locations": failed_locations,
+                "results_per_location": {loc: len([h for h in all_hotels if hasattr(h, 'search_location') and h.search_location == loc]) for loc in successful_locations},
+                "search_summary": search_summary
+            }
+        )
+
+    async def _execute_single_location_search(
+        self, input_data: HotelSearchInput, context: ToolExecutionContext
+    ) -> HotelSearchOutput:
+        """Execute hotel search for a single location (extracted from main logic)"""
+        
+        # Validate that location is a 3-letter code
+        if len(input_data.location) != 3 or not input_data.location.isalpha():
+            return HotelSearchOutput(
+                success=False,
+                error=f"Invalid location format: '{input_data.location}' must be a 3-letter IATA city code",
+                hotels=[]
+            )
+
+        logger.info(f"🏨 Starting hotel search for location: {input_data.location}")
+        logger.info(f"📅 Check-in: {input_data.check_in}, Check-out: {input_data.check_out}")
+        logger.info(f"👥 Guests: {input_data.guests}, Rooms: {input_data.rooms}")
+
+        # Get access token
+        access_token = await self._get_access_token()
+        if not access_token:
+            return HotelSearchOutput(
+                success=False,
+                error="Failed to authenticate with AMADEUS API",
+                hotels=[]
+            )
+
+        # Search for hotels using AMADEUS API
+        hotels = await self._search_hotels_amadeus(
+            input_data.location,
+            input_data.check_in,
+            input_data.check_out,
+            input_data.guests
+        )
+        
+        logger.info(f"🏨 Found {len(hotels)} hotels from AMADEUS API")
+        
+        # Filter hotels based on search criteria
+        filtered_hotels = self._filter_hotels(hotels, input_data)
+        
+        logger.info(f"🏨 After filtering: {len(filtered_hotels)} hotels match criteria")
+
+        return HotelSearchOutput(
+            success=True,
+            hotels=filtered_hotels,
+            data={
+                "total_found": len(hotels),
+                "after_filtering": len(filtered_hotels),
+                "search_location": input_data.location,
+                "search_criteria": {
+                    "check_in": input_data.check_in.isoformat() if input_data.check_in else None,
+                    "check_out": input_data.check_out.isoformat() if input_data.check_out else None,
+                    "guests": input_data.guests,
+                    "rooms": input_data.rooms,
+                    "min_rating": input_data.min_rating,
+                },
+            }
+        )
     
     async def _search_hotels_amadeus(
         self,
@@ -216,7 +379,7 @@ class HotelSearchTool(BaseTool):
                 logger.error(f"❌ City code contains non-alphabetic characters: '{cleaned_city_code}'")
                 return []
             
-            logger.info(f"🔍 Searching hotels in city code: '{cleaned_city_code}' (original: '{city_code}')")
+            logger.info(f"🏨 Searching hotels in: {cleaned_city_code}")
             
             async with aiohttp.ClientSession() as session:
                 # AMADEUS Hotel List API endpoint
@@ -314,7 +477,7 @@ class HotelSearchTool(BaseTool):
                 address=address,
                 # Note: AMADEUS Hotel List API doesn't provide pricing, rating, or amenities
                 # These would need to be fetched from additional API calls
-                price_per_night=None,
+                price_per_night=None,  # Explicitly set to avoid any price vs price_per_night confusion
                 currency=None,
                 rating=None,
                 amenities=[]

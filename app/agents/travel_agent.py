@@ -1,15 +1,12 @@
 """
 Travel Agent - Main travel planning agent
-
-TODO: Implement the following features
-1. Intelligent travel planning generation
-2. Multi-tool coordination
-3. User preference learning
-4. Personalized recommendations
-5. Real-time plan adjustment
+This agent is responsible for planning and executing travel itineraries based on user preferences and constraints.
+It uses a combination of tools to gather information, generate itineraries, and optimize travel plans.
+It also tracks user preferences and updates the travel plan accordingly.
+It also uses a rule-based approach to generate actions based on the user's intent and selected tools.
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 import time
 from datetime import datetime
 from app.agents.base_agent import (
@@ -25,6 +22,7 @@ from app.core.llm_service import get_llm_service
 from app.core.rag_engine import get_rag_engine
 from app.core.logging_config import get_logger
 from app.core.prompt_manager import prompt_manager, PromptType
+from app.knowledge.geographical_data import GeographicalMappings, geo_mappings
 
 logger = get_logger(__name__)
 
@@ -92,12 +90,13 @@ class TravelAgent(BaseAgent):
     def get_quality_dimensions(self) -> Dict[str, float]:
         """Enhanced travel-specific quality assessment dimensions with information fusion"""
         return {
-            "relevance": 0.20,  # How relevant to user's travel request
-            "information_fusion": 0.25,  # How well knowledge + tools are integrated
-            "completeness": 0.20,  # How complete the travel information is
+            "relevance": 0.15,  # How relevant to user's travel request
+            "information_fusion": 0.20,  # How well knowledge + tools are integrated
+            "completeness": 0.15,  # How complete the travel information is
             "accuracy": 0.15,  # How accurate the information is
             "actionability": 0.15,  # How actionable the recommendations are
             "personalization": 0.05,  # How well personalized to user preferences
+            "plan_structure_quality": 0.15,  # How well structured the travel plan is
         }
 
     async def _assess_dimension(
@@ -111,6 +110,8 @@ class TravelAgent(BaseAgent):
             return await self._assess_personalization(original_message, response)
         elif dimension == "feasibility":
             return await self._assess_feasibility(original_message, response)
+        elif dimension == "plan_structure_quality":
+            return await self._assess_plan_structure_quality(original_message, response)
         else:
             # Use base class implementation for standard dimensions
             return await super()._assess_dimension(
@@ -306,6 +307,125 @@ class TravelAgent(BaseAgent):
 
         return suggestions
 
+    def _is_plan_request(self, user_message: str) -> bool:
+        """Detect if user message is requesting plan generation or modification using precise analysis"""
+        message_lower = user_message.lower()
+        
+        # ❌ Explicit exclusions for recommendation/information requests  
+        exclusion_patterns = [
+            "what are", "what is", "which", "where", "when", "how", "why",
+            "recommend", "suggest", "best", "advice", "tips", "should i",
+            "can you recommend", "what do you recommend", "any recommendations",
+            "tell me about", "explain", "describe", "what about", "thoughts on"
+        ]
+        
+        # Check for exclusions first
+        for pattern in exclusion_patterns:
+            if pattern in message_lower:
+                # Additional check: even if it has exclusion words, if it's clearly a plan request, allow it
+                strong_plan_indicators = [
+                    "create", "build", "generate", "make", "plan my", "plan a", 
+                    "itinerary", "day by day", "schedule"
+                ]
+                has_strong_plan = any(indicator in message_lower for indicator in strong_plan_indicators)
+                if not has_strong_plan:
+                    return False
+        
+        # ✅ Strong plan generation indicators (commands/requests)
+        strong_plan_keywords = [
+            "plan my trip", "plan a trip", "create plan", "create itinerary",
+            "make plan", "build itinerary", "generate itinerary", "plan for",
+            "travel plan", "vacation plan", "trip plan", "day by day itinerary",
+            "detailed itinerary", "complete itinerary", "full itinerary",
+            "schedule my", "organize my trip", "arrange my"
+        ]
+        
+        # Check for strong plan indicators
+        for keyword in strong_plan_keywords:
+            if keyword in message_lower:
+                return True
+                
+        # ✅ Duration-based planning (specific time periods)
+        duration_patterns = [
+            r'\d+[\s-]day', r'\d+[\s-]week', r'\d+[\s-]night',
+            "weekend trip", "week trip", "month trip", "vacation"
+        ]
+        
+        import re
+        for pattern in duration_patterns:
+            if re.search(pattern, message_lower):
+                # If mentions duration AND has action words
+                action_words = ["plan", "visit", "go to", "travel to", "trip to"]
+                if any(action in message_lower for action in action_words):
+                    return True
+        
+        # ✅ Plan modification keywords (for existing plans)
+        modification_keywords = [
+            "change my plan", "modify my itinerary", "update my plan", 
+            "edit my schedule", "revise my trip", "adjust my itinerary",
+            "add to my plan", "remove from plan", "reschedule"
+        ]
+        
+        for keyword in modification_keywords:
+            if keyword in message_lower:
+                return True
+        
+        # ✅ Context-specific planning phrases
+        planning_phrases = [
+            "i'm planning", "i am planning", "help me plan", 
+            "planning a trip", "organizing a trip"
+        ]
+        
+        for phrase in planning_phrases:
+            if phrase in message_lower:
+                return True
+                
+        return False
+
+    async def _assess_plan_structure_quality(
+        self, original_message: AgentMessage, response: AgentResponse
+    ) -> float:
+        """Assess the quality of travel plan structure"""
+        score = 0.0
+        
+        # Check if this is a plan-related request
+        if not self._is_plan_request(original_message.content):
+            return 1.0  # Non-plan requests get full score for this dimension
+        
+        # Check if structured plan data exists
+        if hasattr(response, 'structured_plan') and response.structured_plan:
+            score += 0.4
+            
+            # Check required plan fields
+            required_fields = ["destination", "duration", "events"]
+            if all(field in response.structured_plan for field in required_fields):
+                score += 0.2
+        
+        # Check if plan events exist
+        if hasattr(response, 'plan_events') and response.plan_events:
+            score += 0.3
+            
+            # Check event completeness
+            complete_events = 0
+            for event in response.plan_events:
+                if all(key in event for key in ["title", "start_time", "end_time", "location"]):
+                    complete_events += 1
+            
+            if complete_events > 0:
+                score += 0.1 * (complete_events / len(response.plan_events))
+        
+        # Check content structure indicators for plan requests
+        content = response.content.lower()
+        plan_indicators = ["day 1", "day 2", "morning", "afternoon", "evening", "itinerary", "schedule"]
+        indicators_found = sum(1 for indicator in plan_indicators if indicator in content)
+        
+        if indicators_found >= 3:
+            score = max(score, 0.7)  # Content shows plan structure
+        elif indicators_found >= 1:
+            score = max(score, 0.5)
+        
+        return min(score, 1.0)
+
     async def _refine_response(
         self,
         original_message: AgentMessage,
@@ -486,22 +606,44 @@ class TravelAgent(BaseAgent):
             }
             result = await self._execute_action_plan(action_plan, execution_context)
 
-            # 4. Structured response fusion (template-based, fast)
-            structured_response = self._generate_structured_response(result, intent, message.content)
+            # 4. Generate response content using LLM
+            response_content = await self._generate_response(result, intent)
+
+            # Create agent response
+            response = AgentResponse(
+                success=result.get("success", False),
+                content=response_content,
+                actions_taken=result.get("actions", []),
+                next_steps=result.get("next_steps", []),
+                confidence=0.85 if result.get("success", False) else 0.7,
+                metadata={
+                    "intent": intent,
+                    "tools_used": result.get("tools_used", []),
+                    "execution_time": result.get("execution_time", 0),
+                    "response_method": "llm_generated",
+                    "destination": intent.get("destination", "unknown"),
+                    "intent_type": intent.get("type", "query"),
+                    "is_plan_request": self._is_plan_request(message.content),
+                    "execution_result_for_plan": result if self._is_plan_request(message.content) else None,
+                    "tool_execution_success": result.get("success", False),
+                    "partial_tool_success": bool(result.get("results", {}))
+                }
+            )
 
             # 5. Fast quality assessment (heuristic, ~0.1s) - Skip if in refinement mode
             if skip_quality_check:
                 self.status = AgentStatus.IDLE
-                return structured_response
+                return response
             
-            quality_score = await self._fast_quality_assessment(message, structured_response)
+            quality_score = await self._fast_quality_assessment(message, response)
 
-            # 6. Quality good enough -> return, else LLM enhancement
+            # 6. Quality good enough -> return, else enhancement
             if quality_score >= self.fast_response_threshold:  # 0.75 for fast response
                 self.status = AgentStatus.IDLE
-                return structured_response
+                return response
             else:
-                enhanced_response = await self._llm_enhanced_response(structured_response, result, intent)
+                # Try to enhance if needed
+                enhanced_response = await self._llm_enhanced_response(response, result, intent)
                 self.status = AgentStatus.IDLE
                 return enhanced_response
 
@@ -548,7 +690,7 @@ class TravelAgent(BaseAgent):
                     self.user_preferences_history.setdefault("interests", []).append("food")
             
             # Extract mentioned destinations for context
-            destinations = ["tokyo", "kyoto", "paris", "london", "new york", "beijing", "shanghai", "rome", "barcelona"]
+            destinations = geo_mappings.get_preference_tracking_destinations()
             for dest in destinations:
                 if dest in user_msg:
                     self.user_preferences_history.setdefault("visited_destinations", []).append(dest)
@@ -666,9 +808,18 @@ Please analyze the current message considering the conversation history for bett
                 return await self._enhanced_fallback_intent_analysis(user_message)
 
         # Convert to legacy format for backward compatibility
+        # ✅ Fix: Ensure destination is always a string, not a list
+        destination_primary = llm_analysis["destination"]["primary"]
+        if isinstance(destination_primary, list):
+            # If it's a list, take the first item or default to "unknown"
+            destination_str = destination_primary[0] if destination_primary else "unknown"
+            logger.warning(f"LLM returned destination as list {destination_primary}, using first item: {destination_str}")
+        else:
+            destination_str = destination_primary if destination_primary else "unknown"
+        
         legacy_format = {
             "type": llm_analysis["intent_type"],
-            "destination": llm_analysis["destination"]["primary"],
+            "destination": destination_str,
             "time_info": {
                 "duration_days": llm_analysis["travel_details"].get("duration", 0)
             },
@@ -679,7 +830,7 @@ Please analyze the current message considering the conversation history for bett
             },
             "urgency": llm_analysis["urgency"],
             "extracted_info": {
-                "destination": llm_analysis["destination"]["primary"],
+                "destination": destination_str,
                 "time_info": llm_analysis["travel_details"],
                 "budget_info": llm_analysis["travel_details"]["budget"],
             },
@@ -790,53 +941,49 @@ Please analyze the current message considering the conversation history for bett
         import re
         user_message_lower = user_message.lower()
 
-        # Enhanced intent type detection
+        # ✅ Enhanced intent type detection (more precise)
         intent_type = "query"  # default
-        if any(
-            word in user_message_lower
-            for word in ["plan", "create", "make", "arrange", "organize", "schedule"]
-        ):
+        
+        # Use the improved _is_plan_request method for planning detection
+        if self._is_plan_request(user_message):
             intent_type = "planning"
+        # Check for recommendations first (many requests are recommendations)
         elif any(
-            word in user_message_lower
-            for word in ["change", "modify", "update", "adjust", "revise"]
-        ):
-            intent_type = "modification"
-        elif any(
-            word in user_message_lower
-            for word in ["recommend", "suggest", "introduce", "advise", "what should"]
+            pattern in user_message_lower
+            for pattern in ["recommend", "suggest", "what are", "what is", "which", 
+                          "best", "advice", "tips", "should i", "can you recommend", 
+                          "what do you recommend", "any recommendations", "thoughts on"]
         ):
             intent_type = "recommendation"
+        # Plan modifications (for existing plans)
+        elif any(
+            pattern in user_message_lower
+            for pattern in ["change my plan", "modify my itinerary", "update my plan", 
+                          "edit my schedule", "revise my trip", "adjust my itinerary"]
+        ):
+            intent_type = "modification"
+        # Booking/reservation requests
         elif any(
             word in user_message_lower
-            for word in ["book", "reserve", "purchase", "buy"]
+            for word in ["book", "reserve", "purchase", "buy", "booking"]
         ):
             intent_type = "booking"
+        # Complaint/problem reports
         elif any(
             word in user_message_lower
-            for word in ["problem", "issue", "complaint", "wrong", "error"]
+            for word in ["problem", "issue", "complaint", "wrong", "error", "trouble"]
         ):
             intent_type = "complaint"
+        # Information queries (catch remaining questions)
+        elif any(
+            pattern in user_message_lower
+            for pattern in ["what", "how", "when", "where", "why", "tell me", "explain", "describe"]
+        ):
+            intent_type = "query"
 
         # Enhanced destination detection
         destination = "Unknown"
-        destinations = [
-            "tokyo",
-            "kyoto",
-            "osaka",
-            "paris",
-            "london",
-            "new york",
-            "beijing",
-            "shanghai",
-            "rome",
-            "barcelona",
-            "amsterdam",
-            "vienna",
-            "prague",
-            "budapest",
-            "berlin",
-        ]
+        destinations = geo_mappings.get_intent_analysis_destinations()
         for dest in destinations:
             if dest in user_message_lower:
                 destination = dest.lower()  # Keep lowercase to match IATA mapping
@@ -1269,85 +1416,8 @@ Please analyze the current message considering the conversation history for bett
         
         # Check for timeline gaps (more than 8 hours between events on same day)
         # This would need more sophisticated date analysis
-        
         return gaps
 
-    async def _create_action_plan(
-        self, intent: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Create intelligent action plan based on structured intention analysis"""
-
-        # Extract structured analysis from intent
-        structured_analysis = intent.get("structured_analysis", {})
-
-        # Initialize enhanced plan structure
-        plan = {
-            "intent_type": intent.get("type") or intent.get("intent_type", "query"),
-            "destination": structured_analysis.get("destination", {}),
-            "actions": [],
-            "tools_to_use": [],
-            "tool_parameters": {},
-            "execution_strategy": "sequential",
-            "next_steps": [],
-            "confidence": 0.0,
-        }
-
-        try:
-            # Step 1: Use LLM for intelligent tool selection
-            tool_selection_result = await self._llm_tool_selection(
-                structured_analysis, context
-            )
-            logger.info(f"LLM tool selection: {tool_selection_result}")
-
-            # Step 2: Extract parameters from structured intent
-            tool_parameters = await self._extract_parameters_from_intent(
-                structured_analysis, tool_selection_result["selected_tools"]
-            )
-            logger.info(f"Tool parameters from intent: {tool_parameters}")
-
-            # Step 3: Generate intent-based actions and next steps
-            actions = await self._generate_intent_based_actions(
-                structured_analysis, tool_selection_result["selected_tools"]
-            )
-            next_steps = await self._generate_intent_based_next_steps(
-                structured_analysis, context
-            )
-
-            # Step 4: Update plan with results
-            plan.update(
-                {
-                    "tools_to_use": tool_selection_result["selected_tools"],
-                    "tool_parameters": tool_parameters,
-                    "execution_strategy": tool_selection_result["execution_strategy"],
-                    "actions": actions,
-                    "next_steps": next_steps,
-                    "confidence": tool_selection_result["confidence"],
-                    "tool_selection_reasoning": tool_selection_result.get(
-                        "reasoning", ""
-                    ),
-                    "intent_metadata": {
-                        "user_sentiment": structured_analysis.get(
-                            "sentiment", "neutral"
-                        ),
-                        "urgency_level": structured_analysis.get("urgency", "medium"),
-                        "missing_info": structured_analysis.get("missing_info", []),
-                        "key_requirements": structured_analysis.get(
-                            "key_requirements", []
-                        ),
-                        "preferences": structured_analysis.get("preferences", {}),
-                    },
-                }
-            )
-
-            logger.info(
-                f"Created intent-based action plan: {plan['intent_type']} -> {plan['tools_to_use']}"
-            )
-            return plan
-
-        except Exception as e:
-            logger.error(f"Error creating intent-based action plan: {e}")
-            # Fall back to basic planning
-            return await self._create_basic_action_plan(intent, context)
 
     async def _llm_tool_selection(
         self, structured_analysis: Dict[str, Any], context: Dict[str, Any]
@@ -1429,209 +1499,72 @@ Please analyze the current message considering the conversation history for bett
             "confidence": 0.7,
         }
 
-    def _convert_city_to_airport_codes(self, city_name: str) -> str:
-        """Convert city name to primary airport code for flight search"""
-        city_to_airport = {
-            'ROME': 'FCO',  # Rome Fiumicino
-            'PARIS': 'CDG',  # Paris Charles de Gaulle
-            'LONDON': 'LHR',  # London Heathrow
-            'BEIJING': 'PEK',  # Beijing Capital
-            'TOKYO': 'NRT',  # Tokyo Narita
-            'NEW YORK': 'JFK',  # New York JFK
-            'BARCELONA': 'BCN',
-            'MADRID': 'MAD',
-            'AMSTERDAM': 'AMS',
-            'BERLIN': 'BER',
-            'MUNICH': 'MUC',
-            'VIENNA': 'VIE',
-            'PRAGUE': 'PRG',
-            'BUDAPEST': 'BUD',
-            'SINGAPORE': 'SIN',
-            'SEOUL': 'ICN',
-            'SHANGHAI': 'PVG',
-            'KYOTO': 'UKB',  # Kyoto uses Osaka Kansai
-            'OSAKA': 'KIX',
-            'BANGKOK': 'BKK',
-            'SYDNEY': 'SYD',
-            'MELBOURNE': 'MEL',
-            'ATHENS': 'ATH',
-            'DUBAI': 'DXB',
-            'ISTANBUL': 'IST',
-        }
-        
-        # Handle "Unknown" case
-        if city_name == "Unknown":
-            return "Unknown"
-        
-        # Convert to uppercase for lookup
-        city_upper = city_name.upper()
-        
-        # Add debugging
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
-        logger.info(f"🔍 Converting city '{city_name}' (uppercase: '{city_upper}') to IATA code")
-        
-        # Try exact match first
-        if city_upper in city_to_airport:
-            result = city_to_airport[city_upper]
-            logger.info(f"✅ Found exact match: '{city_upper}' -> '{result}'")
-            return result
-        
-        # Try partial matches for multi-word cities
-        for key, value in city_to_airport.items():
-            if city_upper in key or key in city_upper:
-                logger.info(f"✅ Found partial match: '{city_upper}' matches '{key}' -> '{value}'")
-                return value
-        
-        # If no match found, return the original (should be a valid IATA code already)
-        logger.warning(f"⚠️ No IATA code found for '{city_name}', returning '{city_upper}'")
-        return city_upper
 
     def _extract_origin_from_message(self, user_message: str) -> str:
-        """Extract origin city from user message using simple text parsing"""
+        """Extract origin city from user message using improved text parsing"""
         import re
         
         # Convert to lowercase for easier matching
         message_lower = user_message.lower()
         
-        # Common destinations that could be origins
+        # Known cities that could be origins
         cities = [
             "tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", 
             "shanghai", "rome", "barcelona", "amsterdam", "vienna", "prague", 
             "budapest", "berlin", "bangkok", "singapore", "seoul", "sydney", 
-            "melbourne", "munich", "madrid", "athens", "dubai", "istanbul"
+            "melbourne", "munich", "madrid", "athens", "dubai", "istanbul",
+            "toronto", "vancouver", "montreal", "calgary", "ottawa"
         ]
         
-        # Common patterns for origin extraction
+        # Exclude common non-location words
+        non_locations = [
+            "trip", "travel", "plan", "vacation", "holiday", "journey", "flight",
+            "hotel", "stay", "visit", "tour", "day", "week", "month", "year"
+        ]
+        
+        # Improved patterns for origin extraction (more specific)
         patterns = [
-            r'from\s+(\w+)\s+to\s+(\w+)',  # "from Paris to Rome"
-            r'(\w+)\s+to\s+(\w+)',  # "Paris to Rome" (if no "from")
-            r'plan\s+a\s+trip\s+from\s+(\w+)\s+to\s+(\w+)',  # "plan a trip from Paris to Rome"
-            r'travel\s+from\s+(\w+)\s+to\s+(\w+)',  # "travel from Paris to Rome"
-            r'flying\s+from\s+(\w+)',  # "flying from Paris"
-            r'departing\s+from\s+(\w+)',  # "departing from Paris"
+            r'from\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)',  # "from Paris to Rome"
+            r'departing\s+from\s+([a-zA-Z\s]+?)(?:\s|$|,|\.|!|\?)',  # "departing from Paris"
+            r'flying\s+from\s+([a-zA-Z\s]+?)(?:\s|$|,|\.|!|\?)',  # "flying from Paris"
+            r'starting\s+from\s+([a-zA-Z\s]+?)(?:\s|$|,|\.|!|\?)',  # "starting from Paris"
+            r'travel\s+from\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)',  # "travel from Paris to Rome"
         ]
         
         for pattern in patterns:
             match = re.search(pattern, message_lower)
             if match:
                 origin = match.group(1).strip().lower()
-                # Check if it's a known city
-                if origin in cities:
-                    return origin.title()  # Capitalize first letter
-                # If not in our list but looks like a city name, return it
-                if len(origin) > 2 and origin.isalpha():
+                
+                # Skip if it's a non-location word
+                if origin in non_locations:
+                    continue
+                    
+                # Check if it's a known city (exact match or partial match)
+                for city in cities:
+                    if city in origin or origin in city:
+                        return city.title()
+                
+                # If not in our list but looks like a valid city name
+                if len(origin) > 2 and origin.replace(' ', '').isalpha() and origin not in non_locations:
                     return origin.title()
         
-        # If no pattern matches, return "Unknown"
+        # Try to find "CITY to DESTINATION" pattern but only if CITY is a known location
+        city_to_pattern = r'([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)'
+        match = re.search(city_to_pattern, message_lower)
+        if match:
+            potential_origin = match.group(1).strip().lower()
+            # Only accept if it's a known city and not a common word
+            if potential_origin in cities and potential_origin not in non_locations:
+                return potential_origin.title()
+        
+        # If no valid origin found, return "Unknown" (will default to Toronto)
         return "Unknown"
 
-    async def _extract_parameters_from_intent(
-        self, structured_analysis: Dict[str, Any], selected_tools: List[str]
-    ) -> Dict[str, Any]:
-        """Extract tool parameters from structured intent analysis"""
 
-        # City to IATA code mapping
-        city_to_iata = {
-            "paris": "PAR",
-            "beijing": "PEK",
-            "london": "LHR",
-            "new york": "JFK",
-            "tokyo": "NRT",
-            "shanghai": "PVG",
-            "rome": "FCO",
-            "barcelona": "BCN",
-            "amsterdam": "AMS",
-            "vienna": "VIE",
-            "prague": "PRG",
-            "budapest": "BUD",
-            "berlin": "BER",
-            "kyoto": "UKY",
-            "osaka": "KIX",
-        }
 
-        tool_parameters = {}
 
-        # Extract common parameters
-        destination = structured_analysis.get("destination", {}).get(
-            "primary", "Unknown"
-        )
-        origin = structured_analysis.get("origin", {}).get(
-            "primary", "Unknown"
-        )
-        
-        # If destination is still "Unknown", try to extract it from the user message
-        if destination == "Unknown":
-            user_message = structured_analysis.get("user_message", "")
-            if user_message:
-                # Try to extract destination from message
-                destination = self._extract_destination_from_message(user_message)
-        
-        # If origin is still "Unknown", try to extract it from the user message
-        if origin == "Unknown":
-            user_message = structured_analysis.get("user_message", "")
-            if user_message:
-                # Try to extract origin from message
-                origin = self._extract_origin_from_message(user_message)
-        
-        # Convert to proper airport codes for flight search
-        destination_airport = self._convert_city_to_airport_codes(destination)
-        origin_airport = self._convert_city_to_airport_codes(origin)
-        
-        # Add logging to debug the conversion
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
-        logger.info(f"🌍 City conversion: destination='{destination}' -> '{destination_airport}', origin='{origin}' -> '{origin_airport}'")
-        logger.info(f"🌍 Final tool parameters will be: origin='{origin_airport}', destination='{destination_airport}'")
-        travel_details = structured_analysis.get("travel_details", {})
-        preferences = structured_analysis.get("preferences", {})
 
-        for tool in selected_tools:
-            if tool == "attraction_search":
-                # Only add attraction search if we have a valid destination
-                if destination != "Unknown":
-                    tool_parameters[tool] = {
-                        "destination": destination,
-                        "limit": 10,
-                        "interests": preferences.get("interests", []),
-                        "travel_style": preferences.get("travel_style", "mid-range"),
-                    }
-            elif tool == "hotel_search":
-                # Only add hotel search if we have a valid destination
-                if destination != "Unknown":
-                    # Convert destination to IATA code for hotel search
-                    destination_iata = self._convert_city_to_airport_codes(destination)
-                    tool_parameters[tool] = {
-                        "destination": destination_iata,
-                        "limit": 8,
-                        "accommodation_type": preferences.get(
-                            "accommodation_type", "hotel"
-                        ),
-                        "budget_level": travel_details.get("budget", {}).get(
-                            "level", "mid-range"
-                        ),
-                        "travelers": travel_details.get("travelers", 1),
-                    }
-            elif tool == "flight_search":
-                # Only add flight search if we have valid origin and destination
-                if origin_airport != "Unknown" and destination_airport != "Unknown":
-                    logger.info(f"✈️ Adding flight search with origin='{origin_airport}' and destination='{destination_airport}'")
-                    tool_parameters[tool] = {
-                        "origin": origin_airport,
-                        "destination": destination_airport,
-                        "limit": 5,
-                        "travelers": travel_details.get("travelers", 1),
-                        "budget_level": travel_details.get("budget", {}).get(
-                            "level", "mid-range"
-                        ),
-                        "flexibility": travel_details.get("dates", {}).get(
-                            "flexibility", "flexible"
-                        ),
-                    }
-                else:
-                    logger.warning(f"✈️ Skipping flight search: origin='{origin_airport}', destination='{destination_airport}'")
-
-        return tool_parameters
 
     async def _generate_intent_based_actions(
         self, structured_analysis: Dict[str, Any], selected_tools: List[str]
@@ -2060,17 +1993,15 @@ Please analyze the current message considering the conversation history for bett
     ) -> Dict[str, Any]:
         """Extract hotel search parameters intelligently"""
 
-        # Get destination and convert to IATA code for AMADEUS API
+        # Get destination and convert to IATA code(s) for AMADEUS API
         destination = requirements.get("destination", "unknown")
-        iata_code = self._convert_city_to_iata_code(destination)
+        iata_result = self._convert_city_to_iata_code(destination)
         
         # Add debugging information
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.info(f"🏨 Hotel search - Original destination: '{destination}'")
-        logger.info(f"🏨 Hotel search - Converted IATA code: '{iata_code}'")
-        logger.info(f"🏨 Hotel search - IATA code type: {type(iata_code)}")
-        logger.info(f"🏨 Hotel search - IATA code length: {len(iata_code) if iata_code else 0}")
+        logger.info(f"🏨 Hotel search - Converted IATA result: '{iata_result}'")
+        logger.info(f"🏨 Hotel search - IATA result type: {type(iata_result)}")
+        logger.info(f"🏨 Hotel search - IATA result length: {len(iata_result) if iata_result else 0}")
 
         # Set default dates (7 days from now for check-in, 10 days from now for check-out)
         from datetime import datetime, timedelta
@@ -2078,7 +2009,7 @@ Please analyze the current message considering the conversation history for bett
         default_check_out = datetime.now() + timedelta(days=10)
         
         params = {
-            "location": iata_code,  # Use IATA code for AMADEUS API
+            "location": iata_result,  # Use IATA code(s) for AMADEUS API
             "destination": destination,  # Keep original for display
             "check_in": default_check_in.strftime("%Y-%m-%d"),
             "check_out": default_check_out.strftime("%Y-%m-%d"),
@@ -2424,7 +2355,7 @@ Please analyze the current message considering the conversation history for bett
         return requirements
 
     async def _execute_action_plan(
-        self, plan: Dict[str, Any], context: Dict[str, Any]
+        self, plan: Dict[str, Any], context: Dict[str, Any], session_id: str = None
     ) -> Dict[str, Any]:
         """Execute action plan using real tools and retrieve knowledge context"""
         results = {
@@ -2494,12 +2425,20 @@ Please analyze the current message considering the conversation history for bett
                     elif tool_name == "hotel_search":
                         # For hotel search, we need proper date handling
                         # Since we don't have specific dates, we'll provide basic search
-                        # Convert destination to IATA code for AMADEUS API
                         destination = tool_params.get("location", "unknown")  # hotel_search uses "location" key
-                        iata_code = self._convert_city_to_iata_code(destination)
+                        
+                        # Check if destination is already converted to list of IATA codes
+                        if isinstance(destination, list):
+                            # Already converted to IATA codes, use directly
+                            iata_result = destination
+                            logger.info(f"🏨 Travel agent - Using pre-converted IATA codes: {destination}")
+                        else:
+                            # Convert destination to IATA code(s) for AMADEUS API
+                            iata_result = self._convert_city_to_iata_code(destination)
+                            logger.info(f"🏨 Travel agent - Converted '{destination}' to IATA: {iata_result}")
                         
                         hotel_params = {
-                            "location": iata_code,  # Use IATA code for AMADEUS API
+                            "location": iata_result,  # Use IATA code(s) for AMADEUS API
                             "check_in": tool_params.get(
                                 "check_in", "2024-06-01"
                             ),  # Default dates
@@ -2510,11 +2449,10 @@ Please analyze the current message considering the conversation history for bett
                         }
                         
                         # Add debugging to see what's being sent to tool executor
-                        from app.core.logging_config import get_logger
-                        logger = get_logger(__name__)
+
                         logger.info(f"🏨 Travel agent - Creating hotel search ToolCall")
                         logger.info(f"🏨 Travel agent - Original destination: '{destination}'")
-                        logger.info(f"🏨 Travel agent - Converted IATA code: '{iata_code}'")
+                        logger.info(f"🏨 Travel agent - Converted IATA result: '{iata_result}'")
                         logger.info(f"🏨 Travel agent - Hotel params being sent: {hotel_params}")
                         tool_calls.append(
                             ToolCall(
@@ -2530,17 +2468,33 @@ Please analyze the current message considering the conversation history for bett
                         # Use a future date for the search
                         future_date = datetime.now() + timedelta(days=30)
                         
-                        # Convert destination to IATA code for AMADEUS API
                         destination = tool_params.get("destination", "unknown")
-                        destination_iata = self._convert_city_to_iata_code(destination)
+                        
+                        # ✅ Fix: Check if destination is already converted to list of IATA codes
+                        if isinstance(destination, list):
+                            # Already converted to IATA codes, use directly
+                            destination_result = destination
+                            logger.info(f"✈️ Travel agent - Using pre-converted IATA codes: {destination}")
+                        else:
+                            # Convert destination to IATA code(s) for AMADEUS API
+                            destination_result = self._convert_city_to_iata_code(destination)
+                            logger.info(f"✈️ Travel agent - Converted '{destination}' to IATA: {destination_result}")
+                        
+                        # ✅ NEW: Enable flight_chain for multi-destination searches
+                        is_multi_destination = isinstance(destination_result, list) and len(destination_result) > 1
+                        flight_chain_enabled = is_multi_destination
+                        
+                        if flight_chain_enabled:
+                            logger.info(f"🔗 Enabling flight chain search for {len(destination_result)} destinations")
                         
                         flight_params = {
                             "origin": tool_params.get("origin", "PAR"),
-                            "destination": destination_iata,  # Use IATA code for AMADEUS API
+                            "destination": destination_result,  # Use IATA code(s) for AMADEUS API
                             "start_date": future_date,
                             "passengers": tool_params.get("passengers", 1),  # flight_search uses "passengers" key
                             "class_type": "ECONOMY",
                             "budget_level": tool_params.get("budget_level", "mid-range"),
+                            "flight_chain": flight_chain_enabled,  # Enable flight chain for multi-city trips
                         }
                         tool_calls.append(
                             ToolCall(
@@ -2623,9 +2577,13 @@ Please analyze the current message considering the conversation history for bett
                     logger.info("Attempting LLM-based information fusion...")
                     try:
                         # Format information for fusion prompt
-                        formatted_knowledge = self._format_knowledge_for_fusion(
-                            knowledge_context.get("relevant_docs", [])
-                        )
+                        relevant_docs = knowledge_context.get("relevant_docs", [])
+                        logger.info(f"🧠 Knowledge context docs available: {len(relevant_docs)}")
+                        
+                        formatted_knowledge = self._format_knowledge_for_fusion(relevant_docs)
+                        logger.info(f"🧠 Formatted knowledge length: {len(formatted_knowledge) if formatted_knowledge else 0}")
+                        logger.debug(f"🧠 Formatted knowledge preview: {formatted_knowledge[:200] if formatted_knowledge else 'None'}...")
+                        
                         formatted_tools = self._format_tools_for_fusion(tool_results)
                         formatted_intent = self._format_intent_for_fusion(intent)
 
@@ -2637,10 +2595,14 @@ Please analyze the current message considering the conversation history for bett
                             )
                         else:
                             # Use information fusion template from prompt manager
+                            # Ensure knowledge_context is never None or empty
+                            safe_knowledge_context = formatted_knowledge or "No specific knowledge context available for this request."
+                            logger.info(f"🧠 Passing knowledge_context to template: {len(safe_knowledge_context)} chars")
+                            
                             fusion_prompt = prompt_manager.get_prompt(
                                 PromptType.INFORMATION_FUSION,
                                 user_message=user_message,
-                                knowledge_context=formatted_knowledge,
+                                knowledge_context=safe_knowledge_context,
                                 tool_results=formatted_tools,
                                 intent_analysis=formatted_intent,
                             )
@@ -2719,6 +2681,12 @@ Please analyze the current message considering the conversation history for bett
             else:
                 # Handle error cases
                 error_msg = execution_result.get("error", "Unknown error")
+                
+                # ✅ Fix: Ensure error message is never None
+                if error_msg is None:
+                    error_msg = "Unexpected processing error"
+                    logger.warning("Error message was None, using default")
+                
                 intent_type = intent.get("type") or intent.get("intent_type", "travel")
                 error_response = f"I encountered an issue while processing your {intent_type} request: {error_msg}. Let me try to help you in another way. Could you provide more details about what you're looking for?"
 
@@ -2739,8 +2707,12 @@ Please analyze the current message considering the conversation history for bett
 
     def _format_knowledge_for_fusion(self, relevant_docs: List[Dict]) -> str:
         """Format knowledge context for information fusion"""
+        logger.info(f"🧠 Formatting knowledge: {len(relevant_docs)} docs provided")
+        
         if not relevant_docs:
-            return "No specific knowledge context available."
+            fallback_msg = "No specific knowledge context available for this request."
+            logger.info(f"🧠 No relevant docs, returning fallback: {fallback_msg}")
+            return fallback_msg
 
         knowledge_parts = []
         for i, doc in enumerate(relevant_docs[:3]):  # Top 3 most relevant
@@ -2757,7 +2729,11 @@ Please analyze the current message considering the conversation history for bett
 
             knowledge_parts.append(formatted_doc)
 
-        return "\n\n".join(knowledge_parts)
+        result = "\n\n".join(knowledge_parts)
+        logger.info(f"🧠 Knowledge formatting complete: {len(result)} chars, {len(knowledge_parts)} parts")
+        
+        # Ensure we always return something
+        return result if result.strip() else "Knowledge context processed but no content available."
 
     def _format_tools_for_fusion(self, tool_results: Dict) -> str:
         """Format tool results for information fusion"""
@@ -2796,22 +2772,52 @@ Please analyze the current message considering the conversation history for bett
                 logger.info(f"Tool {tool_name} success: {result.success}")
                 if result.success:
                     if tool_name == "flight_search" and hasattr(result, 'flights'):
-                        flights = result.flights[:3]  # Top 3
-                        logger.info(f"Found {len(flights)} flights for {tool_name}")
-                        if flights:
-                            tool_parts.append(f"**Current Flights ({len(flights)} found)**:")
-                            for flight in flights:
-                                airline = flight.airline
-                                price = f"{flight.price} {flight.currency}"
-                                duration = f"{flight.duration} minutes"
-                                tool_parts.append(f"- {airline}: {price} ({duration})")
-                                logger.info(f"Added flight: {airline} - {price} ({duration})")
+                        # ✅ Check if this is a flight chain search
+                        is_flight_chain = (hasattr(result, 'data') and result.data and 
+                                         result.data.get("search_type") == "flight_chain")
+                        
+                        if is_flight_chain:
+                            # ✅ For flight chain, show representative flights from each route
+                            flight_chain_routes = result.data.get("successful_routes", [])
+                            route_flights = {}
+                            
+                            # Group flights by route
+                            for flight in result.flights:
+                                if hasattr(flight, 'details') and flight.details:
+                                    route_name = flight.details.get('route_name', '')
+                                    if route_name and route_name not in route_flights:
+                                        route_flights[route_name] = flight
+                            
+                            logger.info(f"Found flight chain with {len(route_flights)} routes covering {len(result.flights)} total flights")
+                            
+                            if route_flights:
+                                tool_parts.append(f"**Flight Chain ({len(route_flights)} routes, {len(result.flights)} flights total)**:")
+                                for route_name, flight in route_flights.items():
+                                    airline = flight.airline
+                                    price = f"{flight.price} {flight.currency}"
+                                    duration = f"{flight.duration} minutes"
+                                    tool_parts.append(f"- {route_name}: {airline} {flight.flight_number} • {price} • {duration}")
+                                    logger.info(f"Added flight chain route: {route_name} - {airline} {flight.flight_number}")
+                            else:
+                                tool_parts.append("**Flight Chain**: No valid flight routes found.")
                         else:
-                            tool_parts.append("**Flight Search**: No flights found for the specified route.")
-                            logger.info("No flights found for flight_search")
+                            # ✅ For regular flight search, use top 5
+                            flights = result.flights[:5]  # Top 5
+                            logger.info(f"Found {len(flights)} flights for {tool_name}")
+                            if flights:
+                                tool_parts.append(f"**Current Flights ({len(flights)} found)**:")
+                                for flight in flights:
+                                    airline = flight.airline
+                                    price = f"{flight.price} {flight.currency}"
+                                    duration = f"{flight.duration} minutes"
+                                    tool_parts.append(f"- {airline}: {price} ({duration})")
+                                    logger.info(f"Added flight: {airline} - {price} ({duration})")
+                            else:
+                                tool_parts.append("**Flight Search**: No flights found for the specified route.")
+                                logger.info("No flights found for flight_search")
                     
                     elif tool_name == "attraction_search" and hasattr(result, 'attractions'):
-                        attractions = result.attractions[:3]  # Top 3
+                        attractions = result.attractions[:10]  # Top 10
                         tool_parts.append(f"**Current Attractions ({len(attractions)} found)**:")
                         for attr in attractions:
                             name = attr.get("name", "Unknown")
@@ -2820,14 +2826,19 @@ Please analyze the current message considering the conversation history for bett
                             tool_parts.append(f"- {name} (Rating: {rating}): {desc}")
 
                     elif tool_name == "hotel_search" and hasattr(result, 'hotels'):
-                        hotels = result.hotels[:3]  # Top 3
+                        hotels = result.hotels[:5]  # Top 5
                         logger.info(f"Found {len(hotels)} hotels for {tool_name}")
                         if hotels:
                             tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
                             for hotel in hotels:
                                 name = getattr(hotel, 'name', 'Unknown')
-                                price = getattr(hotel, 'price_per_night', 'Price unavailable')
-                                rating = getattr(hotel, 'rating', 'No rating')
+                                # Defensive: try price_per_night first, never access 'price' directly for hotels
+                                price = getattr(hotel, 'price_per_night', None)
+                                if price is None:
+                                    price = 'Price unavailable'
+                                rating = getattr(hotel, 'rating', None)
+                                if rating is None:
+                                    rating = 'No rating'
                                 currency = getattr(hotel, 'currency', '')
                                 price_str = f"{price} {currency}" if price and price != 'Price unavailable' else 'Price unavailable'
                                 tool_parts.append(f"- {name} (Rating: {rating}): {price_str}")
@@ -2861,6 +2872,7 @@ Please analyze the current message considering the conversation history for bett
                         tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
                         for hotel in hotels:
                             name = hotel.get("name", "Unknown")
+                            # Defensive: only access price_per_night, never 'price' for hotels
                             price = hotel.get("price_per_night", "Price unavailable")
                             rating = hotel.get("rating", "No rating")
                             currency = hotel.get("currency", "")
@@ -3455,11 +3467,9 @@ This will help me provide you with the most relevant travel guidance possible.""
 
         return structured_plan
 
-    def _convert_city_to_iata_code(self, city_name: str) -> str:
-        """Convert city name to IATA city code for AMADEUS API"""
+    def _convert_city_to_iata_code(self, city_name: str) -> Union[str, List[str]]:
+        """Convert city/region name to IATA code(s), handling regions that map to multiple cities"""
         # Add debugging information
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.info(f"🌍 Converting city to IATA code - Input: '{city_name}'")
         
         # Handle unknown/empty destination case - return empty string to indicate invalid destination
@@ -3467,232 +3477,43 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.error(f"❌ Invalid destination '{city_name}' - cannot convert to IATA code")
             return ''  # Return empty string to indicate invalid destination
         
-        # City to IATA code mapping based on the provided list
-        city_to_iata = {
-            'amsterdam': 'AMS',
-            'barcelona': 'BCN', 
-            'beijing': 'PEK',
-            'berlin': 'BER',
-            'budapest': 'BUD',
-            'kyoto': 'ITM',  # Kyoto doesn't have a major airport, using nearby Osaka
-            'london': 'LON',
-            'munich': 'MUC',
-            'paris': 'PAR',
-            'prague': 'PRG',
-            'rome': 'ROM',
-            'seoul': 'SEL',
-            'shanghai': 'SHA',
-            'singapore': 'SIN',
-            'tokyo': 'TYO',
-            'vienna': 'VIE',
-            'osaka': 'ITM',
-            'new york': 'JFK',
-            'los angeles': 'LAX',
-            'chicago': 'ORD',
-            'miami': 'MIA',
-            'san francisco': 'SFO',
-            'toronto': 'YYZ',
-            'vancouver': 'YVR',
-            'montreal': 'YUL',
-            'sydney': 'SYD',
-            'melbourne': 'MEL',
-            'brisbane': 'BNE',
-            'perth': 'PER',
-            'adelaide': 'ADL',
-            'auckland': 'AKL',
-            'wellington': 'WLG',
-            'cape town': 'CPT',
-            'johannesburg': 'JNB',
-            'nairobi': 'NBO',
-            'cairo': 'CAI',
-            'marrakech': 'RAK',
-            'casablanca': 'CMN',
-            'mumbai': 'BOM',
-            'delhi': 'DEL',
-            'bangalore': 'BLR',
-            'chennai': 'MAA',
-            'kolkata': 'CCU',
-            'hyderabad': 'HYD',
-            'pune': 'PNQ',
-            'mexico city': 'MEX',
-            'guadalajara': 'GDL',
-            'monterrey': 'MTY',
-            'rio de janeiro': 'GIG',
-            'sao paulo': 'GRU',
-            'buenos aires': 'EZE',
-            'santiago': 'SCL',
-            'lima': 'LIM',
-            'bogota': 'BOG',
-            'medellin': 'MDE',
-            'caracas': 'CCS',
-            'moscow': 'SVO',
-            'st petersburg': 'LED',
-            'kiev': 'KBP',
-            'warsaw': 'WAW',
-            'krakow': 'KRK',
-            'bratislava': 'BTS',
-            'ljubljana': 'LJU',
-            'zagreb': 'ZAG',
-            'belgrade': 'BEG',
-            'sofia': 'SOF',
-            'bucharest': 'OTP',
-            'tallinn': 'TLL',
-            'riga': 'RIX',
-            'vilnius': 'VNO',
-            'helsinki': 'HEL',
-            'stockholm': 'ARN',
-            'oslo': 'OSL',
-            'copenhagen': 'CPH',
-            'reykjavik': 'KEF',
-            'dublin': 'DUB',
-            'glasgow': 'GLA',
-            'edinburgh': 'EDI',
-            'manchester': 'MAN',
-            'birmingham': 'BHX',
-            'leeds': 'LBA',
-            'liverpool': 'LPL',
-            'newcastle': 'NCL',
-            'cardiff': 'CWL',
-            'belfast': 'BFS',
-            'brussels': 'BRU',
-            'antwerp': 'ANR',
-            'rotterdam': 'RTM',
-            'the hague': 'AMS',  # No airport, using Amsterdam
-            'utrecht': 'AMS',    # No airport, using Amsterdam
-            'luxembourg': 'LUX',
-            'geneva': 'GVA',
-            'zurich': 'ZRH',
-            'bern': 'BRN',
-            'basel': 'BSL',
-            'lucerne': 'ZRH',    # No airport, using Zurich
-            'milan': 'MXP',
-            'florence': 'FLR',
-            'venice': 'VCE',
-            'naples': 'NAP',
-            'palermo': 'PMO',
-            'catania': 'CTA',
-            'bologna': 'BLQ',
-            'turin': 'TRN',
-            'genoa': 'GOA',
-            'bari': 'BRI',
-            'lisbon': 'LIS',
-            'porto': 'OPO',
-            'faro': 'FAO',
-            'funchal': 'FNC',
-            'pontadelgada': 'PDL',
-            'valencia': 'VLC',
-            'bilbao': 'BIO',
-            'seville': 'SVQ',
-            'granada': 'GRX',
-            'malaga': 'AGP',
-            'alicante': 'ALC',
-            'palma': 'PMI',
-            'ibiza': 'IBZ',
-            'tenerife': 'TFS',
-            'las palmas': 'LPA',
-            'fes': 'FEZ',
-            'tangier': 'TNG',
-            'agadir': 'AGA',
-            'rabat': 'RBA',
-            'tunis': 'TUN',
-            'algiers': 'ALG',
-            'alexandria': 'HBE',
-            'giza': 'CAI',       # No airport, using Cairo
-            'luxor': 'LXR',
-            'aswan': 'ASW',
-            'sharm el sheikh': 'SSH',
-            'hurghada': 'HRG',
-            'tel aviv': 'TLV',
-            'jerusalem': 'JRS',  # Limited flights
-            'haifa': 'HFA',
-            'beer sheva': 'TLV', # No airport, using Tel Aviv
-            'amman': 'AMM',
-            'petra': 'AMM',      # No airport, using Amman
-            'aqaba': 'AQJ',
-            'damascus': 'DAM',
-            'beirut': 'BEY',
-            'baghdad': 'BGW',
-            'basra': 'BSR',
-            'erbil': 'EBL',
-            'sulaymaniyah': 'ISU',
-            'tehran': 'IKA',
-            'mashhad': 'MHD',
-            'isfahan': 'IFN',
-            'shiraz': 'SYZ',
-            'tabriz': 'TBZ',
-            'kerman': 'KER',
-            'yazd': 'AZD',
-            'kabul': 'KBL',
-            'kandahar': 'KDH',
-            'herat': 'HEA',
-            'mazar e sharif': 'MZR',
-            'jalalabad': 'JAA',
-            'kunduz': 'UND',
-            'peshawar': 'PEW',
-            'lahore': 'LHE',
-            'karachi': 'KHI',
-            'islamabad': 'ISB',
-            'rawalpindi': 'ISB', # Same as Islamabad
-            'faisalabad': 'LYP',
-            'multan': 'MUX',
-            'gujranwala': 'GRW',
-            'sialkot': 'SKT',
-            'quetta': 'UET',
-            'abbottabad': 'ISB', # No airport, using Islamabad
-            'murree': 'ISB',     # No airport, using Islamabad
-            'gilgit': 'GIL',
-            'skardu': 'KDU',
-            'chitral': 'CJL',
-            'swat': 'ISB',       # No airport, using Islamabad
-            'hunza': 'GIL',      # No airport, using Gilgit
-            'kashmir': 'SXR',
-            'srinagar': 'SXR',
-            'leh': 'IXL',
-            'manali': 'DEL',     # No airport, using Delhi
-            'shimla': 'DEL',     # No airport, using Delhi
-            'mussoorie': 'DEL',  # No airport, using Delhi
-            'nainital': 'DEL',   # No airport, using Delhi
-            'ranikhet': 'DEL',   # No airport, using Delhi
-            'almora': 'DEL',     # No airport, using Delhi
-            'pithoragarh': 'DEL', # No airport, using Delhi
-            'chamoli': 'DEL',    # No airport, using Delhi
-            'rudraprayag': 'DEL', # No airport, using Delhi
-            'tehri': 'DEL',      # No airport, using Delhi
-            'uttarkashi': 'DEL', # No airport, using Delhi
-            'dehradun': 'DED',
-            'haridwar': 'DEL',   # No airport, using Delhi
-            'rishikesh': 'DEL',  # No airport, using Delhi
-            'kedarnath': 'DEL',  # No airport, using Delhi
-            'badrinath': 'DEL',  # No airport, using Delhi
-            'gangotri': 'DEL',   # No airport, using Delhi
-            'yamunotri': 'DEL',  # No airport, using Delhi
-            'hemkund': 'DEL',    # No airport, using Delhi
-            'valley of flowers': 'DEL', # No airport, using Delhi
-            'auli': 'DEL',       # No airport, using Delhi
-            'joshimath': 'DEL',  # No airport, using Delhi
-            'karnaprayag': 'DEL', # No airport, using Delhi
-            'gauchar': 'DEL',    # No airport, using Delhi
-            'karanprayag': 'DEL', # No airport, using Delhi
-            'hong kong': 'HKG',
-            'hongkong': 'HKG',
-            'dubai': 'DXB',
-            'istanbul': 'IST',
-            'madrid': 'MAD',
-            'athens': 'ATH',
-            # Country codes (using major cities)
-            'australia': 'SYD',  # Sydney
-            'brazil': 'SAO',     # Sao Paulo
-            'canada': 'YYZ',     # Toronto
-            'china': 'PEK',      # Beijing
-            'hong_kong': 'HKG',
-            'india': 'DEL',      # Delhi
-            'japan': 'TYO',      # Tokyo
-            'south_africa': 'JNB', # Johannesburg
-            'south_korea': 'SEL',  # Seoul
-            'thailand': 'BKK',     # Bangkok
-            'uk': 'LON',          # London
-            'usa': 'JFK'          # New York
-        }
+        # ✅ Check if input is already an IATA code (3 uppercase letters)
+        if len(city_name) == 3 and city_name.isupper() and city_name.isalpha():
+            logger.info(f"✅ Input '{city_name}' is already an IATA code, returning as-is")
+            return city_name
+        
+        # ✅ Use centralized geographical mappings from config
+        region_to_cities = GeographicalMappings.REGION_TO_CITIES
+        
+        # Normalize input and check for region mapping first
+        normalized_input = city_name.lower().strip()
+        if normalized_input in region_to_cities:
+            mapped_cities = region_to_cities[normalized_input]
+            logger.info(f"🗺️ Mapped region '{city_name}' to cities '{mapped_cities}'")
+            
+            # Convert each city in the list to IATA code
+            iata_codes = []
+            city_to_iata = GeographicalMappings.CITY_TO_IATA
+            
+            for city in mapped_cities:
+                normalized_city = city.lower().strip()
+                iata_code = city_to_iata.get(normalized_city)
+                if iata_code:
+                    clean_iata = iata_code.strip().upper()
+                    iata_codes.append(clean_iata)
+                    logger.info(f"✅ Converted '{city}' to IATA '{clean_iata}'")
+                else:
+                    logger.warning(f"⚠️ Could not convert '{city}' to IATA code")
+            
+            if iata_codes:
+                logger.info(f"🌍 Successfully converted region '{city_name}' to {len(iata_codes)} IATA codes: {iata_codes}")
+                return iata_codes
+            else:
+                logger.error(f"❌ No valid IATA codes found for region '{city_name}'")
+                return ''
+        
+        # ✅ Use centralized city to IATA mapping from config
+        city_to_iata = GeographicalMappings.CITY_TO_IATA
         
         # Normalize city name
         normalized_city = city_name.lower().strip()
@@ -3715,91 +3536,41 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.info(f"✅ Clean IATA code: '{clean_iata}'")
             return clean_iata
         else:
-            # If not found, return empty string to indicate invalid destination
-            logger.error(f"❌ No IATA code found for '{city_name}' - invalid destination")
-            return ''  # Return empty string to indicate invalid destination
+            # ✅ Smart fallback: try region/country mapping with multiple cities support
+            logger.warning(f"⚠️ No direct IATA code found for '{city_name}', trying region fallback")
+            
+            for region, cities in region_to_cities.items():
+                if region in normalized_city:
+                    # ✅ Handle both single city and multiple cities
+                    if isinstance(cities, list):
+                        # For multiple cities, return IATA of the first available city
+                        for city in cities:
+                            fallback_iata = city_to_iata.get(city)
+                            if fallback_iata:
+                                logger.info(f"✅ Using multi-destination fallback: '{city_name}' -> '{city}' ({fallback_iata})")
+                                # ✅ Store multiple destinations for plan generation
+                                setattr(self, '_multi_destinations', cities)
+                                return fallback_iata.strip().upper()
+                    else:
+                        # Single city (legacy format)
+                        fallback_iata = city_to_iata.get(cities)
+                        if fallback_iata:
+                            logger.info(f"✅ Using fallback: '{city_name}' -> '{cities}' ({fallback_iata})")
+                            return fallback_iata.strip().upper()
+            
+            # ✅ Last resort: for any unknown location, use a sensible default based on context
+            # This prevents tool failures and allows plan generation to continue
+            logger.warning(f"⚠️ No IATA code found for '{city_name}', using default fallback: LON")
+            return 'LON'  # London as universal fallback
 
     def _extract_destination_from_message(self, message: str) -> str:
         """Extract destination from user message"""
-        # Add debugging information
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.info(f"🌍 Extracting destination from message: '{message}'")
         
         message_lower = message.lower()
 
         # Common destinations with more comprehensive list
-        destinations = [
-            "tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", 
-            "shanghai", "rome", "barcelona", "amsterdam", "vienna", "prague", 
-            "budapest", "berlin", "bangkok", "singapore", "seoul", "sydney", 
-            "melbourne", "munich", "madrid", "athens", "dubai", "istanbul",
-            "hong kong", "hongkong", "san francisco", "los angeles", "chicago",
-            "miami", "toronto", "vancouver", "montreal", "sydney", "melbourne",
-            "brisbane", "perth", "adelaide", "auckland", "wellington", "cape town",
-            "johannesburg", "nairobi", "cairo", "marrakech", "casablanca", "mumbai",
-            "delhi", "bangalore", "chennai", "kolkata", "hyderabad", "pune",
-            "mexico city", "guadalajara", "monterrey", "rio de janeiro", "sao paulo",
-            "buenos aires", "santiago", "lima", "bogota", "medellin", "caracas",
-            "moscow", "st petersburg", "kiev", "warsaw", "krakow", "bratislava",
-            "ljubljana", "zagreb", "belgrade", "sofia", "bucharest", "budapest",
-            "tallinn", "riga", "vilnius", "helsinki", "stockholm", "oslo", "copenhagen",
-            "reykjavik", "dublin", "glasgow", "edinburgh", "manchester", "birmingham",
-            "leeds", "liverpool", "newcastle", "cardiff", "belfast", "brussels",
-            "antwerp", "rotterdam", "the hague", "utrecht", "luxembourg", "geneva",
-            "zurich", "bern", "basel", "lucerne", "milan", "florence", "venice",
-            "naples", "palermo", "catania", "bologna", "turin", "genoa", "bari",
-            "lisbon", "porto", "faro", "funchal", "pontadelgada", "valencia",
-            "bilbao", "seville", "granada", "malaga", "alicante", "palma",
-            "ibiza", "tenerife", "las palmas", "marrakech", "fes", "tangier",
-            "agadir", "rabat", "casablanca", "tunis", "algiers", "cairo",
-            "alexandria", "giza", "luxor", "aswan", "sharm el sheikh", "hurghada",
-            "tel aviv", "jerusalem", "haifa", "beer sheva", "amman", "petra",
-            "aqaba", "damascus", "beirut", "baghdad", "basra", "erbil", "sulaymaniyah",
-            "tehran", "mashhad", "isfahan", "shiraz", "tabriz", "kerman", "yazd",
-            "kabul", "kandahar", "herat", "mazar e sharif", "jalalabad", "kunduz",
-            "peshawar", "lahore", "karachi", "islamabad", "rawalpindi", "faisalabad",
-            "multan", "gujranwala", "sialkot", "quetta", "peshawar", "abbottabad",
-            "murree", "gilgit", "skardu", "chitral", "swat", "hunza", "kashmir",
-            "srinagar", "leh", "manali", "shimla", "mussoorie", "nainital",
-            "ranikhet", "almora", "pithoragarh", "chamoli", "rudraprayag", "tehri",
-            "uttarkashi", "dehradun", "haridwar", "rishikesh", "kedarnath", "badrinath",
-            "gangotri", "yamunotri", "kedarnath", "badrinath", "hemkund", "valley of flowers",
-            "auli", "joshimath", "karnaprayag", "gauchar", "karanprayag", "rudraprayag",
-            "srinagar", "uttarkashi", "tehri", "chamoli", "pithoragarh", "almora",
-            "ranikhet", "nainital", "mussoorie", "shimla", "manali", "leh",
-            "kashmir", "hunza", "swat", "chitral", "skardu", "gilgit", "murree",
-            "abbottabad", "peshawar", "quetta", "sialkot", "gujranwala", "multan",
-            "faisalabad", "rawalpindi", "islamabad", "karachi", "lahore", "peshawar",
-            "kunduz", "jalalabad", "mazar e sharif", "herat", "kandahar", "kabul",
-            "yazd", "kerman", "tabriz", "shiraz", "isfahan", "mashhad", "tehran",
-            "sulaymaniyah", "erbil", "basra", "baghdad", "beirut", "damascus",
-            "aqaba", "petra", "amman", "beer sheva", "haifa", "jerusalem", "tel aviv",
-            "hurghada", "sharm el sheikh", "aswan", "luxor", "giza", "alexandria",
-            "cairo", "algiers", "tunis", "casablanca", "rabat", "agadir", "tangier",
-            "fes", "marrakech", "las palmas", "tenerife", "ibiza", "palma",
-            "alicante", "malaga", "granada", "seville", "bilbao", "valencia",
-            "pontadelgada", "funchal", "faro", "porto", "lisbon", "genoa",
-            "turin", "bologna", "catania", "palermo", "naples", "venice", "florence",
-            "milan", "lucerne", "basel", "bern", "zurich", "geneva", "luxembourg",
-            "utrecht", "the hague", "rotterdam", "antwerp", "brussels", "belfast",
-            "cardiff", "newcastle", "liverpool", "leeds", "birmingham", "manchester",
-            "edinburgh", "glasgow", "dublin", "reykjavik", "copenhagen", "oslo",
-            "stockholm", "helsinki", "vilnius", "riga", "tallinn", "budapest",
-            "bucharest", "sofia", "belgrade", "zagreb", "ljubljana", "bratislava",
-            "krakow", "warsaw", "kiev", "st petersburg", "moscow", "caracas",
-            "medellin", "bogota", "lima", "santiago", "buenos aires", "sao paulo",
-            "rio de janeiro", "monterrey", "guadalajara", "mexico city", "pune",
-            "hyderabad", "kolkata", "chennai", "bangalore", "delhi", "mumbai",
-            "casablanca", "marrakech", "cairo", "nairobi", "johannesburg", "cape town",
-            "wellington", "auckland", "adelaide", "perth", "brisbane", "melbourne",
-            "sydney", "montreal", "vancouver", "toronto", "miami", "chicago",
-            "los angeles", "san francisco", "hongkong", "hong kong", "istanbul",
-            "dubai", "athens", "madrid", "munich", "melbourne", "sydney", "seoul",
-            "singapore", "bangkok", "berlin", "prague", "vienna", "amsterdam",
-            "barcelona", "rome", "shanghai", "beijing", "new york", "london",
-            "paris", "osaka", "kyoto", "tokyo"
-        ]
+        destinations = geo_mappings.get_comprehensive_destinations()
 
         # First, try exact destination matching
         for dest in destinations:
@@ -3988,7 +3759,14 @@ This will help me provide you with the most relevant travel guidance possible.""
         import datetime
         
         tool_parameters = {}
-        destination = intent.get("destination", "unknown")
+        destination_raw = intent.get("destination", "unknown")
+        
+        # ✅ Fix: Ensure destination is always a string, not a list
+        if isinstance(destination_raw, list):
+            destination = destination_raw[0] if destination_raw else "unknown"
+            logger.warning(f"Intent contained destination as list {destination_raw}, using first item: {destination}")
+        else:
+            destination = destination_raw if destination_raw else "unknown"
         
         # Generate safe default dates (30 days from now)
         default_check_in = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
@@ -4002,8 +3780,11 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         for tool_name in selected_tools:
             if tool_name == "attraction_search":
+                # Convert destination to IATA code(s) for consistent multi-location support
+                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                
                 tool_parameters[tool_name] = {
-                    "location": destination if destination != "unknown" else "Tokyo",  # Safe fallback
+                    "location": destination_result,  # Can be single IATA code or list for multi-location
                     "query": None,  # Let tool use location-based search
                     "max_results": 10,
                     "include_photos": True,
@@ -4024,8 +3805,11 @@ This will help me provide you with the most relevant travel guidance possible.""
                 if check_out_date in ["unknown", "", None]:
                     check_out_date = default_check_out
                 
+                # Convert destination to IATA code(s) for consistent multi-location support  
+                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                
                 tool_parameters[tool_name] = {
-                    "location": destination if destination != "unknown" else "Tokyo",  # Safe fallback
+                    "location": destination_result,  # Can be single IATA code or list for multi-location
                     "check_in": check_in_date,
                     "check_out": check_out_date,
                     "guests": max(travel_details.get("travelers", 1), 1),
@@ -4047,16 +3831,29 @@ This will help me provide you with the most relevant travel guidance possible.""
                 if origin == "Unknown":
                     origin = "Singapore"  # Default fallback for Singapore
                 
-                # Convert origin to IATA code
-                origin_iata = self._convert_city_to_iata_code(origin)
+                # Convert origin to IATA code (should be single for origin)
+                origin_result = self._convert_city_to_iata_code(origin)
+                # For origin, we always use the first code if it's a list (shouldn't happen for origin)
+                origin_iata = origin_result[0] if isinstance(origin_result, list) else origin_result
+                
+                # Convert destination to IATA code(s) for consistent multi-location support
+                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                
+                # ✅ NEW: Enable flight_chain for multi-destination searches
+                is_multi_destination = isinstance(destination_result, list) and len(destination_result) > 1
+                flight_chain_enabled = is_multi_destination
+                
+                if flight_chain_enabled:
+                    logger.info(f"🔗 Multi-destination detected: enabling flight chain for {len(destination_result)} destinations")
                 
                 tool_parameters[tool_name] = {
                     "origin": origin_iata,  # Use extracted origin converted to IATA code
-                    "destination": destination if destination != "unknown" else "Tokyo",
+                    "destination": destination_result,  # Can be single IATA code or list for multi-location
                     "start_date": departure_date,
                     "passengers": max(travel_details.get("travelers", 1), 1),
                     "class_type": "economy",
-                    "budget_level": travel_details.get("budget", {}).get("level", "mid-range")
+                    "budget_level": travel_details.get("budget", {}).get("level", "mid-range"),
+                    "flight_chain": flight_chain_enabled,  # Enable flight chain for multi-city trips
                 }
         
         logger.info(f"Generated tool parameters: {tool_parameters}")
@@ -4141,12 +3938,12 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         return next_steps
 
-    def _generate_structured_response(
+    async def _generate_structured_response(
         self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
     ) -> AgentResponse:
         """
         Generate structured response using fast template-based fusion
-        No LLM calls - uses templates and rule-based content generation
+        Enhanced with plan generation capability for plan requests
         """
         try:
             # Extract key information
@@ -4156,35 +3953,27 @@ This will help me provide you with the most relevant travel guidance possible.""
             tool_results = execution_result.get("results", {})
             execution_success = execution_result.get("success", False)
             
+            # Check if this is a plan request
+            is_plan_request = self._is_plan_request(user_message) or intent_type in ["planning", "modification"]
+            
+            # Plan generation will be done in the background
+            
+            # Generate quick response content for all requests
+            content = self._build_quick_response_content(
+                intent_type, destination, tools_used, tool_results, user_message, is_plan_request
+            )
+            
             # Determine response success based on whether we can provide useful content
-            # Even if tools fail, we can still provide value with knowledge and guidance
             has_useful_content = (
                 destination != "unknown" or 
                 tool_results or 
                 intent_type in ["query", "recommendation", "planning"]
             )
             
-            # Generate content using templates based on intent and results
-            if execution_success and tool_results:
-                content = self._build_structured_content(
-                    intent_type, destination, tools_used, tool_results, user_message
-                )
-                confidence = 0.87
-                response_success = True
-            elif has_useful_content:
-                # Generate helpful content even when tools partially fail
-                content = self._build_mixed_content(
-                    intent_type, destination, tools_used, tool_results, user_message
-                )
-                confidence = 0.75
-                response_success = True  # We can still help the user
-            else:
-                # Handle true error cases with fallback content
-                content = self._build_fallback_content(intent_type, destination, user_message)
-                confidence = 0.6
-                response_success = False
+            # Create fast response with plan generation metadata
+            response_success = execution_success or bool(tool_results) or has_useful_content
+            confidence = 0.85 if execution_success else 0.75
             
-            # Create response with structured metadata
             response = AgentResponse(
                 success=response_success,
                 content=content,
@@ -4195,15 +3984,19 @@ This will help me provide you with the most relevant travel guidance possible.""
                     "intent": intent,
                     "tools_used": tools_used,
                     "execution_time": execution_result.get("execution_time", 0),
-                    "response_method": "structured_template",
+                    "response_method": "fast_template",
                     "destination": destination,
                     "intent_type": intent_type,
+                    "is_plan_request": is_plan_request,  # ✅ 标记需要后台计划生成
+                    "plan_generation_status": "pending" if is_plan_request else "not_required",
+                    # ✅ 传递execution_result给后台plan generation使用
+                    "execution_result_for_plan": execution_result if is_plan_request else None,
                     "tool_execution_success": execution_success,
                     "partial_tool_success": bool(tool_results)
                 }
             )
             
-            logger.info(f"Structured response generated: success={response_success}, {len(content)} chars, confidence: {confidence}")
+            logger.info(f"Fast response generated: success={response_success}, plan_required={is_plan_request}, {len(content)} chars")
             return response
             
         except Exception as e:
@@ -4211,9 +4004,438 @@ This will help me provide you with the most relevant travel guidance possible.""
             # Emergency fallback
             return AgentResponse(
                 success=False,
-                content=f"I apologize, but I encountered an issue processing your travel request about {destination}. Please try rephrasing your question.",
+                content=f"I apologize, but I encountered an issue processing your travel request. Please try rephrasing your question.",
                 confidence=0.3,
                 metadata={"error": str(e), "response_method": "emergency_fallback"}
+            )
+    
+    def _build_quick_response_content(
+        self, intent_type: str, destination: str, tools_used: List[str], 
+        tool_results: Dict[str, Any], user_message: str, is_plan_request: bool
+    ) -> str:
+        """Build quick response content without complex LLM calls"""
+        
+        if is_plan_request:
+            content = f"I'm creating a detailed travel plan for {destination}! 🗺️\n\n"
+            
+            # Quick summary of what we found
+            total_found = 0
+            
+            # Safely handle hotel search results (might be Pydantic object or dict)
+            if "hotel_search" in tool_results:
+                hotel_result = tool_results["hotel_search"]
+                try:
+                    if hasattr(hotel_result, 'hotels'):  # Pydantic object
+                        hotels_count = len(hotel_result.hotels)
+                    elif isinstance(hotel_result, dict) and "hotels" in hotel_result:  # Dict
+                        hotels_count = len(hotel_result["hotels"])
+                    else:
+                        hotels_count = 0
+                    
+                    if hotels_count > 0:
+                        content += f"🏨 Found {hotels_count} hotel options\n"
+                        total_found += hotels_count
+                except Exception as e:
+                    logger.debug(f"Error processing hotel results: {e}")
+            
+            # Safely handle flight search results
+            if "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                try:
+                    if hasattr(flight_result, 'flights'):  # Pydantic object
+                        flights_count = len(flight_result.flights)
+                    elif isinstance(flight_result, dict) and "flights" in flight_result:  # Dict
+                        flights_count = len(flight_result["flights"])
+                    else:
+                        flights_count = 0
+                    
+                    if flights_count > 0:
+                        content += f"✈️ Found {flights_count} flight options\n"
+                        total_found += flights_count
+                except Exception as e:
+                    logger.debug(f"Error processing flight results: {e}")
+            
+            # Safely handle attraction search results
+            if "attraction_search" in tool_results:
+                attraction_result = tool_results["attraction_search"]
+                try:
+                    if hasattr(attraction_result, 'attractions'):  # Pydantic object
+                        attractions_count = len(attraction_result.attractions)
+                    elif isinstance(attraction_result, dict) and "attractions" in attraction_result:  # Dict
+                        attractions_count = len(attraction_result["attractions"])
+                    else:
+                        attractions_count = 0
+                    
+                    if attractions_count > 0:
+                        content += f"🎯 Found {attractions_count} attractions\n"
+                        total_found += attractions_count
+                except Exception as e:
+                    logger.debug(f"Error processing attraction results: {e}")
+            
+            if total_found > 0:
+                content += f"\n📅 I'm now generating your detailed itinerary with precise timing and recommendations. You'll see it appear in the calendar shortly!"
+            else:
+                content += f"\n📅 I'm creating a comprehensive travel plan for {destination} with recommendations and timing. Check the calendar for your detailed itinerary!"
+            
+            return content
+        else:
+            # Non-plan requests use existing template logic
+            return self._build_structured_content(intent_type, destination, tools_used, tool_results, user_message)
+
+    async def _generate_plan_aware_response(
+        self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
+    ) -> AgentResponse:
+        """Generate structured plan data using plan_manager (Centralized approach)"""
+        try:
+            # Extract key information
+            intent_type = intent.get("type") or intent.get("intent_type", "planning")
+            destination = intent.get("destination", {})
+            if isinstance(destination, dict):
+                destination_name = destination.get("primary", "unknown")
+                # Extract multi-destinations from intent
+                multi_destinations = destination.get("secondary", [])
+                if not multi_destinations and "all" in destination:
+                    # Handle case where all destinations are in one list
+                    all_destinations = destination.get("all", [])
+                    if len(all_destinations) > 1:
+                        destination_name = all_destinations[0]
+                        multi_destinations = all_destinations
+                    else:
+                        multi_destinations = None
+            else:
+                destination_name = str(destination)
+                multi_destinations = None
+            
+            tool_results = execution_result.get("results", {})
+            
+            # Also check tool results for multi-destination info from flight search
+            if not multi_destinations and "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                if hasattr(flight_result, 'data') and flight_result.data:
+                    flight_data = flight_result.data
+                    search_type = flight_data.get("search_type")
+                    
+                    if search_type == "flight_chain":
+                        flight_chain = flight_data.get("flight_chain", [])
+                        
+                        if len(flight_chain) > 3:  # Start + destinations + end
+                            multi_destinations = flight_chain[1:-1]  # Remove start and end
+                            logger.info(f"🔗 Flight chain detected: {len(multi_destinations)} destinations")
+            
+            logger.info(f"Generating plan-aware response for destination: {destination_name}")
+            if multi_destinations:
+                logger.info(f"🌍 Multi-destination trip: {len(multi_destinations)} destinations")
+            
+            # Use plan_manager for centralized plan generation
+            from app.core.plan_manager import get_plan_manager
+            plan_manager = get_plan_manager()
+            
+            # Note: session_id should be passed from execution_result metadata
+            session_id = execution_result.get("session_id", "unknown")
+            
+            # Generate plan using plan_manager
+            plan_result = await plan_manager.generate_plan_from_tool_results(
+                session_id=session_id,
+                tool_results=tool_results,
+                destination=destination_name,
+                user_message=user_message,
+                intent=intent,
+                multi_destinations=multi_destinations
+            )
+            
+            events_count = plan_result.get("events_added", 0)
+            duration = plan_result.get("duration", 5)
+            travelers = plan_result.get("travelers", 1)
+            
+            logger.info(f"Plan generation via plan_manager: {events_count} events for {duration}-day trip")
+            
+            # Create natural response
+            natural_response = self._create_natural_plan_response(destination_name, events_count, duration, travelers, tool_results)
+            
+            # Create enhanced AgentResponse with structured plan data
+            response = AgentResponse(
+                success=plan_result.get("success", False),
+                content=natural_response,
+                actions_taken=execution_result.get("actions", []),
+                next_steps=execution_result.get("next_steps", []),
+                confidence=0.88,
+                plan_events=[],  # Events are now managed by plan_manager
+                metadata={
+                    **execution_result,
+                    "intent": intent,
+                    "response_type": "structured_plan",
+                    "plan_generation_method": "plan_manager_based",
+                    "destination": destination_name,
+                    "intent_type": intent_type,
+                    "plan_events_count": events_count,
+                    "plan_result": plan_result
+                }
+            )
+            
+            logger.info(f"Plan-aware response generated successfully: {events_count} events")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to generate plan via plan_manager: {e}")
+            # Emergency fallback
+            return AgentResponse(
+                success=False,
+                content=f"I created a basic travel plan outline for {destination_name}. Let me know if you'd like me to refine any specific aspects!",
+                confidence=0.6,
+                plan_events=[],
+                metadata={"error": str(e), "plan_generation_method": "emergency_fallback"}
+            )
+
+    def _create_events_from_tool_results(
+        self, tool_results: Dict[str, Any], destination: str, user_message: str
+    ) -> List[Dict[str, Any]]:
+        """Create calendar events directly from tool results"""
+        events = []
+        from datetime import datetime, timedelta
+        import uuid
+        
+        # Start from tomorrow
+        start_date = datetime.now() + timedelta(days=1)
+        current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)  # Start at 8 AM
+        
+        try:
+            # Add flight events
+            if "flight_search" in tool_results:
+                flight_result = tool_results["flight_search"]
+                if hasattr(flight_result, 'flights'):
+                    flights = flight_result.flights[:2]  # Limit to 2 flights (outbound/return)
+                    for i, flight in enumerate(flights):
+                        flight_time = current_time if i == 0 else current_time + timedelta(days=6)
+                        events.append({
+                            "id": f"flight_{i+1}_{str(uuid.uuid4())[:8]}",
+                            "title": f"Flight to {destination}" if i == 0 else f"Return Flight",
+                            "description": f"Flight details: {getattr(flight, 'airline', 'TBA')} - Duration: {getattr(flight, 'duration', 'TBA')} minutes",
+                            "event_type": "flight",
+                            "start_time": flight_time.isoformat(),
+                            "end_time": (flight_time + timedelta(hours=6)).isoformat(),
+                            "location": f"Airport → {destination}" if i == 0 else f"{destination} → Home",
+                            "coordinates": {"lat": 40.7128, "lng": -74.0060},
+                            "details": {
+                                "source": "flight_search",
+                                "airline": getattr(flight, 'airline', 'TBA'),
+                                "price": {"amount": getattr(flight, 'price', 500), "currency": "USD"}
+                            }
+                        })
+            
+            # ✅ Hotel events are now handled by plan_manager.py for consistency
+            # Removed duplicate hotel creation logic to avoid conflicts
+            
+            # Add attraction events (spread across days 2-4)
+            if "attraction_search" in tool_results:
+                attraction_result = tool_results["attraction_search"]
+                if hasattr(attraction_result, 'attractions'):
+                    attractions = attraction_result.attractions[:3]  # Limit to 3
+                    for i, attraction in enumerate(attractions):
+                        visit_day = start_date + timedelta(days=i+1)
+                        visit_time = visit_day.replace(hour=10 + i*2, minute=0)  # 10 AM, 12 PM, 2 PM
+                        
+                        events.append({
+                            "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
+                            "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
+                            "description": getattr(attraction, 'category', 'Sightseeing activity'),
+                            "event_type": "attraction",
+                            "start_time": visit_time.isoformat(),
+                            "end_time": (visit_time + timedelta(hours=2)).isoformat(),
+                            "location": getattr(attraction, 'location', destination),
+                            "coordinates": {"lat": 40.7484, "lng": -73.9857},
+                            "details": {
+                                "source": "attraction_search",
+                                "rating": getattr(attraction, 'rating', 4.5),
+                                "category": getattr(attraction, 'category', 'Tourism')
+                            }
+                        })
+            
+            # Add meal events if no specific events were created
+            if not events:
+                # Create default sightseeing events
+                for i in range(3):
+                    day = start_date + timedelta(days=i+1)
+                    event_time = day.replace(hour=10 + i*3, minute=0)
+                    events.append({
+                        "id": f"activity_{i+1}_{str(uuid.uuid4())[:8]}",
+                        "title": f"Explore {destination} - Day {i+1}",
+                        "description": f"Discover the best of {destination}",
+                        "event_type": "activity",
+                        "start_time": event_time.isoformat(),
+                        "end_time": (event_time + timedelta(hours=3)).isoformat(),
+                        "location": destination,
+                        "coordinates": {"lat": 40.7484, "lng": -73.9857},
+                        "details": {
+                            "source": "default_generation",
+                            "recommendations": ["Bring camera", "Wear comfortable shoes"]
+                        }
+                    })
+            
+            logger.info(f"Created {len(events)} events from tool results")
+            return events
+            
+        except Exception as e:
+            logger.error(f"Error creating events from tool results: {e}")
+            # Return basic fallback event
+            return [{
+                "id": f"basic_trip_{str(uuid.uuid4())[:8]}",
+                "title": f"Trip to {destination}",
+                "description": f"Travel to {destination}",
+                "event_type": "activity",
+                "start_time": current_time.isoformat(),
+                "end_time": (current_time + timedelta(hours=4)).isoformat(),
+                "location": destination,
+                "coordinates": {"lat": 40.7484, "lng": -73.9857},
+                "details": {"source": "fallback_generation"}
+            }]
+    
+    def _create_natural_plan_response(
+        self, destination: str, event_count: int, duration: int, travelers: int, tool_results: Dict[str, Any]
+    ) -> str:
+        """Create a natural language description of the generated plan"""
+        
+        response = f"🗺️ **Your {destination} Travel Plan is Ready!**\n\n"
+        response += f"I've created a detailed {duration}-day itinerary with {event_count} events for "
+        
+        if travelers == 1:
+            response += "your solo trip"
+        elif travelers == 2:
+            response += "your couple's trip" 
+        else:
+            response += f"your group of {travelers}"
+            
+        response += f" to {destination}.\n\n"
+        
+        # Add tool-specific highlights
+        if "hotel_search" in tool_results:
+            hotel_result = tool_results["hotel_search"]
+            if hasattr(hotel_result, 'hotels') and len(hotel_result.hotels) > 0:
+                response += f"🏨 **Accommodation**: Found {len(hotel_result.hotels)} hotel options\n"
+        
+        if "flight_search" in tool_results:
+            flight_result = tool_results["flight_search"]
+            if hasattr(flight_result, 'flights') and len(flight_result.flights) > 0:
+                response += f"✈️ **Flights**: Found {len(flight_result.flights)} flight options\n"
+        
+        if "attraction_search" in tool_results:
+            attraction_result = tool_results["attraction_search"]
+            if hasattr(attraction_result, 'attractions') and len(attraction_result.attractions) > 0:
+                response += f"🎯 **Attractions**: Found {len(attraction_result.attractions)} local attractions\n"
+        
+        response += f"\n📅 **Check your calendar** to see the complete {duration}-day schedule with times, locations, and details!\n"
+        response += f"💡 You can chat with me to modify any part of your itinerary."
+        
+        return response
+
+    def _generate_template_based_plan(
+        self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_message: str
+    ) -> AgentResponse:
+        """Generate basic structured plan using template when LLM fails"""
+        try:
+            # Extract information
+            intent_type = intent.get("type") or intent.get("intent_type", "planning")
+            destination = intent.get("destination", {})
+            if isinstance(destination, dict):
+                destination_name = destination.get("primary", "unknown")
+            else:
+                destination_name = str(destination)
+            
+            tool_results = execution_result.get("results", {})
+            
+            # Create basic structured plan
+            structured_plan = {
+                "destination": destination_name,
+                "duration": 3,  # Default 3-day plan
+                "start_date": "2024-07-01",
+                "end_date": "2024-07-03",
+                "travelers": 2,
+                "budget_estimate": {"currency": "USD", "amount": 1500},
+                "metadata": {
+                    "generated_method": "template_fallback",
+                    "travel_style": "moderate"
+                }
+            }
+            
+            # Generate basic events from tool results
+            plan_events = []
+            event_id_counter = 1
+            
+            # Add flight events if available
+            if "flight_search" in tool_results:
+                flight_data = tool_results["flight_search"]
+                if isinstance(flight_data, dict) and flight_data.get("flights"):
+                    plan_events.append({
+                        "id": f"flight_{event_id_counter}",
+                        "title": f"Flight to {destination_name}",
+                        "description": "Outbound flight based on search results",
+                        "event_type": "flight",
+                        "start_time": "2024-07-01T08:00:00+00:00",
+                        "end_time": "2024-07-01T12:00:00+00:00",
+                        "location": f"Airport → {destination_name}",
+                        "details": {"source": "flight_search", "tool_data": flight_data}
+                    })
+                    event_id_counter += 1
+            
+            # ✅ Hotel events are now handled by plan_manager.py for consistency
+            # Removed duplicate hotel creation logic to avoid conflicts
+            
+            # Add attraction events if available
+            if "attraction_search" in tool_results:
+                attraction_data = tool_results["attraction_search"]
+                if isinstance(attraction_data, dict) and attraction_data.get("attractions"):
+                    attractions = attraction_data.get("attractions", [])[:3]  # Take first 3
+                    for i, attraction in enumerate(attractions):
+                        plan_events.append({
+                            "id": f"attraction_{event_id_counter}",
+                            "title": f"Visit {attraction.get('name', 'Attraction')}",
+                            "description": attraction.get("description", "Explore local attraction"),
+                            "event_type": "attraction",
+                            "start_time": f"2024-07-0{2+i//2}T{9+i*3}:00:00+00:00",
+                            "end_time": f"2024-07-0{2+i//2}T{12+i*3}:00:00+00:00",
+                            "location": attraction.get("location", destination_name),
+                            "details": {"source": "attraction_search", "attraction_data": attraction}
+                        })
+                        event_id_counter += 1
+            
+            # Generate natural response
+            natural_response = f"Here's a structured travel plan for {destination_name}! "
+            if plan_events:
+                natural_response += f"I've created a {structured_plan['duration']}-day itinerary with {len(plan_events)} planned activities including "
+                event_types = list(set([event["event_type"] for event in plan_events]))
+                natural_response += ", ".join(event_types) + ". "
+            natural_response += "This plan is based on your travel preferences and the available options I found. You can modify any part of this itinerary to better suit your needs!"
+            
+            # Create response
+            response = AgentResponse(
+                success=True,
+                content=natural_response,
+                actions_taken=execution_result.get("actions", []),
+                next_steps=execution_result.get("next_steps", []),
+                confidence=0.78,
+                structured_plan=structured_plan,
+                plan_events=plan_events,
+                metadata={
+                    **execution_result,
+                    "intent": intent,
+                    "response_type": "structured_plan",
+                    "plan_generation_method": "template_based",
+                    "destination": destination_name,
+                    "intent_type": intent_type,
+                    "plan_events_count": len(plan_events)
+                }
+            )
+            
+            logger.info(f"Template-based plan generated: {len(plan_events)} events for {destination_name}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to generate template-based plan: {e}")
+            # Ultimate fallback to basic response
+            return AgentResponse(
+                success=False,
+                content=f"I encountered an issue creating a detailed plan for {destination_name}. Please try rephrasing your request or provide more specific details about your travel preferences.",
+                confidence=0.4,
+                metadata={"error": str(e), "response_method": "plan_generation_fallback"}
             )
 
     def _build_structured_content(
@@ -4357,16 +4579,16 @@ This will help me provide you with the most relevant travel guidance possible.""
             for i, hotel in enumerate(hotels[:5], 1):  # Top 5
                 # Handle both Pydantic models and dictionaries
                 if hasattr(hotel, 'name'):
-                    # Pydantic model
+                    # Pydantic model - Only access price_per_night, never 'price' for hotels
                     name = getattr(hotel, 'name', 'Unknown Hotel')
                     price = getattr(hotel, 'price_per_night', 'Price available')
                     rating = getattr(hotel, 'rating', 'No rating')
                     location = getattr(hotel, 'location', destination)
                     currency = getattr(hotel, 'currency', '')
                 else:
-                    # Dictionary
+                    # Dictionary - Only access price_per_night for hotels, removed fallback to 'price'
                     name = hotel.get("name", "Unknown Hotel")
-                    price = hotel.get("price_per_night", hotel.get("price", "Price available"))
+                    price = hotel.get("price_per_night", "Price available")  # Removed price fallback to avoid confusion
                     rating = hotel.get("rating", "No rating")
                     location = hotel.get("location", destination)
                     currency = hotel.get("currency", "")
@@ -4838,41 +5060,17 @@ This will help me provide you with the most relevant travel guidance possible.""
         plan_gaps = plan_context.get("gaps_identified", [])
         last_updated = plan_context.get("last_updated", "Unknown")
         
-        prompt = f"""You are a travel planning assistant with access to an existing travel plan. Generate a helpful response that considers both the current plan and new information.
-
-EXISTING TRAVEL PLAN CONTEXT:
-Current plan events: {existing_events}
-Identified gaps: {', '.join(plan_gaps) if plan_gaps else 'None'}
-Last updated: {last_updated}
-
-USER REQUEST: {user_message}
-
-TRAVEL INTENT ANALYSIS:
-{formatted_intent}
-
-NEW INFORMATION FROM TOOLS:
-{formatted_tools}
-
-KNOWLEDGE BASE INSIGHTS:
-{formatted_knowledge}
-
-INSTRUCTIONS:
-1. Acknowledge the user's existing plan when relevant
-2. Identify any conflicts with existing events and suggest resolutions
-3. Fill gaps in the current plan based on user's request
-4. Suggest specific updates or additions to improve the plan
-5. Maintain travel plan continuity and logical flow
-6. Be specific about timing, locations, and practical details
-7. If suggesting changes, explain why they improve the overall plan
-
-RESPONSE REQUIREMENTS:
-- Start by acknowledging relevant existing plan elements
-- Integrate new findings with current plan
-- Suggest specific, actionable updates
-- Maintain helpful, travel-focused tone
-- Provide practical, implementable advice
-
-Generate a comprehensive response that helps the user optimize their travel plan:"""
+        # Use centralized prompt template
+        prompt = prompt_manager.get_prompt(
+            PromptType.INFORMATION_FUSION,
+            user_message=user_message,
+            existing_events=existing_events,
+            plan_gaps=', '.join(plan_gaps) if plan_gaps else 'None',
+            last_updated=last_updated,
+            formatted_intent=formatted_intent,
+            formatted_tools=formatted_tools,
+            formatted_knowledge=formatted_knowledge
+        )
         
         return prompt
 

@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, Plane, Hotel, Camera, Star } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, Plane, Hotel, Camera, Star, Loader2 } from 'lucide-react';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addDays, startOfDay, addHours } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import { useTravelPlans } from '../../hooks/useApi';
+import { useTravelPlans, usePlanGenerationStatus } from '../../hooks/useApi';
 import type { TravelPlan, SessionTravelPlan } from '../../types/api';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -29,20 +29,150 @@ const EventComponent = ({ event }: { event: any }) => {
       case 'flight': return <Plane className="w-3 h-3" />;
       case 'hotel': return <Hotel className="w-3 h-3" />;
       case 'attraction': return <Camera className="w-3 h-3" />;
+      case 'restaurant':
+      case 'meal': return <Star className="w-3 h-3" />; // Star icon for food-related events
+      case 'transportation': return <Plane className="w-3 h-3" />; // Reuse plane for transport
+      case 'activity': return <Camera className="w-3 h-3" />; // Similar to attractions
+      case 'meeting': return <Clock className="w-3 h-3" />;
+      case 'free_time': return <Clock className="w-3 h-3" />;
       default: return <MapPin className="w-3 h-3" />;
     }
   };
 
+  // ✅ Enhanced flight event display with airline and flight details
+  const renderFlightDetails = () => {
+    const details = event.resource?.details || {};
+    const airline = details.airline || 'TBA';
+    const flightNumber = details.flight_number || '';
+    const price = details.price?.amount || 'TBA';
+    const currency = details.price?.currency || 'USD';
+    const durationMinutes = details.duration_minutes || null;
+    
+    // Extract route from location or title
+    const route = event.location || '';
+    
+    // Build compact flight info
+    const parts = [];
+    
+    // Add airline and flight number
+    if (airline !== 'TBA' && flightNumber && flightNumber !== 'TBA') {
+      parts.push(`${airline} ${flightNumber}`);
+    } else if (airline !== 'TBA') {
+      parts.push(airline);
+    }
+    
+    // Add route if available
+    if (route) {
+      parts.push(route);
+    }
+    
+    // Add duration if available
+    if (durationMinutes && durationMinutes > 0) {
+      const hours = Math.floor(durationMinutes / 60);
+      const minutes = durationMinutes % 60;
+      if (hours > 0 && minutes > 0) {
+        parts.push(`${hours}h${minutes}m`);
+      } else if (hours > 0) {
+        parts.push(`${hours}h`);
+      } else if (minutes > 0) {
+        parts.push(`${minutes}m`);
+      }
+    }
+    
+    // Add price if available
+    if (price !== 'TBA' && price !== undefined && price !== null) {
+      parts.push(`${price} ${currency}`);
+    }
+    
+    return parts.length > 0 ? parts.join(' • ') : event.title;
+  };
+
+  // ✅ Enhanced hotel event display
+  const renderHotelDetails = () => {
+    const details = event.resource?.details || {};
+    const rating = details.rating;
+    const nights = details.nights;
+    const pricePerNight = details.price_per_night?.amount;
+    const currency = details.price_per_night?.currency || 'USD';
+    
+    const parts = [event.title];
+    
+    if (rating) {
+      parts.push(`★${rating}`);
+    }
+    
+    if (nights) {
+      parts.push(`${nights}n`);
+    }
+    
+    if (pricePerNight) {
+      parts.push(`${pricePerNight}${currency}/n`);
+    }
+    
+    return parts.join(' • ');
+  };
+
+  // ✅ Smart display title based on event type
+  const getDisplayContent = () => {
+    const isAllDay = event.allDay;
+    
+    if (event.type === 'flight') {
+      const flightInfo = renderFlightDetails();
+      return isAllDay ? `All Day - ${flightInfo}` : flightInfo;
+    }
+    
+    if (event.type === 'hotel') {
+      const hotelInfo = renderHotelDetails();
+      return isAllDay ? `All Day - ${hotelInfo}` : hotelInfo;
+    }
+    
+    // Default display for other event types
+    const defaultTitle = event.title;
+    return isAllDay ? `All Day - ${defaultTitle}` : defaultTitle;
+  };
+
   return (
-    <div className="flex items-center gap-1 text-xs">
+    <div className="flex items-center gap-1 text-xs leading-tight">
       {getEventIcon(event.type)}
-      <span className="truncate">{event.title}</span>
+      <span className="flex-1 whitespace-normal break-words text-wrap leading-tight">
+        {getDisplayContent()}
+      </span>
     </div>
   );
 };
 
+// Utility function for safe datetime parsing
+const parseDateTime = (dateString: string): Date => {
+  // Standardize datetime format handling
+  let normalizedDate = dateString;
+  
+  // If space-separated format, convert to standard ISO format
+  if (dateString.includes(' ') && !dateString.includes('T')) {
+    normalizedDate = dateString.replace(' ', 'T');
+  }
+  
+  // Ensure timezone information is present
+  if (!normalizedDate.includes('+') && !normalizedDate.includes('Z')) {
+    normalizedDate += '+00:00';
+  }
+  
+  const date = new Date(normalizedDate);
+  
+  // Validate date validity
+  if (isNaN(date.getTime())) {
+    console.error('Invalid date format:', dateString, 'using current time as fallback');
+    return new Date(); // Return current time as fallback
+  }
+  
+  return date;
+};
+
 export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => {
   const { data: travelPlans, isLoading } = useTravelPlans(sessionId);
+  
+  // Only check plan status if we don't have travel plans yet and aren't currently loading
+  const shouldCheckPlanStatus = !isLoading && (!travelPlans || !travelPlans.events || travelPlans.events.length === 0);
+  const { data: planStatus } = usePlanGenerationStatus(shouldCheckPlanStatus ? sessionId : null);
 
   // Add custom styles for hover effects
   const customStyles = `
@@ -70,17 +200,124 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
       background-color: #4b5563 !important; /* darker gray for default */
     }
     
-    /* Disable click/selection styling */
-    .rbc-calendar .rbc-event.rbc-selected {
+    /* ✅ Ultra-strong override for all selection states */
+    .rbc-calendar .rbc-event.rbc-selected,
+    .rbc-calendar .rbc-event.rbc-selected:hover,
+    .rbc-calendar .rbc-event.rbc-selected:focus,
+    .rbc-calendar .rbc-event.rbc-selected:active {
       background-color: inherit !important;
+      color: white !important;
       border: inherit !important;
       outline: none !important;
       box-shadow: none !important;
+      opacity: 1 !important;
+      filter: none !important;
     }
     
     .rbc-calendar .rbc-event:focus {
       outline: none !important;
       box-shadow: none !important;
+      opacity: 1 !important;
+      color: white !important;
+    }
+    
+    /* ✅ Specific override for travel calendar events */
+    .rbc-calendar .rbc-event.travel-calendar-event.rbc-selected,
+    .rbc-calendar .rbc-event.travel-calendar-event.rbc-selected:hover,
+    .rbc-calendar .rbc-event.travel-calendar-event.rbc-selected:focus,
+    .rbc-calendar .rbc-event.travel-calendar-event.rbc-selected:active {
+      background-color: inherit !important;
+      color: white !important;
+      border: inherit !important;
+      border-radius: inherit !important;
+      opacity: 1 !important;
+      filter: none !important;
+    }
+    
+    /* ✅ Override any potential inline styles from react-big-calendar */
+    .rbc-calendar .rbc-event[style] {
+      opacity: 1 !important;
+    }
+    
+    .rbc-calendar .rbc-event.rbc-selected[style] {
+      opacity: 1 !important;
+      filter: none !important;
+    }
+    
+    /* ✅ Disable any selection overlay effects */
+    .rbc-calendar .rbc-selected-overlay {
+      display: none !important;
+    }
+    
+    /* ✅ Ensure active/clicked states don't change appearance */
+    .rbc-calendar .rbc-event:active,
+    .rbc-calendar .rbc-event:active:focus {
+      background-color: inherit !important;
+      color: white !important;
+      border: inherit !important;
+      outline: none !important;
+      box-shadow: none !important;
+      opacity: 1 !important;
+      filter: none !important;
+    }
+    
+    /* ✅ Fix event title wrapping and overlapping layout */
+    .rbc-calendar .rbc-event {
+      white-space: normal !important; /* Allow text wrapping */
+      word-wrap: break-word !important;
+      overflow: visible !important;
+      line-height: 1.2 !important;
+      min-height: 20px !important;
+      text-overflow: clip !important; /* Remove ellipsis */
+    }
+    
+    .rbc-calendar .rbc-event-content {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      word-break: break-word !important;
+      line-height: 1.2 !important;
+    }
+    
+    /* ✅ Improve overlapping events layout */
+    .rbc-calendar .rbc-row-segment {
+      z-index: auto !important;
+    }
+    
+    .rbc-calendar .rbc-events-container {
+      margin-right: 0 !important;
+    }
+    
+    /* ✅ Better spacing for concurrent events */
+    .rbc-calendar .rbc-event + .rbc-event {
+      margin-left: 1px !important;
+    }
+    
+    /* ✅ All-day events styling - applies to all event types */
+    .rbc-calendar .rbc-allday-cell {
+      min-height: 40px !important;
+    }
+    
+    .rbc-calendar .rbc-event.rbc-all-day-event {
+      margin-bottom: 2px !important;
+      border-radius: 4px !important;
+      font-size: 12px !important;
+      padding: 4px 6px !important;
+      min-height: 24px !important;
+    }
+    
+    /* ✅ Ensure proper stacking of multiple all-day events */
+    .rbc-calendar .rbc-row-segment.rbc-all-day-event {
+      margin-bottom: 1px !important;
+    }
+    
+    /* ✅ All-day event container */
+    .rbc-calendar .rbc-row-content {
+      overflow: visible !important;
+    }
+    
+    .rbc-calendar .rbc-addons-dnd .rbc-addons-dnd-row-body {
+      overflow: visible !important;
     }
   `;
 
@@ -108,8 +345,8 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             const startField = (event as any).start_time || (event as any).start;
             const endField = (event as any).end_time || (event as any).end;
             
-            const startDate = new Date(startField);
-            const endDate = new Date(endField);
+            const startDate = parseDateTime(startField);
+            const endDate = parseDateTime(endField);
             
             // Validate that dates are valid
             if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
@@ -122,15 +359,53 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               return null;
             }
             
+            // Determine if this should be an all-day event
+            const eventType = (event as any).event_type || (event as any).type;
+            
+            // Check multiple conditions for all-day events
+            const isAllDayEvent = 
+              // Hotel/accommodation events
+              eventType === 'hotel' || 
+              eventType === 'accommodation' ||
+              (event.title && event.title.toLowerCase().includes('hotel')) ||
+              
+              // Meal/food budget events (typically all-day)
+              eventType === 'meal' ||
+              eventType === 'food' ||
+              eventType === 'budget' ||
+              (event.title && (
+                event.title.toLowerCase().includes('budget') ||
+                event.title.toLowerCase().includes('food') ||
+                event.title.toLowerCase().includes('meal') ||
+                event.title.toLowerCase().includes('dining')
+              )) ||
+              
+              // Transportation (some may be all-day like train passes)
+              (eventType === 'transportation' && 
+               event.title && (
+                 event.title.toLowerCase().includes('pass') ||
+                 event.title.toLowerCase().includes('card') ||
+                 event.title.toLowerCase().includes('metro')
+               )) ||
+              
+              // General all-day activities
+              eventType === 'all_day' ||
+              eventType === 'full_day' ||
+              
+              // Events explicitly marked as all-day in backend
+              (event as any).all_day === true ||
+              (event as any).allDay === true;
+
             return {
               id: event.id,
               title: event.title,
               start: startDate,
               end: endDate,
-              type: (event as any).event_type || (event as any).type,
+              type: eventType,
               location: event.location,
               description: event.description,
-              resource: event
+              resource: event,
+              allDay: isAllDayEvent // ✅ Mark hotel events as all-day
             };
           } catch (error) {
             console.warn('Error processing event dates:', event, error);
@@ -149,8 +424,8 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
       plansArray.forEach((plan: TravelPlan) => {
         // Add flights
         plan.flights?.forEach((flight: any, index: number) => {
-          const departureTime = new Date(flight.departure_time);
-          const arrivalTime = new Date(flight.arrival_time);
+          const departureTime = parseDateTime(flight.departure_time);
+          const arrivalTime = parseDateTime(flight.arrival_time);
           
           events.push({
             id: `flight-${plan.id}-${index}`,
@@ -163,21 +438,41 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
           });
         });
 
-        // Add hotels (assume check-in at 3 PM, check-out at 11 AM)
+        // Add hotels as all-day events
         plan.hotels?.forEach((hotel: any, index: number) => {
-          const checkIn = addHours(startOfDay(today), 15); // 3 PM
-          const checkOut = addHours(startOfDay(addDays(today, 1)), 11); // 11 AM next day
+          const checkInDate = startOfDay(today);
+          const checkOutDate = startOfDay(addDays(today, 1));
           
           events.push({
             id: `hotel-${plan.id}-${index}`,
             title: hotel.name,
-            start: checkIn,
-            end: checkOut,
+            start: checkInDate,
+            end: checkOutDate,
             type: 'hotel',
             location: hotel.location,
             description: `$${hotel.price_per_night}/night`,
+            allDay: true // ✅ Mark as all-day event
           });
         });
+
+        // Add meals/food budget as all-day events if they exist
+        const planWithMeals = plan as any;
+        if (planWithMeals.meals) {
+          planWithMeals.meals.forEach((meal: any, index: number) => {
+            const mealDate = startOfDay(today);
+            
+            events.push({
+              id: `meal-${plan.id}-${index}`,
+              title: meal.name || `Budget for Food`,
+              start: mealDate,
+              end: mealDate,
+              type: 'meal',
+              location: meal.location || planWithMeals.destination || 'Unknown',
+              description: meal.description || `Daily food budget`,
+              allDay: true // ✅ Mark meal budgets as all-day events
+            });
+          });
+        }
 
         // Add attractions (assume 2-hour visits starting at various times)
         plan.attractions?.forEach((attraction: any, index: number) => {
@@ -201,50 +496,90 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     return [];
   }, [travelPlans]);
 
-  // Custom event style getter
-  const eventStyleGetter = (event: any) => {
+  // Custom event style getter with forced selection state handling
+  const eventStyleGetter = (event: any, _start: Date, _end: Date, _isSelected: boolean) => {
     let backgroundColor = '#3174ad';
     let color = 'white';
-    let hoverColor; // Default hover color (gray-700)
 
     switch (event.type) {
       case 'flight':
         backgroundColor = '#2563eb'; // blue
-        hoverColor = '#1d4ed8'; // darker blue on hover
         break;
       case 'hotel':
         backgroundColor = '#16a34a'; // green
-        hoverColor = '#15803d'; // darker green on hover
         break;
       case 'attraction':
         backgroundColor = '#9333ea'; // purple
-        hoverColor = '#7c3aed'; // darker purple on hover
         break;
       case 'restaurant':
-        backgroundColor = '#ea580c'; // orange
-        hoverColor = '#dc2626'; // red on hover
+      case 'meal':
+        backgroundColor = '#ea580c'; // orange for food-related events
+        break;
+      case 'transportation':
+        backgroundColor = '#0ea5e9'; // sky blue
+        break;
+      case 'activity':
+        backgroundColor = '#8b5cf6'; // violet
+        break;
+      case 'meeting':
+        backgroundColor = '#ef4444'; // red
+        break;
+      case 'free_time':
+        backgroundColor = '#10b981'; // emerald
         break;
       default:
         backgroundColor = '#6b7280'; // gray
-        hoverColor = '#4b5563'; // darker gray on hover
     }
 
-    return {
-      style: {
-        backgroundColor,
-        color,
-        border: 'none',
-        borderRadius: '4px',
-        fontSize: '12px',
-        padding: '2px 4px',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s ease',
-        // Override react-big-calendar's default selection styling
-        outline: 'none !important',
-        boxShadow: 'none !important'
-      },
-      className: 'travel-calendar-event'
+    // ✅ Force same styling regardless of selection state
+    const baseStyle = {
+      backgroundColor: backgroundColor, // ✅ Force original color even when selected
+      color: color, // ✅ Force white text even when selected
+      border: 'none',
+      borderRadius: '4px',
+      fontSize: '12px',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s ease',
+      outline: 'none',
+      boxShadow: 'none',
+      whiteSpace: 'normal' as 'normal',
+      wordBreak: 'break-word' as 'break-word',
+      lineHeight: '1.2',
+      overflow: 'visible' as 'visible',
+      textOverflow: 'clip' as 'clip',
+      // ✅ Force these properties to override any selection styling
+      opacity: '1',
+      filter: 'none'
     };
+
+    if (event.allDay) {
+      // All-day event styling (applies to all event types marked as all-day)
+      return {
+        style: {
+          ...baseStyle,
+          padding: '4px 8px',
+          minHeight: '24px',
+          fontWeight: '500',
+          // Slightly different styling for all-day events
+          borderLeft: `4px solid ${backgroundColor}`,
+          backgroundColor: `${backgroundColor}f0`, // Add transparency
+          color: color, // ✅ Ensure text stays white
+        },
+        className: 'travel-calendar-event rbc-all-day-event'
+      };
+    } else {
+      // Regular timed event styling
+      return {
+        style: {
+          ...baseStyle,
+          padding: '2px 4px',
+          minHeight: '20px',
+          backgroundColor: backgroundColor, // ✅ Force background color
+          color: color, // ✅ Force text color
+        },
+        className: 'travel-calendar-event'
+      };
+    }
   };
 
   if (!sessionId) {
@@ -259,6 +594,10 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
     );
   }
 
+  // Check if plan is being generated
+  const isPlanGenerating = planStatus?.plan_generation_status === 'pending';
+  const planGenerationFailed = planStatus?.plan_generation_status === 'failed';
+
   return (
     <div className="w-[1000px] bg-white border-l border-gray-200 flex flex-col h-full">
       <style>{customStyles}</style>
@@ -267,6 +606,9 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
       <div className="flex-shrink-0 p-4 border-b border-gray-200">
         <div className="flex items-center gap-2 mb-3">
           <CalendarIcon className="w-5 h-5 text-blue-600" />
+          {isPlanGenerating && (
+            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+          )}
           <h2 className="font-semibold text-gray-900">Travel Schedule</h2>
         </div>
         
@@ -276,7 +618,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         
         {/* Legend */}
         <div className="mt-3 space-y-1">
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-blue-600 rounded"></div>
               <span>Flights</span>
@@ -288,6 +630,18 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-purple-600 rounded"></div>
               <span>Attractions</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-orange-600 rounded"></div>
+              <span>Meals</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-sky-500 rounded"></div>
+              <span>Transport</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-violet-500 rounded"></div>
+              <span>Activities</span>
             </div>
           </div>
         </div>
@@ -305,11 +659,31 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
         ) : calendarEvents.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500 p-6">
-              <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <h3 className="font-medium mb-2">No Plans Yet</h3>
-              <p className="text-sm">
-                Start chatting to create your travel itinerary
-              </p>
+              {isPlanGenerating ? (
+                <>
+                  <Loader2 className="w-12 h-12 mx-auto mb-4 opacity-50 animate-spin" />
+                  <h3 className="font-medium mb-2">Generating Travel Plan</h3>
+                  <p className="text-sm">
+                    Creating your itinerary based on the conversation...
+                  </p>
+                </>
+              ) : planGenerationFailed ? (
+                <>
+                  <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2 text-red-600">Plan Generation Failed</h3>
+                  <p className="text-sm">
+                    {planStatus?.plan_generation_error || 'Failed to generate travel plan'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2">No Plans Yet</h3>
+                  <p className="text-sm">
+                    Start chatting to create your travel itinerary
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : (
@@ -330,7 +704,13 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               eventPropGetter={eventStyleGetter}
               popup
               popupOffset={{ x: 30, y: 20 }}
-              onSelectEvent={() => {}} // Disable click selection
+              onSelectEvent={() => {
+                // ✅ Immediately clear any selection to prevent styling changes
+                return false;
+              }}
+              selectable={false} // ✅ Completely disable selection
+              onSelectSlot={() => {}} // ✅ Disable slot selection
+              selected={[]} // ✅ Force empty selection array
             />
           </div>
         )}

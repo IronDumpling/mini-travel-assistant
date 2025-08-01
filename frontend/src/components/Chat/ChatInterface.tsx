@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useChatHistory, useSendMessage } from '../../hooks/useApi';
 import type { ChatMessage as ChatMessageType } from '../../types/api';
 
@@ -120,6 +122,41 @@ const ChatMessage: React.FC<MessageProps> = ({
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Thinking...</span>
             </div>
+          ) : role === 'assistant' ? (
+            <div className="text-gray-800">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Custom styling for markdown elements
+                  h1: ({node, ...props}: any) => <h1 className="text-xl font-bold mb-3 text-gray-900" {...props} />,
+                  h2: ({node, ...props}: any) => <h2 className="text-lg font-semibold mb-2 text-gray-900" {...props} />,
+                  h3: ({node, ...props}: any) => <h3 className="text-md font-semibold mb-2 text-gray-800" {...props} />,
+                  h4: ({node, ...props}: any) => <h4 className="text-sm font-semibold mb-1 text-gray-800" {...props} />,
+                  p: ({node, ...props}: any) => <p className="mb-2 leading-relaxed" {...props} />,
+                  ul: ({node, ...props}: any) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
+                  ol: ({node, ...props}: any) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
+                  li: ({node, ...props}: any) => <li className="text-gray-800" {...props} />,
+                  strong: ({node, ...props}: any) => <strong className="font-semibold text-gray-900" {...props} />,
+                  em: ({node, ...props}: any) => <em className="italic" {...props} />,
+                  code: ({node, inline, ...props}: any) => 
+                    inline ? (
+                      <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800" {...props} />
+                    ) : (
+                      <code className="block bg-gray-100 p-2 rounded text-sm font-mono text-gray-800 overflow-x-auto" {...props} />
+                    ),
+                  pre: ({node, ...props}: any) => <pre className="bg-gray-100 p-3 rounded mb-2 overflow-x-auto" {...props} />,
+                  blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-blue-200 pl-4 italic text-gray-700 mb-2" {...props} />,
+                  hr: ({node, ...props}: any) => <hr className="my-4 border-gray-300" {...props} />,
+                  a: ({node, ...props}: any) => <a className="text-blue-600 hover:text-blue-800 underline" {...props} />,
+                  table: ({node, ...props}: any) => <table className="w-full border-collapse border border-gray-300 mb-2" {...props} />,
+                  thead: ({node, ...props}: any) => <thead className="bg-gray-50" {...props} />,
+                  th: ({node, ...props}: any) => <th className="border border-gray-300 px-2 py-1 text-left font-semibold" {...props} />,
+                  td: ({node, ...props}: any) => <td className="border border-gray-300 px-2 py-1" {...props} />,
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            </div>
           ) : (
             <div className="whitespace-pre-wrap text-gray-800">{content}</div>
           )}
@@ -173,6 +210,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [showDetailedProgress, setShowDetailedProgress] = useState(false);
+  const [enableRefinement, setEnableRefinement] = useState(false); // 默认关闭 refinement loop
+  const [currentTime, setCurrentTime] = useState(Date.now()); // 用于实时更新计时器
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { data: chatHistory, isLoading: historyLoading } = useChatHistory(sessionId);
@@ -185,6 +224,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   useEffect(() => {
     scrollToBottom();
   }, [chatHistory, isTyping]);
+
+  // ✅ 实时更新计时器
+  useEffect(() => {
+    if (!processingStartTime || !sendMessageMutation.isPending) return;
+
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [processingStartTime, sendMessageMutation.isPending]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,7 +255,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
       const chatMessage: ChatMessageType = {
         message: userMessage,
         session_id: sessionId,
-        enable_refinement: true,
+        enable_refinement: enableRefinement,
       };
 
       await sendMessageMutation.mutateAsync(chatMessage);
@@ -216,6 +266,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
       setIsTyping(false);
       setProcessingStartTime(null);
       setShowDetailedProgress(false);
+      setCurrentTime(Date.now()); // ✅ 重置计时器
     }
   };
 
@@ -249,7 +300,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
             <div className="flex items-center gap-1 text-blue-600">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="text-sm">
-                {showDetailedProgress ? `Processing (${Math.floor((Date.now() - (processingStartTime || Date.now())) / 1000)}s)` : 'Processing...'}
+                {processingStartTime ? `Processing (${Math.floor((currentTime - processingStartTime) / 1000)}s)` : 'Processing...'}
               </span>
             </div>
           )}
@@ -341,7 +392,28 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
           </div>
         </form>
         
-        {sendMessageMutation.isPending && !isTyping && processingStartTime && (Date.now() - processingStartTime) > 200000 && (
+        {/* Refinement Loop Option */}
+        <div className="mt-2 flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enableRefinement}
+              onChange={(e) => setEnableRefinement(e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              disabled={sendMessageMutation.isPending}
+            />
+            <span className="select-none">
+              Enable AI Refinement Loop
+            </span>
+          </label>
+          {enableRefinement && (
+            <div className="text-xs text-gray-500">
+              ✨ AI will refine responses for higher quality (slower)
+            </div>
+          )}
+        </div>
+        
+        {sendMessageMutation.isPending && !isTyping && processingStartTime && (currentTime - processingStartTime) > 200000 && (
           <div className="mt-2 flex items-center gap-2 text-orange-600 text-sm">
             <AlertCircle className="w-4 h-4" />
             <span>The AI is taking longer than usual. Your request is still being processed...</span>

@@ -93,6 +93,17 @@ export class ApiService {
     }
   }
 
+  static async getPlanGenerationStatus(sessionId: string): Promise<{
+    session_id: string;
+    plan_generation_status: string;
+    plan_generation_error?: string;
+    plan_update_result?: any;
+    last_updated?: string;
+  }> {
+    const response = await api.get(`/chat/plan-status/${sessionId}`);
+    return response.data;
+  }
+
   // System Health
   static async getSystemHealth(): Promise<any> {
     const response = await api.get('/system/status');

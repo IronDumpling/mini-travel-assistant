@@ -6,7 +6,8 @@ Integrated with Amadeus API for real flight search functionality
 """
 
 import os
-from typing import List, Optional, Dict, Any
+import asyncio
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, timedelta
 import aiohttp
 from pydantic import BaseModel, Field
@@ -27,11 +28,15 @@ class Flight(BaseModel):
     origin: Optional[str] = None
     destination: Optional[str] = None
     return_date: Optional[datetime] = None
+    # For multi-destination search tracking
+    search_destination: Optional[str] = None
+    # For storing additional flight details and metadata
+    details: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class FlightSearchInput(ToolInput):
     """Flight search input"""
     origin: str = Field(description="IATA code or city of departure")
-    destination: Optional[str] = Field(default=None, description="IATA code or city of arrival (optional for inspiration search)")
+    destination: Optional[Union[str, List[str]]] = Field(default=None, description="IATA code/city of arrival or list of destinations for multi-destination search")
     start_date: Optional[datetime] = Field(default=None, description="Departure date (YYYY-MM-DD)")
     end_date: Optional[datetime] = Field(default=None, description="Return date (YYYY-MM-DD), if round trip")
     passengers: int = Field(default=1, description="Number of passengers")
@@ -39,6 +44,7 @@ class FlightSearchInput(ToolInput):
     max_price: Optional[float] = Field(default=None, description="Maximum price filter")
     preferred_airlines: List[str] = Field(default_factory=list, description="Preferred airlines (IATA codes)")
     inspiration_search: bool = Field(default=False, description="If true, use the Flight Inspiration Search API")
+    flight_chain: bool = Field(default=False, description="If true, search flight chain: origin → dest1 → dest2 → ... → origin")
 
 class FlightSearchOutput(ToolOutput):
     """Flight search output"""
@@ -53,7 +59,7 @@ class FlightSearchTool(BaseTool):
             description="Search for available flight information using Amadeus API with multiple filtering conditions",
             category="transportation",
             tags=["flight", "ticket", "search", "travel", "amadeus"],
-            timeout=30
+            timeout=60  # Increased to 60 seconds for multi-destination searches
         )
         super().__init__(metadata)
         
@@ -95,13 +101,19 @@ class FlightSearchTool(BaseTool):
     async def _execute(self, input_data: FlightSearchInput, context: ToolExecutionContext) -> FlightSearchOutput:
         """Execute flight search using Amadeus API or Inspiration Search API"""
         try:
-            # Validate input parameters
+            # ✅ Enhanced: Support multiple destinations by iterating through list
+            if isinstance(input_data.destination, list):
+                return await self._execute_multi_destination_search(input_data, context)
+            
+            # Handle origin as list (take first item as primary origin)
+            if isinstance(input_data.origin, list):
+                input_data.origin = input_data.origin[0] if input_data.origin else "YYZ"
+                logger.warning(f"Flight search received origin as list, using first item: {input_data.origin}")
+            
+            # Set default origin to Toronto (YYZ) if not provided or invalid
             if not input_data.origin or input_data.origin.lower() in ['unknown', '']:
-                return FlightSearchOutput(
-                    success=False,
-                    error="Invalid origin: origin is required and cannot be 'unknown'",
-                    flights=[]
-                )
+                input_data.origin = "YYZ"
+                logger.info(f"No valid origin provided, using default departure location: Toronto (YYZ)")
             
             if not input_data.inspiration_search and (not input_data.destination or input_data.destination.lower() in ['unknown', '']):
                 return FlightSearchOutput(
@@ -109,6 +121,16 @@ class FlightSearchTool(BaseTool):
                     error="Invalid destination: destination is required for flight offers search and cannot be 'unknown'",
                     flights=[]
                 )
+            
+            # Check for O/D overlap - origin and destination cannot be the same
+            if not input_data.inspiration_search and input_data.origin and input_data.destination:
+                if input_data.origin.upper() == input_data.destination.upper():
+                    logger.warning(f"⚠️ Origin and destination are the same ('{input_data.origin}') - O/D overlap detected")
+                    return FlightSearchOutput(
+                        success=False,
+                        error=f"Invalid flight search: origin and destination cannot be the same ('{input_data.origin}')",
+                        flights=[]
+                    )
             
             # Validate that origin and destination are 3-letter codes or valid city names
             if len(input_data.origin) != 3 or not input_data.origin.isalpha():
@@ -148,6 +170,291 @@ class FlightSearchTool(BaseTool):
                 success=False,
                 error=str(e),
                 flights=[]
+            )
+
+    async def _execute_multi_destination_search(
+        self, input_data: FlightSearchInput, context: ToolExecutionContext
+    ) -> FlightSearchOutput:
+        """Execute flight search for multiple destinations - supports both multi-destination and flight chain modes"""
+        
+        destinations = input_data.destination
+        if not destinations:
+            return FlightSearchOutput(
+                success=False,
+                error="No valid destinations provided in list",
+                flights=[]
+            )
+        
+        # Handle origin as list (use first item)
+        if isinstance(input_data.origin, list):
+            origin = input_data.origin[0] if input_data.origin else "YYZ"
+        else:
+            origin = input_data.origin or "YYZ"
+        
+        # ✅ NEW: Check if this is a flight chain search
+        if input_data.flight_chain:
+            logger.info(f"🔗 Executing FLIGHT CHAIN search: {origin} → {' → '.join(destinations)} → {origin}")
+            return await self._execute_flight_chain_search(input_data, context, origin, destinations)
+        else:
+            logger.info(f"🌍 Executing MULTI-DESTINATION search from {origin} to {len(destinations)} destinations: {destinations}")
+            return await self._execute_traditional_multi_destination_search(input_data, context, origin, destinations)
+
+    async def _execute_flight_chain_search(
+        self, input_data: FlightSearchInput, context: ToolExecutionContext, origin: str, destinations: List[str]
+    ) -> FlightSearchOutput:
+        """Execute flight chain search: Origin → A → B → C → ... → Origin"""
+        
+        # Build complete flight chain: [Origin, A, B, C, ..., Origin]
+        flight_chain = [origin] + destinations + [origin]
+        logger.info(f"✈️ Flight chain: {' → '.join(flight_chain)}")
+        
+        all_flights = []
+        successful_routes = []
+        failed_routes = []
+        
+        # Search each consecutive pair in the chain
+        for i in range(len(flight_chain) - 1):
+            route_origin = flight_chain[i]
+            route_destination = flight_chain[i + 1]
+            route_name = f"{route_origin} → {route_destination}"
+            
+            # Skip if origin and destination are the same
+            if route_origin.upper() == route_destination.upper():
+                failed_routes.append(route_name)
+                logger.warning(f"⚠️ Skipping route {route_name} - same origin and destination")
+                continue
+            
+            try:
+                # Create flight search for this route segment
+                route_input = FlightSearchInput(
+                    origin=route_origin,
+                    destination=route_destination,
+                    start_date=input_data.start_date,
+                    end_date=input_data.end_date,
+                    passengers=input_data.passengers,
+                    class_type=input_data.class_type,
+                    max_price=input_data.max_price,
+                    inspiration_search=input_data.inspiration_search,
+                    flight_chain=False  # Prevent recursion
+                )
+                
+                logger.info(f"✈️ Searching route {i+1}/{len(flight_chain)-1}: {route_name}")
+                
+                # Execute search for this route with timeout
+                try:
+                    result = await asyncio.wait_for(
+                        self._execute_single_destination_search(route_input, context),
+                        timeout=15.0  # Reduced timeout per route
+                    )
+                except asyncio.TimeoutError:
+                    failed_routes.append(route_name)
+                    logger.warning(f"⏰ Flight search for route {route_name} timed out after 15 seconds")
+                    continue
+                
+                if result.success and result.flights:
+                    # Tag flights with route information
+                    for flight in result.flights:
+                        flight.search_destination = route_destination
+                        # Add route sequence info to flight details
+                        flight.details.update({
+                            "route_sequence": i + 1,
+                            "total_routes": len(flight_chain) - 1,
+                            "route_name": route_name,
+                            "flight_chain": True
+                        })
+                        logger.debug(f"🏷️ Tagged flight {flight.flight_number} for route {route_name} (sequence {i+1})")
+                    
+                    all_flights.extend(result.flights)
+                    successful_routes.append(route_name)
+                    logger.info(f"✅ Found {len(result.flights)} flights for route {route_name}")
+                else:
+                    failed_routes.append(route_name)
+                    logger.warning(f"⚠️ No flights found for route {route_name}: {result.error}")
+                    
+            except Exception as e:
+                failed_routes.append(route_name)
+                logger.error(f"❌ Error searching flights for route {route_name}: {e}")
+        
+        # Prepare flight chain result
+        total_results = len(all_flights)
+        search_summary = f"Flight chain search: {len(successful_routes)}/{len(flight_chain)-1} routes successful"
+        
+        if failed_routes:
+            search_summary += f" (failed routes: {failed_routes})"
+        
+        if total_results == 0:
+            return FlightSearchOutput(
+                success=False,
+                error=f"No flights found for any route in the flight chain {' → '.join(flight_chain)}",
+                flights=[]
+            )
+        
+        # Sort by route sequence, then by price
+        all_flights.sort(key=lambda x: (
+            x.details.get("route_sequence", 999) if hasattr(x, 'details') and x.details else 999,
+            x.price or float('inf')
+        ))
+        
+        logger.info(f"🎯 Flight chain search completed: {total_results} total flights for {len(successful_routes)} routes")
+        
+        return FlightSearchOutput(
+            success=True,
+            flights=all_flights,
+            data={
+                "search_type": "flight_chain",
+                "flight_chain": flight_chain,
+                "total_routes": len(flight_chain) - 1,
+                "successful_routes": successful_routes,
+                "failed_routes": failed_routes,
+                "results_per_route": {route: len([f for f in all_flights if f.details and f.details.get("route_name") == route]) for route in successful_routes},
+                "search_summary": search_summary,
+                "origin": origin
+            }
+        )
+
+    async def _execute_traditional_multi_destination_search(
+        self, input_data: FlightSearchInput, context: ToolExecutionContext, origin: str, destinations: List[str]
+    ) -> FlightSearchOutput:
+        """Execute traditional multi-destination search: Origin → A, Origin → B, Origin → C"""
+        
+        all_flights = []
+        successful_destinations = []
+        failed_destinations = []
+        
+        # Execute search for each destination with individual timeout handling
+        for destination in destinations:
+            if not destination or destination.lower() in ['unknown', '']:
+                failed_destinations.append(destination or "unknown")
+                continue
+                
+            # Skip if origin and destination are the same
+            if origin.upper() == destination.upper():
+                failed_destinations.append(destination)
+                logger.warning(f"⚠️ Skipping destination {destination} - same as origin {origin}")
+                continue
+                
+            try:
+                # Create a copy of input_data with single destination
+                single_destination_input = FlightSearchInput(
+                    origin=origin,
+                    destination=destination,
+                    start_date=input_data.start_date,
+                    end_date=input_data.end_date,
+                    passengers=input_data.passengers,
+                    class_type=input_data.class_type,
+                    max_price=input_data.max_price,
+                    inspiration_search=input_data.inspiration_search,
+                    flight_chain=False
+                )
+                
+                logger.info(f"✈️ Searching flights from {origin} to {destination}")
+                
+                # Execute single destination search with individual timeout (20 seconds per destination)
+                try:
+                    result = await asyncio.wait_for(
+                        self._execute_single_destination_search(single_destination_input, context),
+                        timeout=20.0
+                    )
+                except asyncio.TimeoutError:
+                    failed_destinations.append(destination)
+                    logger.warning(f"⏰ Flight search to {destination} timed out after 20 seconds, continuing with other destinations")
+                    continue
+                
+                if result.success and result.flights:
+                    # Add destination context to each flight
+                    for flight in result.flights:
+                        flight.search_destination = destination
+                        logger.debug(f"🏷️ Tagged flight {flight.flight_number} with search_destination: {destination}")
+                    all_flights.extend(result.flights)
+                    successful_destinations.append(destination)
+                    logger.info(f"✅ Found {len(result.flights)} flights to {destination}, tagged with search context")
+                else:
+                    failed_destinations.append(destination)
+                    logger.warning(f"⚠️ No flights found to {destination}: {result.error}")
+                    
+            except Exception as e:
+                failed_destinations.append(destination)
+                logger.error(f"❌ Error searching flights to {destination}: {e}")
+        
+        # Prepare result summary
+        total_results = len(all_flights)
+        search_summary = f"Searched flights from {origin} to {len(destinations)} destinations: {successful_destinations}"
+        
+        if failed_destinations:
+            search_summary += f" (failed: {failed_destinations})"
+        
+        if total_results == 0:
+            return FlightSearchOutput(
+                success=False,
+                error=f"No flights found to any of the {len(destinations)} destinations from {origin}",
+                flights=[]
+            )
+        
+        # Sort by price and departure time
+        all_flights.sort(key=lambda x: (x.price or float('inf'), x.departure_time or datetime(1900, 1, 1)))
+        
+        logger.info(f"🎯 Traditional multi-destination flight search completed: {total_results} total flights to {len(successful_destinations)} destinations")
+        
+        return FlightSearchOutput(
+            success=True,
+            flights=all_flights,
+            data={
+                "search_type": "multi_destination",
+                "searched_destinations": len(destinations),
+                "successful_destinations": successful_destinations,
+                "failed_destinations": failed_destinations,
+                "results_per_destination": {dest: len([f for f in all_flights if f.search_destination == dest]) for dest in successful_destinations},
+                "search_summary": search_summary,
+                "origin": origin
+            }
+        )
+
+    async def _execute_single_destination_search(
+        self, input_data: FlightSearchInput, context: ToolExecutionContext
+    ) -> FlightSearchOutput:
+        """Execute flight search for a single destination (extracted from main logic)"""
+        
+        # Check for O/D overlap - origin and destination cannot be the same
+        if not input_data.inspiration_search and input_data.origin and input_data.destination:
+            if input_data.origin.upper() == input_data.destination.upper():
+                logger.warning(f"⚠️ Origin and destination are the same ('{input_data.origin}') - O/D overlap detected")
+                return FlightSearchOutput(
+                    success=False,
+                    error=f"Invalid flight search: origin and destination cannot be the same ('{input_data.origin}')",
+                    flights=[]
+                )
+        
+        # Validate that origin and destination are 3-letter codes or valid city names
+        if input_data.origin and (len(input_data.origin) != 3 or not input_data.origin.isalpha()):
+            logger.warning(f"Origin '{input_data.origin}' may not be a valid IATA code")
+        
+        if input_data.destination and (len(input_data.destination) != 3 or not input_data.destination.isalpha()):
+            logger.warning(f"Destination '{input_data.destination}' may not be a valid IATA code")
+        
+        token = await self._get_access_token()
+        if input_data.inspiration_search:
+            flights = await self._search_flight_destinations(input_data, token)
+            return FlightSearchOutput(
+                success=True,
+                flights=flights,
+                data={
+                    "total_results": len(flights),
+                    "search_type": "inspiration",
+                    "search_parameters": input_data.model_dump(),
+                }
+            )
+        else:
+            flights = await self._search_flights_amadeus(input_data, token)
+            filtered_flights = self._filter_flights(flights, input_data)
+            return FlightSearchOutput(
+                success=True,
+                flights=filtered_flights,
+                data={
+                    "total_results": len(flights),
+                    "filtered_results": len(filtered_flights),
+                    "search_type": "offers",
+                    "search_parameters": input_data.model_dump(),
+                }
             )
 
     async def _search_flights_amadeus(self, input_data: FlightSearchInput, token: str) -> List[Flight]:
