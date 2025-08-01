@@ -81,9 +81,8 @@ class KnowledgeBase:
             # 2. Load knowledge data
             await self._load_knowledge_data()
 
-            # 3. 🔧 FORCE REBUILD RAG INDEX - 强制重新构建索引
-            # 直接强制重建索引以确保数据一致性
-            logger.info("🔄 FORCE REBUILDING RAG INDEX - 强制重新构建索引...")
+            # 3. 🔧 FORCE REBUILD RAG INDEX
+            logger.info("🔄 FORCE REBUILDING RAG INDEX...")
             logger.info("  - This ensures all documents are properly indexed")
             logger.info("  - Previous index will be updated/replaced")
             await self._build_index()

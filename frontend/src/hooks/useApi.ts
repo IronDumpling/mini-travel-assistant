@@ -78,6 +78,10 @@ export const useSendMessage = () => {
         queryClient.invalidateQueries({ 
           queryKey: queryKeys.travelPlans(variables.session_id) 
         });
+        // Invalidate plan status to check for completion
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.planStatus(variables.session_id) 
+        });
       }
     },
   });
@@ -118,17 +122,44 @@ export const useTravelPlans = (sessionId: string | null) => {
 
 // Plan generation status hook
 export const usePlanGenerationStatus = (sessionId: string | null) => {
+  const queryClient = useQueryClient();
+  
   return useQuery({
     queryKey: queryKeys.planStatus(sessionId || ''),
     queryFn: () => sessionId ? ApiService.getPlanGenerationStatus(sessionId) : null,
     enabled: !!sessionId,
     refetchInterval: (query) => {
-      // Stop polling if plan generation is completed or failed
-      if (!query.state.data || !sessionId) return false;
+      // Only poll when plan is actively being generated
+      if (!query.state.data || !sessionId) {
+        console.log('Plan status polling stopped: no data or session');
+        return false;
+      }
+      
       const status = query.state.data.plan_generation_status;
-      return (status === 'pending' || status === 'unknown') ? 2000 : false; // Poll every 2 seconds if pending
+      console.log(`Plan status: ${status}`);
+      
+      // If status changed to 'completed', refresh travel plans
+      if (status === 'completed') {
+        console.log('Plan generation completed, refreshing travel plans');
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.travelPlans(sessionId) 
+        });
+        return false; // Stop polling
+      }
+      
+      // Only poll for 'pending' status, stop for all other states
+      if (status === 'pending') {
+        console.log('Plan generation pending, continuing to poll');
+        return 2000; // Poll every 2 seconds only when pending
+      }
+      
+      // Stop polling for: 'failed', 'not_required', 'unknown', or any other status
+      console.log(`Plan status polling stopped for status: ${status}`);
+      return false;
     },
-    staleTime: 1000, // 1 second
+    staleTime: 5000, // 5 seconds - longer stale time since we're not constantly polling
+    refetchOnMount: true, // Always check status when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus to reduce requests
   });
 };
 

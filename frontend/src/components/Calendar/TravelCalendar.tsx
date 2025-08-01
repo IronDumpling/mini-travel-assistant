@@ -169,7 +169,10 @@ const parseDateTime = (dateString: string): Date => {
 
 export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => {
   const { data: travelPlans, isLoading } = useTravelPlans(sessionId);
-  const { data: planStatus } = usePlanGenerationStatus(sessionId);
+  
+  // Only check plan status if we don't have travel plans yet and aren't currently loading
+  const shouldCheckPlanStatus = !isLoading && (!travelPlans || !travelPlans.events || travelPlans.events.length === 0);
+  const { data: planStatus } = usePlanGenerationStatus(shouldCheckPlanStatus ? sessionId : null);
 
   // Add custom styles for hover effects
   const customStyles = `
