@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useChatHistory, useSendMessage } from '../../hooks/useApi';
 import type { ChatMessage as ChatMessageType } from '../../types/api';
 
@@ -119,6 +121,41 @@ const ChatMessage: React.FC<MessageProps> = ({
             <div className="flex items-center gap-2 text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Thinking...</span>
+            </div>
+          ) : role === 'assistant' ? (
+            <div className="text-gray-800">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Custom styling for markdown elements
+                  h1: ({node, ...props}: any) => <h1 className="text-xl font-bold mb-3 text-gray-900" {...props} />,
+                  h2: ({node, ...props}: any) => <h2 className="text-lg font-semibold mb-2 text-gray-900" {...props} />,
+                  h3: ({node, ...props}: any) => <h3 className="text-md font-semibold mb-2 text-gray-800" {...props} />,
+                  h4: ({node, ...props}: any) => <h4 className="text-sm font-semibold mb-1 text-gray-800" {...props} />,
+                  p: ({node, ...props}: any) => <p className="mb-2 leading-relaxed" {...props} />,
+                  ul: ({node, ...props}: any) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
+                  ol: ({node, ...props}: any) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
+                  li: ({node, ...props}: any) => <li className="text-gray-800" {...props} />,
+                  strong: ({node, ...props}: any) => <strong className="font-semibold text-gray-900" {...props} />,
+                  em: ({node, ...props}: any) => <em className="italic" {...props} />,
+                  code: ({node, inline, ...props}: any) => 
+                    inline ? (
+                      <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800" {...props} />
+                    ) : (
+                      <code className="block bg-gray-100 p-2 rounded text-sm font-mono text-gray-800 overflow-x-auto" {...props} />
+                    ),
+                  pre: ({node, ...props}: any) => <pre className="bg-gray-100 p-3 rounded mb-2 overflow-x-auto" {...props} />,
+                  blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-blue-200 pl-4 italic text-gray-700 mb-2" {...props} />,
+                  hr: ({node, ...props}: any) => <hr className="my-4 border-gray-300" {...props} />,
+                  a: ({node, ...props}: any) => <a className="text-blue-600 hover:text-blue-800 underline" {...props} />,
+                  table: ({node, ...props}: any) => <table className="w-full border-collapse border border-gray-300 mb-2" {...props} />,
+                  thead: ({node, ...props}: any) => <thead className="bg-gray-50" {...props} />,
+                  th: ({node, ...props}: any) => <th className="border border-gray-300 px-2 py-1 text-left font-semibold" {...props} />,
+                  td: ({node, ...props}: any) => <td className="border border-gray-300 px-2 py-1" {...props} />,
+                }}
+              >
+                {content}
+              </ReactMarkdown>
             </div>
           ) : (
             <div className="whitespace-pre-wrap text-gray-800">{content}</div>

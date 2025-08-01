@@ -344,7 +344,7 @@ class TravelAgent(BaseAgent):
         for keyword in strong_plan_keywords:
             if keyword in message_lower:
                 return True
-        
+                
         # ✅ Duration-based planning (specific time periods)
         duration_patterns = [
             r'\d+[\s-]day', r'\d+[\s-]week', r'\d+[\s-]night',
@@ -2170,7 +2170,7 @@ Please analyze the current message considering the conversation history for bett
         # Get destination and convert to IATA code for AMADEUS API
         destination = requirements.get("destination", "unknown")
         iata_code = self._convert_city_to_iata_code(destination)
-                    
+        
         # Add debugging information
         logger.info(f"🏨 Hotel search - Original destination: '{destination}'")
         logger.info(f"🏨 Hotel search - Converted IATA code: '{iata_code}'")
