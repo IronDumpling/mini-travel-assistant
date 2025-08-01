@@ -629,19 +629,25 @@ class PlanManager:
                 logger.info(f"🏙️ Planning destination {i+1}/{len(destinations)}: {destination}")
                 
                 # ✅ Create flight to this destination
+                # ✅ Get proper city names from IATA codes
+                from app.knowledge.geographical_data import GeographicalMappings
+                destination_city_name = GeographicalMappings.get_city_name(destination)
+                
                 if i == 0:
                     # First flight: Origin → First Destination
                     departure_city = origin
+                    departure_city_name = GeographicalMappings.get_city_name(departure_city)
                     flight_time = current_date.replace(hour=8, minute=0)
-                    flight_title = f"Flight: {departure_city} → {destination.title()}"
-                    flight_description = f"Departure from {departure_city} to {destination.title()} - Start of multi-city adventure"
+                    flight_title = f"Flight: {departure_city_name} → {destination_city_name}"
+                    flight_description = f"Departure from {departure_city_name} to {destination_city_name} - Start of multi-city adventure"
                     flight_sequence = 1  # First flight in chain
                 else:
                     # Connecting flights: Previous Destination → Current Destination
                     departure_city = destinations[i-1]
+                    departure_city_name = GeographicalMappings.get_city_name(departure_city)
                     flight_time = current_date.replace(hour=14, minute=0)
-                    flight_title = f"Flight: {departure_city.title()} → {destination.title()}"
-                    flight_description = f"Connecting flight from {departure_city.title()} to {destination.title()}"
+                    flight_title = f"Flight: {departure_city_name} → {destination_city_name}"
+                    flight_description = f"Connecting flight from {departure_city_name} to {destination_city_name}"
                     flight_sequence = i + 1  # Sequence number in chain
                 
                 # Get flight info from tool results if available
@@ -656,7 +662,7 @@ class PlanManager:
                     "event_type": "flight",
                     "start_time": flight_time.isoformat(),
                     "end_time": (flight_time + timedelta(hours=flight_details.get('duration_hours', 3))).isoformat(),
-                    "location": f"{departure_city} → {destination.title()}",
+                    "location": f"{departure_city_name} → {destination_city_name}",
                     "details": {
                         "source": "multi_destination_planning",
                         "flight_sequence": flight_sequence,  # ✅ Use correct sequence
@@ -676,19 +682,58 @@ class PlanManager:
                 checkin_time = current_date.replace(hour=15, minute=0)
                 checkout_time = (current_date + timedelta(days=days_per_destination)).replace(hour=11, minute=0)
                 
+                # ✅ Get proper city name from IATA code
+                from app.knowledge.geographical_data import GeographicalMappings
+                city_name = GeographicalMappings.get_city_name(destination)
+                
+                # ✅ Try to get hotel information from tool results
+                hotel_name = f"Hotel in {city_name}"
+                hotel_location = city_name
+                hotel_details = {
+                    "source": "multi_destination_planning",
+                    "nights": days_per_destination,
+                    "destination_sequence": i + 1
+                }
+                
+                # ✅ Check if we have hotel search results for this destination
+                if "hotel_search" in tool_results:
+                    hotel_result = tool_results["hotel_search"]
+                    if hasattr(hotel_result, 'hotels') and len(hotel_result.hotels) > 0:
+                        # Find hotel for this destination (hotels may be tagged with search_location)
+                        matching_hotel = None
+                        for hotel in hotel_result.hotels:
+                            # Check if hotel is for this destination
+                            hotel_search_location = getattr(hotel, 'search_location', '')
+                            if (hotel_search_location == destination or 
+                                hotel_search_location.upper() == destination.upper()):
+                                matching_hotel = hotel
+                                break
+                        
+                        # If no specific match, use first hotel as template
+                        if not matching_hotel and hotel_result.hotels:
+                            matching_hotel = hotel_result.hotels[0]
+                        
+                        if matching_hotel:
+                            hotel_name = getattr(matching_hotel, 'name', f"Hotel in {city_name}")
+                            hotel_location = getattr(matching_hotel, 'location', city_name)
+                            hotel_details.update({
+                                "source": "hotel_search",
+                                "rating": getattr(matching_hotel, 'rating', None),
+                                "price_per_night": {
+                                    "amount": getattr(matching_hotel, 'price_per_night', None), 
+                                    "currency": getattr(matching_hotel, 'currency', 'USD')
+                                }
+                            })
+                
                 hotel_event = self._create_calendar_event_from_data({
                     "id": f"hotel_{destination}_{str(uuid.uuid4())[:8]}",
-                    "title": f"Hotel in {destination.title()}",
-                    "description": f"Accommodation in {destination.title()} for {days_per_destination} nights",
+                    "title": hotel_name,
+                    "description": f"Accommodation in {city_name} for {days_per_destination} nights",
                     "event_type": "hotel",
                     "start_time": checkin_time.isoformat(),
                     "end_time": checkout_time.isoformat(),
-                    "location": destination.title(),
-                    "details": {
-                        "source": "multi_destination_planning",
-                        "nights": days_per_destination,
-                        "destination_sequence": i + 1
-                    }
+                    "location": hotel_location,
+                    "details": hotel_details
                 })
                 if hotel_event:
                     events.append(hotel_event)
@@ -700,12 +745,12 @@ class PlanManager:
                     
                     activity_event = self._create_calendar_event_from_data({
                         "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
-                        "title": f"Explore {destination.title()} - Day {day+1}",
-                        "description": f"Discover attractions and culture in {destination.title()}",
+                        "title": f"Explore {city_name} - Day {day+1}",
+                        "description": f"Discover attractions and culture in {city_name}",
                         "event_type": "attraction",
                         "start_time": activity_time.isoformat(),
                         "end_time": (activity_time + timedelta(hours=4)).isoformat(),
-                        "location": destination.title(),
+                        "location": city_name,
                         "details": {
                             "source": "multi_destination_planning",
                             "day_in_destination": day + 1,
@@ -721,6 +766,8 @@ class PlanManager:
             
             # ✅ Final return flight: Last Destination → Origin
             final_destination = destinations[-1]
+            final_destination_city_name = GeographicalMappings.get_city_name(final_destination)
+            origin_city_name = GeographicalMappings.get_city_name(origin)
             return_flight_time = current_date.replace(hour=18, minute=0)
             
             # Get return flight details
@@ -731,12 +778,12 @@ class PlanManager:
             
             return_flight_event = self._create_calendar_event_from_data({
                 "id": f"flight_{final_destination}_to_{origin}_{str(uuid.uuid4())[:8]}",
-                "title": f"Return Flight: {final_destination.title()} → {origin}",
-                "description": f"Return journey from {final_destination.title()} to {origin} - End of multi-city trip",
+                "title": f"Return Flight: {final_destination_city_name} → {origin_city_name}",
+                "description": f"Return journey from {final_destination_city_name} to {origin_city_name} - End of multi-city trip",
                 "event_type": "flight",
                 "start_time": return_flight_time.isoformat(),
                 "end_time": (return_flight_time + timedelta(hours=return_flight_details.get('duration_hours', 6))).isoformat(),
-                "location": f"{final_destination.title()} → {origin}",
+                "location": f"{final_destination_city_name} → {origin_city_name}",
                 "details": {
                     "source": "multi_destination_planning",
                     "flight_sequence": return_flight_sequence,  # ✅ Use correct sequence

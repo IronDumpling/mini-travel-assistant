@@ -270,6 +270,98 @@ class GeographicalMappings:
         codes = cls.get_airport_codes(city)
         return codes[0] if codes else cls.get_iata_code(city)
     
+    # ✅ Reverse mapping: IATA code to city name
+    IATA_TO_CITY = {
+        # European cities (available in our documents)
+        'AMS': 'Amsterdam',
+        'BCN': 'Barcelona', 
+        'BER': 'Berlin',
+        'BUD': 'Budapest',
+        'LON': 'London',
+        'MUC': 'Munich',
+        'PAR': 'Paris',
+        'PRG': 'Prague',
+        'ROM': 'Rome',
+        'VIE': 'Vienna',
+        
+        # Asian cities (available in our documents)
+        'PEK': 'Beijing',
+        'ITM': 'Kyoto',  # Kyoto doesn't have a major airport, using nearby Osaka
+        'SEL': 'Seoul',
+        'SHA': 'Shanghai',
+        'SIN': 'Singapore',
+        'TYO': 'Tokyo',
+        
+        # North American cities
+        'JFK': 'New York',
+        'LAX': 'Los Angeles',
+        'ORD': 'Chicago',
+        'MIA': 'Miami',
+        'SFO': 'San Francisco',
+        'YYZ': 'Toronto',
+        'YVR': 'Vancouver',
+        'YUL': 'Montreal',
+        
+        # Oceania cities
+        'SYD': 'Sydney',
+        'MEL': 'Melbourne',
+        'BNE': 'Brisbane',
+        'PER': 'Perth',
+        'ADL': 'Adelaide',
+        'AKL': 'Auckland',
+        'WLG': 'Wellington',
+        
+        # African cities
+        'CPT': 'Cape Town',
+        'JNB': 'Johannesburg',
+        'NBO': 'Nairobi',
+        'CAI': 'Cairo',
+        'RAK': 'Marrakech',
+        'CMN': 'Casablanca',
+        
+        # South American cities
+        'GIG': 'Rio de Janeiro',
+        'GRU': 'São Paulo',
+        'EZE': 'Buenos Aires',
+        'SCL': 'Santiago',
+        'LIM': 'Lima',
+        'BOG': 'Bogotá',
+        'MDE': 'Medellín',
+        'CCS': 'Caracas',
+        
+        # Middle Eastern cities
+        'DXB': 'Dubai',
+        'DOH': 'Doha',
+        'RUH': 'Riyadh',
+        'JED': 'Jeddah',
+        'KWI': 'Kuwait',
+        'BEY': 'Beirut',
+        'TLV': 'Tel Aviv',
+        'IST': 'Istanbul',
+        
+        # Additional European cities
+        'ZUR': 'Zurich',
+        'GVA': 'Geneva',
+        'BRU': 'Brussels',
+        'LUX': 'Luxembourg',
+        'MXP': 'Milan',
+        'FLR': 'Florence',
+        'VCE': 'Venice',
+        'NAP': 'Naples',
+        'MAD': 'Madrid',
+        'SVQ': 'Seville',
+        'VLC': 'Valencia',
+        'LIS': 'Lisbon',
+        'OPO': 'Porto',
+        'ATH': 'Athens',
+        'SKG': 'Thessaloniki'
+    }
+    
+    @classmethod
+    def get_city_name(cls, iata_code: str) -> str:
+        """Get city name from IATA code (case-insensitive)"""
+        return cls.IATA_TO_CITY.get(iata_code.upper().strip(), iata_code)
+    
     @classmethod
     def is_region(cls, location: str) -> bool:
         """Check if a location is a region/area rather than a specific city"""
