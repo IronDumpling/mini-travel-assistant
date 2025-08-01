@@ -1416,85 +1416,8 @@ Please analyze the current message considering the conversation history for bett
         
         # Check for timeline gaps (more than 8 hours between events on same day)
         # This would need more sophisticated date analysis
-        
         return gaps
 
-    async def _create_action_plan(
-        self, intent: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Create intelligent action plan based on structured intention analysis"""
-
-        # Extract structured analysis from intent
-        structured_analysis = intent.get("structured_analysis", {})
-
-        # Initialize enhanced plan structure
-        plan = {
-            "intent_type": intent.get("type") or intent.get("intent_type", "query"),
-            "destination": structured_analysis.get("destination", {}),
-            "actions": [],
-            "tools_to_use": [],
-            "tool_parameters": {},
-            "execution_strategy": "sequential",
-            "next_steps": [],
-            "confidence": 0.0,
-        }
-
-        try:
-            # Step 1: Use LLM for intelligent tool selection
-            tool_selection_result = await self._llm_tool_selection(
-                structured_analysis, context
-            )
-            logger.info(f"LLM tool selection: {tool_selection_result}")
-
-            # Step 2: Extract parameters from structured intent
-            tool_parameters = await self._extract_parameters_from_intent(
-                structured_analysis, tool_selection_result["selected_tools"]
-            )
-            logger.info(f"Tool parameters from intent: {tool_parameters}")
-
-            # Step 3: Generate intent-based actions and next steps
-            actions = await self._generate_intent_based_actions(
-                structured_analysis, tool_selection_result["selected_tools"]
-            )
-            next_steps = await self._generate_intent_based_next_steps(
-                structured_analysis, context
-            )
-
-            # Step 4: Update plan with results
-            plan.update(
-                {
-                    "tools_to_use": tool_selection_result["selected_tools"],
-                    "tool_parameters": tool_parameters,
-                    "execution_strategy": tool_selection_result["execution_strategy"],
-                    "actions": actions,
-                    "next_steps": next_steps,
-                    "confidence": tool_selection_result["confidence"],
-                    "tool_selection_reasoning": tool_selection_result.get(
-                        "reasoning", ""
-                    ),
-                    "intent_metadata": {
-                        "user_sentiment": structured_analysis.get(
-                            "sentiment", "neutral"
-                        ),
-                        "urgency_level": structured_analysis.get("urgency", "medium"),
-                        "missing_info": structured_analysis.get("missing_info", []),
-                        "key_requirements": structured_analysis.get(
-                            "key_requirements", []
-                        ),
-                        "preferences": structured_analysis.get("preferences", {}),
-                    },
-                }
-            )
-
-            logger.info(
-                f"Created intent-based action plan: {plan['intent_type']} -> {plan['tools_to_use']}"
-            )
-            return plan
-
-        except Exception as e:
-            logger.error(f"Error creating intent-based action plan: {e}")
-            # Fall back to basic planning
-            return await self._create_basic_action_plan(intent, context)
 
     async def _llm_tool_selection(
         self, structured_analysis: Dict[str, Any], context: Dict[str, Any]
@@ -1576,24 +1499,6 @@ Please analyze the current message considering the conversation history for bett
             "confidence": 0.7,
         }
 
-    def _convert_city_to_airport_codes(self, city_name: str) -> str:
-        """Convert city name to primary airport code for flight search"""
-        # ✅ Use centralized city to airport codes mapping from config
-        primary_airport_code = geo_mappings.get_primary_airport_code(city_name.lower())
-        if primary_airport_code:
-            logger.info(f"✅ Found primary airport code for '{city_name}': {primary_airport_code}")
-            return primary_airport_code
-        
-        # Handle "Unknown" case
-        if city_name == "Unknown":
-            return "Unknown"
-        
-        # Add debugging
-        logger.info(f"🔍 Converting city '{city_name}' to primary airport code")
-        
-        # If no match found from config, return "Unknown"
-        logger.warning(f"⚠️ No airport code found for '{city_name}'")
-        return "Unknown"
 
     def _extract_origin_from_message(self, user_message: str) -> str:
         """Extract origin city from user message using improved text parsing"""
@@ -1656,98 +1561,10 @@ Please analyze the current message considering the conversation history for bett
         # If no valid origin found, return "Unknown" (will default to Toronto)
         return "Unknown"
 
-    async def _extract_parameters_from_intent(
-        self, structured_analysis: Dict[str, Any], selected_tools: List[str]
-    ) -> Dict[str, Any]:
-        """Extract tool parameters from structured intent analysis"""
 
-        # Use centralized city to IATA mapping from config
-        city_to_iata = GeographicalMappings.CITY_TO_IATA
 
-        tool_parameters = {}
 
-        # Extract common parameters
-        destination = structured_analysis.get("destination", {}).get(
-            "primary", "Unknown"
-        )
-        origin = structured_analysis.get("origin", {}).get(
-            "primary", "Unknown"
-        )
-        
-        # If destination is still "Unknown", try to extract it from the user message
-        if destination == "Unknown":
-            user_message = structured_analysis.get("user_message", "")
-            if user_message:
-                # Try to extract destination from message
-                destination = self._extract_destination_from_message(user_message)
-        
-        # If origin is still "Unknown", try to extract it from the user message
-        if origin == "Unknown":
-            user_message = structured_analysis.get("user_message", "")
-            if user_message:
-                # Try to extract origin from message
-                origin = self._extract_origin_from_message(user_message)
-        
-        # Convert to proper airport codes for flight search
-        destination_airport = self._convert_city_to_airport_codes(destination)
-        origin_airport = self._convert_city_to_airport_codes(origin)
-        
-        # Add logging to debug the conversion
-        logger.info(f"🌍 City conversion: destination='{destination}' -> '{destination_airport}', origin='{origin}' -> '{origin_airport}'")
-        logger.info(f"🌍 Final tool parameters will be: origin='{origin_airport}', destination='{destination_airport}'")
-        travel_details = structured_analysis.get("travel_details", {})
-        preferences = structured_analysis.get("preferences", {})
 
-        for tool in selected_tools:
-            if tool == "attraction_search":
-                # Only add attraction search if we have a valid destination
-                if destination != "Unknown":
-                    tool_parameters[tool] = {
-                        "destination": destination,
-                        "limit": 10,
-                        "interests": preferences.get("interests", []),
-                        "travel_style": preferences.get("travel_style", "mid-range"),
-                    }
-            elif tool == "hotel_search":
-                # Only add hotel search if we have a valid destination
-                if destination != "Unknown":
-                    # Convert destination to IATA code for hotel search
-                    destination_iata = self._convert_city_to_airport_codes(destination)
-                    tool_parameters[tool] = {
-                        "destination": destination_iata,
-                        "limit": 8,
-                        "accommodation_type": preferences.get(
-                            "accommodation_type", "hotel"
-                        ),
-                        "budget_level": travel_details.get("budget", {}).get(
-                            "level", "mid-range"
-                        ),
-                        "travelers": travel_details.get("travelers", 1),
-                    }
-            elif tool == "flight_search":
-                # ✅ Only add flight search if we have valid origin and destination AND they are different
-                if (origin_airport != "Unknown" and destination_airport != "Unknown" and 
-                    origin_airport != destination_airport):
-                    logger.info(f"✈️ Adding flight search with origin='{origin_airport}' and destination='{destination_airport}'")
-                    tool_parameters[tool] = {
-                        "origin": origin_airport,
-                        "destination": destination_airport,
-                        "limit": 5,
-                        "travelers": travel_details.get("travelers", 1),
-                        "budget_level": travel_details.get("budget", {}).get(
-                            "level", "mid-range"
-                        ),
-                        "flexibility": travel_details.get("dates", {}).get(
-                            "flexibility", "flexible"
-                        ),
-                    }
-                else:
-                    if origin_airport == destination_airport:
-                        logger.warning(f"✈️ Skipping flight search: origin and destination are the same ('{origin_airport}') - O/D overlap")
-                    else:
-                        logger.warning(f"✈️ Skipping flight search: invalid airports - origin='{origin_airport}', destination='{destination_airport}'")
-
-        return tool_parameters
 
     async def _generate_intent_based_actions(
         self, structured_analysis: Dict[str, Any], selected_tools: List[str]
@@ -3599,6 +3416,11 @@ This will help me provide you with the most relevant travel guidance possible.""
         if not city_name or city_name.lower() in ['unknown', '']:
             logger.error(f"❌ Invalid destination '{city_name}' - cannot convert to IATA code")
             return ''  # Return empty string to indicate invalid destination
+        
+        # ✅ Check if input is already an IATA code (3 uppercase letters)
+        if len(city_name) == 3 and city_name.isupper() and city_name.isalpha():
+            logger.info(f"✅ Input '{city_name}' is already an IATA code, returning as-is")
+            return city_name
         
         # ✅ Use centralized geographical mappings from config
         region_to_cities = GeographicalMappings.REGION_TO_CITIES

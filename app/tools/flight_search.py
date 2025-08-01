@@ -27,6 +27,8 @@ class Flight(BaseModel):
     origin: Optional[str] = None
     destination: Optional[str] = None
     return_date: Optional[datetime] = None
+    # For multi-destination search tracking
+    search_destination: Optional[str] = None
 
 class FlightSearchInput(ToolInput):
     """Flight search input"""
@@ -225,9 +227,10 @@ class FlightSearchTool(BaseTool):
                     # Add destination context to each flight
                     for flight in result.flights:
                         flight.search_destination = destination
+                        logger.debug(f"🏷️ Tagged flight {flight.flight_number} with search_destination: {destination}")
                     all_flights.extend(result.flights)
                     successful_destinations.append(destination)
-                    logger.info(f"✅ Found {len(result.flights)} flights to {destination}")
+                    logger.info(f"✅ Found {len(result.flights)} flights to {destination}, tagged with search context")
                 else:
                     failed_destinations.append(destination)
                     logger.warning(f"⚠️ No flights found to {destination}: {result.error}")
