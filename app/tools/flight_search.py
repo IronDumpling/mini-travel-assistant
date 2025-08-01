@@ -6,6 +6,7 @@ Integrated with Amadeus API for real flight search functionality
 """
 
 import os
+import asyncio
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, timedelta
 import aiohttp
@@ -55,7 +56,7 @@ class FlightSearchTool(BaseTool):
             description="Search for available flight information using Amadeus API with multiple filtering conditions",
             category="transportation",
             tags=["flight", "ticket", "search", "travel", "amadeus"],
-            timeout=30
+            timeout=60  # Increased to 60 seconds for multi-destination searches
         )
         super().__init__(metadata)
         
@@ -193,7 +194,7 @@ class FlightSearchTool(BaseTool):
         successful_destinations = []
         failed_destinations = []
         
-        # Execute search for each destination
+        # Execute search for each destination with individual timeout handling
         for destination in destinations:
             if not destination or destination.lower() in ['unknown', '']:
                 failed_destinations.append(destination or "unknown")
@@ -220,8 +221,16 @@ class FlightSearchTool(BaseTool):
                 
                 logger.info(f"✈️ Searching flights from {origin} to {destination}")
                 
-                # Execute single destination search by calling the main logic
-                result = await self._execute_single_destination_search(single_destination_input, context)
+                # Execute single destination search with individual timeout (20 seconds per destination)
+                try:
+                    result = await asyncio.wait_for(
+                        self._execute_single_destination_search(single_destination_input, context),
+                        timeout=20.0
+                    )
+                except asyncio.TimeoutError:
+                    failed_destinations.append(destination)
+                    logger.warning(f"⏰ Flight search to {destination} timed out after 20 seconds, continuing with other destinations")
+                    continue
                 
                 if result.success and result.flights:
                     # Add destination context to each flight

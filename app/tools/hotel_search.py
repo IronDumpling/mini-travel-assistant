@@ -35,6 +35,7 @@ class Hotel(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address: Optional[Dict[str, Any]] = None
+    search_location: Optional[str] = None  # For multi-location search tracking
 
 class HotelSearchInput(ToolInput):
     """Hotel search input"""
@@ -62,7 +63,7 @@ class HotelSearchTool(BaseTool):
             description="Search for hotel accommodation information using AMADEUS API, with multiple filtering conditions",
             category="accommodation",
             tags=["hotel", "accommodation", "search", "booking", "amadeus"],
-            timeout=30
+            timeout=60  # Increased to 60 seconds for multi-location searches
         )
         super().__init__(metadata)
         
@@ -242,9 +243,10 @@ class HotelSearchTool(BaseTool):
                     # Add location context to each hotel
                     for hotel in result.hotels:
                         hotel.search_location = location
+                        logger.debug(f"🏷️ Tagged hotel {hotel.name} with search_location: {location}")
                     all_hotels.extend(result.hotels)
                     successful_locations.append(location)
-                    logger.info(f"✅ Found {len(result.hotels)} hotels in {location}")
+                    logger.info(f"✅ Found {len(result.hotels)} hotels in {location}, tagged with search context")
                 else:
                     failed_locations.append(location)
                     logger.warning(f"⚠️ No hotels found in {location}: {result.error}")
@@ -252,6 +254,7 @@ class HotelSearchTool(BaseTool):
             except Exception as e:
                 failed_locations.append(location)
                 logger.error(f"❌ Error searching hotels in {location}: {e}")
+                logger.debug(f"📊 Exception details for {location}: {type(e).__name__}: {str(e)}")
         
         # Prepare result summary
         total_results = len(all_hotels)
@@ -267,8 +270,8 @@ class HotelSearchTool(BaseTool):
                 hotels=[]
             )
         
-        # Sort by rating and price
-        all_hotels.sort(key=lambda x: (x.rating or 0, -(x.price or float('inf'))), reverse=True)
+        # Sort by rating and price_per_night
+        all_hotels.sort(key=lambda x: (x.rating or 0, -(x.price_per_night or float('inf'))), reverse=True)
         
         logger.info(f"🎯 Multi-location hotel search completed: {total_results} total hotels from {len(successful_locations)} locations")
         
