@@ -1,12 +1,9 @@
 """
 Travel Agent - Main travel planning agent
-
-TODO: Implement the following features
-1. Intelligent travel planning generation
-2. Multi-tool coordination
-3. User preference learning
-4. Personalized recommendations
-5. Real-time plan adjustment
+This agent is responsible for planning and executing travel itineraries based on user preferences and constraints.
+It uses a combination of tools to gather information, generate itineraries, and optimize travel plans.
+It also tracks user preferences and updates the travel plan accordingly.
+It also uses a rule-based approach to generate actions based on the user's intent and selected tools.
 """
 
 from typing import Dict, List, Any, Optional
@@ -25,6 +22,7 @@ from app.core.llm_service import get_llm_service
 from app.core.rag_engine import get_rag_engine
 from app.core.logging_config import get_logger
 from app.core.prompt_manager import prompt_manager, PromptType
+from app.knowledge.geographical_data import GeographicalMappings, geo_mappings
 
 logger = get_logger(__name__)
 
@@ -692,7 +690,7 @@ class TravelAgent(BaseAgent):
                     self.user_preferences_history.setdefault("interests", []).append("food")
             
             # Extract mentioned destinations for context
-            destinations = ["tokyo", "kyoto", "paris", "london", "new york", "beijing", "shanghai", "rome", "barcelona"]
+            destinations = geo_mappings.get_preference_tracking_destinations()
             for dest in destinations:
                 if dest in user_msg:
                     self.user_preferences_history.setdefault("visited_destinations", []).append(dest)
@@ -976,23 +974,7 @@ Please analyze the current message considering the conversation history for bett
 
         # Enhanced destination detection
         destination = "Unknown"
-        destinations = [
-            "tokyo",
-            "kyoto",
-            "osaka",
-            "paris",
-            "london",
-            "new york",
-            "beijing",
-            "shanghai",
-            "rome",
-            "barcelona",
-            "amsterdam",
-            "vienna",
-            "prague",
-            "budapest",
-            "berlin",
-        ]
+        destinations = geo_mappings.get_intent_analysis_destinations()
         for dest in destinations:
             if dest in user_message_lower:
                 destination = dest.lower()  # Keep lowercase to match IATA mapping
@@ -1587,61 +1569,22 @@ Please analyze the current message considering the conversation history for bett
 
     def _convert_city_to_airport_codes(self, city_name: str) -> str:
         """Convert city name to primary airport code for flight search"""
-        city_to_airport = {
-            'ROME': 'FCO',  # Rome Fiumicino
-            'PARIS': 'CDG',  # Paris Charles de Gaulle
-            'LONDON': 'LHR',  # London Heathrow
-            'BEIJING': 'PEK',  # Beijing Capital
-            'TOKYO': 'NRT',  # Tokyo Narita
-            'NEW YORK': 'JFK',  # New York JFK
-            'BARCELONA': 'BCN',
-            'MADRID': 'MAD',
-            'AMSTERDAM': 'AMS',
-            'BERLIN': 'BER',
-            'MUNICH': 'MUC',
-            'VIENNA': 'VIE',
-            'PRAGUE': 'PRG',
-            'BUDAPEST': 'BUD',
-            'SINGAPORE': 'SIN',
-            'SEOUL': 'ICN',
-            'SHANGHAI': 'PVG',
-            'KYOTO': 'UKB',  # Kyoto uses Osaka Kansai
-            'OSAKA': 'KIX',
-            'BANGKOK': 'BKK',
-            'SYDNEY': 'SYD',
-            'MELBOURNE': 'MEL',
-            'ATHENS': 'ATH',
-            'DUBAI': 'DXB',
-            'ISTANBUL': 'IST',
-        }
+        # ✅ Use centralized city to airport codes mapping from config
+        primary_airport_code = geo_mappings.get_primary_airport_code(city_name.lower())
+        if primary_airport_code:
+            logger.info(f"✅ Found primary airport code for '{city_name}': {primary_airport_code}")
+            return primary_airport_code
         
         # Handle "Unknown" case
         if city_name == "Unknown":
             return "Unknown"
         
-        # Convert to uppercase for lookup
-        city_upper = city_name.upper()
-        
         # Add debugging
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
-        logger.info(f"🔍 Converting city '{city_name}' (uppercase: '{city_upper}') to IATA code")
+        logger.info(f"🔍 Converting city '{city_name}' to primary airport code")
         
-        # Try exact match first
-        if city_upper in city_to_airport:
-            result = city_to_airport[city_upper]
-            logger.info(f"✅ Found exact match: '{city_upper}' -> '{result}'")
-            return result
-        
-        # Try partial matches for multi-word cities
-        for key, value in city_to_airport.items():
-            if city_upper in key or key in city_upper:
-                logger.info(f"✅ Found partial match: '{city_upper}' matches '{key}' -> '{value}'")
-                return value
-        
-        # If no match found, return the original (should be a valid IATA code already)
-        logger.warning(f"⚠️ No IATA code found for '{city_name}', returning '{city_upper}'")
-        return city_upper
+        # If no match found from config, return "Unknown"
+        logger.warning(f"⚠️ No airport code found for '{city_name}'")
+        return "Unknown"
 
     def _extract_origin_from_message(self, user_message: str) -> str:
         """Extract origin city from user message using improved text parsing"""
@@ -1709,24 +1652,8 @@ Please analyze the current message considering the conversation history for bett
     ) -> Dict[str, Any]:
         """Extract tool parameters from structured intent analysis"""
 
-        # City to IATA code mapping
-        city_to_iata = {
-            "paris": "PAR",
-            "beijing": "PEK",
-            "london": "LHR",
-            "new york": "JFK",
-            "tokyo": "NRT",
-            "shanghai": "PVG",
-            "rome": "FCO",
-            "barcelona": "BCN",
-            "amsterdam": "AMS",
-            "vienna": "VIE",
-            "prague": "PRG",
-            "budapest": "BUD",
-            "berlin": "BER",
-            "kyoto": "UKY",
-            "osaka": "KIX",
-        }
+        # Use centralized city to IATA mapping from config
+        city_to_iata = GeographicalMappings.CITY_TO_IATA
 
         tool_parameters = {}
 
@@ -1757,8 +1684,6 @@ Please analyze the current message considering the conversation history for bett
         origin_airport = self._convert_city_to_airport_codes(origin)
         
         # Add logging to debug the conversion
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.info(f"🌍 City conversion: destination='{destination}' -> '{destination_airport}', origin='{origin}' -> '{origin_airport}'")
         logger.info(f"🌍 Final tool parameters will be: origin='{origin_airport}', destination='{destination_airport}'")
         travel_details = structured_analysis.get("travel_details", {})
@@ -1791,8 +1716,9 @@ Please analyze the current message considering the conversation history for bett
                         "travelers": travel_details.get("travelers", 1),
                     }
             elif tool == "flight_search":
-                # Only add flight search if we have valid origin and destination
-                if origin_airport != "Unknown" and destination_airport != "Unknown":
+                # ✅ Only add flight search if we have valid origin and destination AND they are different
+                if (origin_airport != "Unknown" and destination_airport != "Unknown" and 
+                    origin_airport != destination_airport):
                     logger.info(f"✈️ Adding flight search with origin='{origin_airport}' and destination='{destination_airport}'")
                     tool_parameters[tool] = {
                         "origin": origin_airport,
@@ -1807,7 +1733,10 @@ Please analyze the current message considering the conversation history for bett
                         ),
                     }
                 else:
-                    logger.warning(f"✈️ Skipping flight search: origin='{origin_airport}', destination='{destination_airport}'")
+                    if origin_airport == destination_airport:
+                        logger.warning(f"✈️ Skipping flight search: origin and destination are the same ('{origin_airport}') - O/D overlap")
+                    else:
+                        logger.warning(f"✈️ Skipping flight search: invalid airports - origin='{origin_airport}', destination='{destination_airport}'")
 
         return tool_parameters
 
@@ -2241,10 +2170,8 @@ Please analyze the current message considering the conversation history for bett
         # Get destination and convert to IATA code for AMADEUS API
         destination = requirements.get("destination", "unknown")
         iata_code = self._convert_city_to_iata_code(destination)
-        
+                    
         # Add debugging information
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.info(f"🏨 Hotel search - Original destination: '{destination}'")
         logger.info(f"🏨 Hotel search - Converted IATA code: '{iata_code}'")
         logger.info(f"🏨 Hotel search - IATA code type: {type(iata_code)}")
@@ -2688,8 +2615,7 @@ Please analyze the current message considering the conversation history for bett
                         }
                         
                         # Add debugging to see what's being sent to tool executor
-                        from app.core.logging_config import get_logger
-                        logger = get_logger(__name__)
+
                         logger.info(f"🏨 Travel agent - Creating hotel search ToolCall")
                         logger.info(f"🏨 Travel agent - Original destination: '{destination}'")
                         logger.info(f"🏨 Travel agent - Converted IATA code: '{iata_code}'")
@@ -3636,8 +3562,6 @@ This will help me provide you with the most relevant travel guidance possible.""
     def _convert_city_to_iata_code(self, city_name: str) -> str:
         """Convert city name to IATA city code for AMADEUS API"""
         # Add debugging information
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.info(f"🌍 Converting city to IATA code - Input: '{city_name}'")
         
         # Handle unknown/empty destination case - return empty string to indicate invalid destination
@@ -3645,72 +3569,8 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.error(f"❌ Invalid destination '{city_name}' - cannot convert to IATA code")
             return ''  # Return empty string to indicate invalid destination
         
-        # ✅ Region/Continent to multiple cities mapping (based on available documents)
-        region_to_cities = {
-            # European destinations with multiple cities
-            'europe': ['london', 'paris', 'berlin', 'rome', 'barcelona', 'amsterdam', 'vienna', 'prague'],
-            'european': ['london', 'paris', 'berlin', 'rome', 'barcelona', 'amsterdam', 'vienna', 'prague'],
-            'western europe': ['london', 'paris', 'amsterdam', 'barcelona'],
-            'central europe': ['berlin', 'vienna', 'prague', 'budapest'],
-            'southern europe': ['rome', 'barcelona'],
-            
-            # Asian destinations with multiple cities  
-            'asia': ['tokyo', 'beijing', 'shanghai', 'seoul', 'singapore'],
-            'asian': ['tokyo', 'beijing', 'shanghai', 'seoul', 'singapore'],
-            'east asia': ['tokyo', 'beijing', 'shanghai', 'seoul'],
-            'southeast asia': ['singapore'],
-            'japan': ['tokyo', 'kyoto'],
-            'china': ['beijing', 'shanghai'],
-            
-            # Other regions (keeping single cities for now)
-            'north america': ['new york'],
-            'north american': ['new york'],
-            'south america': ['sao paulo'],
-            'south american': ['sao paulo'],
-            'africa': ['johannesburg'],
-            'african': ['johannesburg'],
-            'oceania': ['sydney'],
-            'middle east': ['dubai'],
-            'middle eastern': ['dubai'],
-            
-            # ✅ Special area mappings to available cities
-            'swiss alps': ['munich', 'vienna'],     # Nearby European cities
-            'alps': ['munich', 'vienna'],           # Nearby European cities
-            'himalaya': ['beijing'],                # Closest available city
-            'himalayas': ['beijing'],               # Closest available city
-            'rockies': ['new york'],                # Default North American city
-            'rocky mountains': ['new york'],        # Default North American city
-            'andes': ['sao paulo'],                 # Default South American city
-            'sahara': ['cairo'],                    # Not in our documents
-            'sahara desert': ['cairo'],             # Not in our documents
-            'scottish highlands': ['london'],       # UK -> London
-            'lake district': ['london'],            # UK -> London
-            'tuscany': ['rome'],                    # Italy -> Rome
-            'provence': ['paris'],                  # France -> Paris
-            'bavarian alps': ['munich'],            # Germany -> Munich
-            'black forest': ['munich'],             # Germany -> Munich
-            
-            # Country-level mappings to available cities
-            'france': ['paris'],
-            'germany': ['berlin', 'munich'], 
-            'italy': ['rome'],
-            'spain': ['barcelona'],
-            'netherlands': ['amsterdam'],
-            'austria': ['vienna'],
-            'czech republic': ['prague'],
-            'hungary': ['budapest'],
-            'united kingdom': ['london'],
-            'england': ['london'],
-            'scotland': ['london'],  # Use London as we don't have Edinburgh data
-            'ireland': ['london'],   # Use London as we don't have Dublin data
-            'switzerland': ['munich'],  # Use nearby city in our dataset
-            'belgium': ['amsterdam'], # Use nearby city in our dataset
-            'poland': ['berlin'],     # Use nearby city in our dataset
-            'sweden': ['london'],     # Use available city
-            'norway': ['london'],     # Use available city
-            'denmark': ['london'],    # Use available city
-            'finland': ['london']     # Use available city
-        }
+        # ✅ Use centralized geographical mappings from config
+        region_to_cities = GeographicalMappings.REGION_TO_CITIES
         
         # Normalize input and check for region mapping first
         normalized_input = city_name.lower().strip()
@@ -3719,232 +3579,8 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.info(f"🗺️ Mapped region '{city_name}' to city '{mapped_city}'")
             city_name = mapped_city  # Replace the region with the mapped city
         
-        # City to IATA code mapping based on the provided list
-        city_to_iata = {
-            'amsterdam': 'AMS',
-            'barcelona': 'BCN', 
-            'beijing': 'PEK',
-            'berlin': 'BER',
-            'budapest': 'BUD',
-            'kyoto': 'ITM',  # Kyoto doesn't have a major airport, using nearby Osaka
-            'london': 'LON',
-            'munich': 'MUC',
-            'paris': 'PAR',
-            'prague': 'PRG',
-            'rome': 'ROM',
-            'seoul': 'SEL',
-            'shanghai': 'SHA',
-            'singapore': 'SIN',
-            'tokyo': 'TYO',
-            'vienna': 'VIE',
-            'osaka': 'ITM',
-            'new york': 'JFK',
-            'los angeles': 'LAX',
-            'chicago': 'ORD',
-            'miami': 'MIA',
-            'san francisco': 'SFO',
-            'toronto': 'YYZ',
-            'vancouver': 'YVR',
-            'montreal': 'YUL',
-            'sydney': 'SYD',
-            'melbourne': 'MEL',
-            'brisbane': 'BNE',
-            'perth': 'PER',
-            'adelaide': 'ADL',
-            'auckland': 'AKL',
-            'wellington': 'WLG',
-            'cape town': 'CPT',
-            'johannesburg': 'JNB',
-            'nairobi': 'NBO',
-            'cairo': 'CAI',
-            'marrakech': 'RAK',
-            'casablanca': 'CMN',
-            'mumbai': 'BOM',
-            'delhi': 'DEL',
-            'bangalore': 'BLR',
-            'chennai': 'MAA',
-            'kolkata': 'CCU',
-            'hyderabad': 'HYD',
-            'pune': 'PNQ',
-            'mexico city': 'MEX',
-            'guadalajara': 'GDL',
-            'monterrey': 'MTY',
-            'rio de janeiro': 'GIG',
-            'sao paulo': 'GRU',
-            'buenos aires': 'EZE',
-            'santiago': 'SCL',
-            'lima': 'LIM',
-            'bogota': 'BOG',
-            'medellin': 'MDE',
-            'caracas': 'CCS',
-            'moscow': 'SVO',
-            'st petersburg': 'LED',
-            'kiev': 'KBP',
-            'warsaw': 'WAW',
-            'krakow': 'KRK',
-            'bratislava': 'BTS',
-            'ljubljana': 'LJU',
-            'zagreb': 'ZAG',
-            'belgrade': 'BEG',
-            'sofia': 'SOF',
-            'bucharest': 'OTP',
-            'tallinn': 'TLL',
-            'riga': 'RIX',
-            'vilnius': 'VNO',
-            'helsinki': 'HEL',
-            'stockholm': 'ARN',
-            'oslo': 'OSL',
-            'copenhagen': 'CPH',
-            'reykjavik': 'KEF',
-            'dublin': 'DUB',
-            'glasgow': 'GLA',
-            'edinburgh': 'EDI',
-            'manchester': 'MAN',
-            'birmingham': 'BHX',
-            'leeds': 'LBA',
-            'liverpool': 'LPL',
-            'newcastle': 'NCL',
-            'cardiff': 'CWL',
-            'belfast': 'BFS',
-            'brussels': 'BRU',
-            'antwerp': 'ANR',
-            'rotterdam': 'RTM',
-            'the hague': 'AMS',  # No airport, using Amsterdam
-            'utrecht': 'AMS',    # No airport, using Amsterdam
-            'luxembourg': 'LUX',
-            'geneva': 'GVA',
-            'zurich': 'ZRH',
-            'bern': 'BRN',
-            'basel': 'BSL',
-            'lucerne': 'ZRH',    # No airport, using Zurich
-            'milan': 'MXP',
-            'florence': 'FLR',
-            'venice': 'VCE',
-            'naples': 'NAP',
-            'palermo': 'PMO',
-            'catania': 'CTA',
-            'bologna': 'BLQ',
-            'turin': 'TRN',
-            'genoa': 'GOA',
-            'bari': 'BRI',
-            'lisbon': 'LIS',
-            'porto': 'OPO',
-            'faro': 'FAO',
-            'funchal': 'FNC',
-            'pontadelgada': 'PDL',
-            'valencia': 'VLC',
-            'bilbao': 'BIO',
-            'seville': 'SVQ',
-            'granada': 'GRX',
-            'malaga': 'AGP',
-            'alicante': 'ALC',
-            'palma': 'PMI',
-            'ibiza': 'IBZ',
-            'tenerife': 'TFS',
-            'las palmas': 'LPA',
-            'fes': 'FEZ',
-            'tangier': 'TNG',
-            'agadir': 'AGA',
-            'rabat': 'RBA',
-            'tunis': 'TUN',
-            'algiers': 'ALG',
-            'alexandria': 'HBE',
-            'giza': 'CAI',       # No airport, using Cairo
-            'luxor': 'LXR',
-            'aswan': 'ASW',
-            'sharm el sheikh': 'SSH',
-            'hurghada': 'HRG',
-            'tel aviv': 'TLV',
-            'jerusalem': 'JRS',  # Limited flights
-            'haifa': 'HFA',
-            'beer sheva': 'TLV', # No airport, using Tel Aviv
-            'amman': 'AMM',
-            'petra': 'AMM',      # No airport, using Amman
-            'aqaba': 'AQJ',
-            'damascus': 'DAM',
-            'beirut': 'BEY',
-            'baghdad': 'BGW',
-            'basra': 'BSR',
-            'erbil': 'EBL',
-            'sulaymaniyah': 'ISU',
-            'tehran': 'IKA',
-            'mashhad': 'MHD',
-            'isfahan': 'IFN',
-            'shiraz': 'SYZ',
-            'tabriz': 'TBZ',
-            'kerman': 'KER',
-            'yazd': 'AZD',
-            'kabul': 'KBL',
-            'kandahar': 'KDH',
-            'herat': 'HEA',
-            'mazar e sharif': 'MZR',
-            'jalalabad': 'JAA',
-            'kunduz': 'UND',
-            'peshawar': 'PEW',
-            'lahore': 'LHE',
-            'karachi': 'KHI',
-            'islamabad': 'ISB',
-            'rawalpindi': 'ISB', # Same as Islamabad
-            'faisalabad': 'LYP',
-            'multan': 'MUX',
-            'gujranwala': 'GRW',
-            'sialkot': 'SKT',
-            'quetta': 'UET',
-            'abbottabad': 'ISB', # No airport, using Islamabad
-            'murree': 'ISB',     # No airport, using Islamabad
-            'gilgit': 'GIL',
-            'skardu': 'KDU',
-            'chitral': 'CJL',
-            'swat': 'ISB',       # No airport, using Islamabad
-            'hunza': 'GIL',      # No airport, using Gilgit
-            'kashmir': 'SXR',
-            'srinagar': 'SXR',
-            'leh': 'IXL',
-            'manali': 'DEL',     # No airport, using Delhi
-            'shimla': 'DEL',     # No airport, using Delhi
-            'mussoorie': 'DEL',  # No airport, using Delhi
-            'nainital': 'DEL',   # No airport, using Delhi
-            'ranikhet': 'DEL',   # No airport, using Delhi
-            'almora': 'DEL',     # No airport, using Delhi
-            'pithoragarh': 'DEL', # No airport, using Delhi
-            'chamoli': 'DEL',    # No airport, using Delhi
-            'rudraprayag': 'DEL', # No airport, using Delhi
-            'tehri': 'DEL',      # No airport, using Delhi
-            'uttarkashi': 'DEL', # No airport, using Delhi
-            'dehradun': 'DED',
-            'haridwar': 'DEL',   # No airport, using Delhi
-            'rishikesh': 'DEL',  # No airport, using Delhi
-            'kedarnath': 'DEL',  # No airport, using Delhi
-            'badrinath': 'DEL',  # No airport, using Delhi
-            'gangotri': 'DEL',   # No airport, using Delhi
-            'yamunotri': 'DEL',  # No airport, using Delhi
-            'hemkund': 'DEL',    # No airport, using Delhi
-            'valley of flowers': 'DEL', # No airport, using Delhi
-            'auli': 'DEL',       # No airport, using Delhi
-            'joshimath': 'DEL',  # No airport, using Delhi
-            'karnaprayag': 'DEL', # No airport, using Delhi
-            'gauchar': 'DEL',    # No airport, using Delhi
-            'karanprayag': 'DEL', # No airport, using Delhi
-            'hong kong': 'HKG',
-            'hongkong': 'HKG',
-            'dubai': 'DXB',
-            'istanbul': 'IST',
-            'madrid': 'MAD',
-            'athens': 'ATH',
-            # Country codes (using major cities)
-            'australia': 'SYD',  # Sydney
-            'brazil': 'SAO',     # Sao Paulo
-            'canada': 'YYZ',     # Toronto
-            'china': 'PEK',      # Beijing
-            'hong_kong': 'HKG',
-            'india': 'DEL',      # Delhi
-            'japan': 'TYO',      # Tokyo
-            'south_africa': 'JNB', # Johannesburg
-            'south_korea': 'SEL',  # Seoul
-            'thailand': 'BKK',     # Bangkok
-            'uk': 'LON',          # London
-            'usa': 'JFK'          # New York
-        }
+        # ✅ Use centralized city to IATA mapping from config
+        city_to_iata = GeographicalMappings.CITY_TO_IATA
         
         # Normalize city name
         normalized_city = city_name.lower().strip()
@@ -3996,85 +3632,12 @@ This will help me provide you with the most relevant travel guidance possible.""
 
     def _extract_destination_from_message(self, message: str) -> str:
         """Extract destination from user message"""
-        # Add debugging information
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
         logger.info(f"🌍 Extracting destination from message: '{message}'")
         
         message_lower = message.lower()
 
         # Common destinations with more comprehensive list
-        destinations = [
-            "tokyo", "kyoto", "osaka", "paris", "london", "new york", "beijing", 
-            "shanghai", "rome", "barcelona", "amsterdam", "vienna", "prague", 
-            "budapest", "berlin", "bangkok", "singapore", "seoul", "sydney", 
-            "melbourne", "munich", "madrid", "athens", "dubai", "istanbul",
-            "hong kong", "hongkong", "san francisco", "los angeles", "chicago",
-            "miami", "toronto", "vancouver", "montreal", "sydney", "melbourne",
-            "brisbane", "perth", "adelaide", "auckland", "wellington", "cape town",
-            "johannesburg", "nairobi", "cairo", "marrakech", "casablanca", "mumbai",
-            "delhi", "bangalore", "chennai", "kolkata", "hyderabad", "pune",
-            "mexico city", "guadalajara", "monterrey", "rio de janeiro", "sao paulo",
-            "buenos aires", "santiago", "lima", "bogota", "medellin", "caracas",
-            "moscow", "st petersburg", "kiev", "warsaw", "krakow", "bratislava",
-            "ljubljana", "zagreb", "belgrade", "sofia", "bucharest", "budapest",
-            "tallinn", "riga", "vilnius", "helsinki", "stockholm", "oslo", "copenhagen",
-            "reykjavik", "dublin", "glasgow", "edinburgh", "manchester", "birmingham",
-            "leeds", "liverpool", "newcastle", "cardiff", "belfast", "brussels",
-            "antwerp", "rotterdam", "the hague", "utrecht", "luxembourg", "geneva",
-            "zurich", "bern", "basel", "lucerne", "milan", "florence", "venice",
-            "naples", "palermo", "catania", "bologna", "turin", "genoa", "bari",
-            "lisbon", "porto", "faro", "funchal", "pontadelgada", "valencia",
-            "bilbao", "seville", "granada", "malaga", "alicante", "palma",
-            "ibiza", "tenerife", "las palmas", "marrakech", "fes", "tangier",
-            "agadir", "rabat", "casablanca", "tunis", "algiers", "cairo",
-            "alexandria", "giza", "luxor", "aswan", "sharm el sheikh", "hurghada",
-            "tel aviv", "jerusalem", "haifa", "beer sheva", "amman", "petra",
-            "aqaba", "damascus", "beirut", "baghdad", "basra", "erbil", "sulaymaniyah",
-            "tehran", "mashhad", "isfahan", "shiraz", "tabriz", "kerman", "yazd",
-            "kabul", "kandahar", "herat", "mazar e sharif", "jalalabad", "kunduz",
-            "peshawar", "lahore", "karachi", "islamabad", "rawalpindi", "faisalabad",
-            "multan", "gujranwala", "sialkot", "quetta", "peshawar", "abbottabad",
-            "murree", "gilgit", "skardu", "chitral", "swat", "hunza", "kashmir",
-            "srinagar", "leh", "manali", "shimla", "mussoorie", "nainital",
-            "ranikhet", "almora", "pithoragarh", "chamoli", "rudraprayag", "tehri",
-            "uttarkashi", "dehradun", "haridwar", "rishikesh", "kedarnath", "badrinath",
-            "gangotri", "yamunotri", "kedarnath", "badrinath", "hemkund", "valley of flowers",
-            "auli", "joshimath", "karnaprayag", "gauchar", "karanprayag", "rudraprayag",
-            "srinagar", "uttarkashi", "tehri", "chamoli", "pithoragarh", "almora",
-            "ranikhet", "nainital", "mussoorie", "shimla", "manali", "leh",
-            "kashmir", "hunza", "swat", "chitral", "skardu", "gilgit", "murree",
-            "abbottabad", "peshawar", "quetta", "sialkot", "gujranwala", "multan",
-            "faisalabad", "rawalpindi", "islamabad", "karachi", "lahore", "peshawar",
-            "kunduz", "jalalabad", "mazar e sharif", "herat", "kandahar", "kabul",
-            "yazd", "kerman", "tabriz", "shiraz", "isfahan", "mashhad", "tehran",
-            "sulaymaniyah", "erbil", "basra", "baghdad", "beirut", "damascus",
-            "aqaba", "petra", "amman", "beer sheva", "haifa", "jerusalem", "tel aviv",
-            "hurghada", "sharm el sheikh", "aswan", "luxor", "giza", "alexandria",
-            "cairo", "algiers", "tunis", "casablanca", "rabat", "agadir", "tangier",
-            "fes", "marrakech", "las palmas", "tenerife", "ibiza", "palma",
-            "alicante", "malaga", "granada", "seville", "bilbao", "valencia",
-            "pontadelgada", "funchal", "faro", "porto", "lisbon", "genoa",
-            "turin", "bologna", "catania", "palermo", "naples", "venice", "florence",
-            "milan", "lucerne", "basel", "bern", "zurich", "geneva", "luxembourg",
-            "utrecht", "the hague", "rotterdam", "antwerp", "brussels", "belfast",
-            "cardiff", "newcastle", "liverpool", "leeds", "birmingham", "manchester",
-            "edinburgh", "glasgow", "dublin", "reykjavik", "copenhagen", "oslo",
-            "stockholm", "helsinki", "vilnius", "riga", "tallinn", "budapest",
-            "bucharest", "sofia", "belgrade", "zagreb", "ljubljana", "bratislava",
-            "krakow", "warsaw", "kiev", "st petersburg", "moscow", "caracas",
-            "medellin", "bogota", "lima", "santiago", "buenos aires", "sao paulo",
-            "rio de janeiro", "monterrey", "guadalajara", "mexico city", "pune",
-            "hyderabad", "kolkata", "chennai", "bangalore", "delhi", "mumbai",
-            "casablanca", "marrakech", "cairo", "nairobi", "johannesburg", "cape town",
-            "wellington", "auckland", "adelaide", "perth", "brisbane", "melbourne",
-            "sydney", "montreal", "vancouver", "toronto", "miami", "chicago",
-            "los angeles", "san francisco", "hongkong", "hong kong", "istanbul",
-            "dubai", "athens", "madrid", "munich", "melbourne", "sydney", "seoul",
-            "singapore", "bangkok", "berlin", "prague", "vienna", "amsterdam",
-            "barcelona", "rome", "shanghai", "beijing", "new york", "london",
-            "paris", "osaka", "kyoto", "tokyo"
-        ]
+        destinations = geo_mappings.get_comprehensive_destinations()
 
         # First, try exact destination matching
         for dest in destinations:
@@ -5544,41 +5107,17 @@ This will help me provide you with the most relevant travel guidance possible.""
         plan_gaps = plan_context.get("gaps_identified", [])
         last_updated = plan_context.get("last_updated", "Unknown")
         
-        prompt = f"""You are a travel planning assistant with access to an existing travel plan. Generate a helpful response that considers both the current plan and new information.
-
-EXISTING TRAVEL PLAN CONTEXT:
-Current plan events: {existing_events}
-Identified gaps: {', '.join(plan_gaps) if plan_gaps else 'None'}
-Last updated: {last_updated}
-
-USER REQUEST: {user_message}
-
-TRAVEL INTENT ANALYSIS:
-{formatted_intent}
-
-NEW INFORMATION FROM TOOLS:
-{formatted_tools}
-
-KNOWLEDGE BASE INSIGHTS:
-{formatted_knowledge}
-
-INSTRUCTIONS:
-1. Acknowledge the user's existing plan when relevant
-2. Identify any conflicts with existing events and suggest resolutions
-3. Fill gaps in the current plan based on user's request
-4. Suggest specific updates or additions to improve the plan
-5. Maintain travel plan continuity and logical flow
-6. Be specific about timing, locations, and practical details
-7. If suggesting changes, explain why they improve the overall plan
-
-RESPONSE REQUIREMENTS:
-- Start by acknowledging relevant existing plan elements
-- Integrate new findings with current plan
-- Suggest specific, actionable updates
-- Maintain helpful, travel-focused tone
-- Provide practical, implementable advice
-
-Generate a comprehensive response that helps the user optimize their travel plan:"""
+        # Use centralized prompt template
+        prompt = prompt_manager.get_prompt(
+            PromptType.INFORMATION_FUSION,
+            user_message=user_message,
+            existing_events=existing_events,
+            plan_gaps=', '.join(plan_gaps) if plan_gaps else 'None',
+            last_updated=last_updated,
+            formatted_intent=formatted_intent,
+            formatted_tools=formatted_tools,
+            formatted_knowledge=formatted_knowledge
+        )
         
         return prompt
 

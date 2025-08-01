@@ -107,6 +107,16 @@ class FlightSearchTool(BaseTool):
                     flights=[]
                 )
             
+            # Check for O/D overlap - origin and destination cannot be the same
+            if not input_data.inspiration_search and input_data.origin and input_data.destination:
+                if input_data.origin.upper() == input_data.destination.upper():
+                    logger.warning(f"⚠️ Origin and destination are the same ('{input_data.origin}') - O/D overlap detected")
+                    return FlightSearchOutput(
+                        success=False,
+                        error=f"Invalid flight search: origin and destination cannot be the same ('{input_data.origin}')",
+                        flights=[]
+                    )
+            
             # Validate that origin and destination are 3-letter codes or valid city names
             if len(input_data.origin) != 3 or not input_data.origin.isalpha():
                 logger.warning(f"Origin '{input_data.origin}' may not be a valid IATA code")

@@ -890,6 +890,44 @@ class PromptManager:
         7. Provide fallback events if tool results are insufficient
         </important_notes>
         """
+    
+    def _get_plan_aware_fusion_template(self) -> str:
+        """Plan-aware fusion prompt template for integrating existing travel plans"""
+        return """You are a travel planning assistant with access to an existing travel plan. Generate a helpful response that considers both the current plan and new information.
+
+EXISTING TRAVEL PLAN CONTEXT:
+Current plan events: {existing_events}
+Identified gaps: {plan_gaps}
+Last updated: {last_updated}
+
+USER REQUEST: {user_message}
+
+TRAVEL INTENT ANALYSIS:
+{formatted_intent}
+
+NEW INFORMATION FROM TOOLS:
+{formatted_tools}
+
+KNOWLEDGE BASE INSIGHTS:
+{formatted_knowledge}
+
+INSTRUCTIONS:
+1. Acknowledge the user's existing plan when relevant
+2. Identify any conflicts with existing events and suggest resolutions
+3. Fill gaps in the current plan based on user's request
+4. Suggest specific updates or additions to improve the plan
+5. Maintain travel plan continuity and logical flow
+6. Be specific about timing, locations, and practical details
+7. If suggesting changes, explain why they improve the overall plan
+
+RESPONSE REQUIREMENTS:
+- Start by acknowledging relevant existing plan elements
+- Integrate new findings with current plan
+- Suggest specific, actionable updates
+- Maintain helpful, travel-focused tone
+- Provide practical, implementable advice
+
+Generate a comprehensive response that helps the user optimize their travel plan:"""
 
 
 # Create global instance
