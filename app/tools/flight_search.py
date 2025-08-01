@@ -238,7 +238,7 @@ class FlightSearchTool(BaseTool):
                     flight_chain=False  # Prevent recursion
                 )
                 
-                logger.info(f"🔍 Searching flight route {i+1}/{len(flight_chain)-1}: {route_name}")
+                logger.info(f"✈️ Searching route {i+1}/{len(flight_chain)-1}: {route_name}")
                 
                 # Execute search for this route with timeout
                 try:

@@ -4111,34 +4111,20 @@ This will help me provide you with the most relevant travel guidance possible.""
             # Also check tool results for multi-destination info from flight search
             if not multi_destinations and "flight_search" in tool_results:
                 flight_result = tool_results["flight_search"]
-                logger.info(f"🔍 Checking flight search result for multi-destinations...")
-                logger.info(f"   Flight result type: {type(flight_result)}")
-                logger.info(f"   Has data attribute: {hasattr(flight_result, 'data')}")
-                
                 if hasattr(flight_result, 'data') and flight_result.data:
                     flight_data = flight_result.data
                     search_type = flight_data.get("search_type")
-                    logger.info(f"   Search type: {search_type}")
                     
                     if search_type == "flight_chain":
                         flight_chain = flight_data.get("flight_chain", [])
-                        logger.info(f"   Flight chain found: {flight_chain}")
                         
                         if len(flight_chain) > 3:  # Start + destinations + end
                             multi_destinations = flight_chain[1:-1]  # Remove start and end
-                            logger.info(f"🔗 Detected flight chain destinations from tool results: {multi_destinations}")
-                        else:
-                            logger.warning(f"   Flight chain too short: {len(flight_chain)} cities")
-                    else:
-                        logger.info(f"   Not a flight chain search, search type: {search_type}")
-                else:
-                    logger.warning(f"   Flight result has no data attribute or data is empty")
+                            logger.info(f"🔗 Flight chain detected: {len(multi_destinations)} destinations")
             
             logger.info(f"Generating plan-aware response for destination: {destination_name}")
             if multi_destinations:
-                logger.info(f"🌍 Multi-destinations detected: {multi_destinations}")
-            else:
-                logger.info(f"🏙️ Single destination planning: {destination_name}")
+                logger.info(f"🌍 Multi-destination trip: {len(multi_destinations)} destinations")
             
             # Use plan_manager for centralized plan generation
             from app.core.plan_manager import get_plan_manager

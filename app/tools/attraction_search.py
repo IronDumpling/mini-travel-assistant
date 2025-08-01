@@ -145,11 +145,9 @@ class AttractionSearchTool(BaseTool):
             # Determine search strategy based on input
             if input_data.query:
                 # Use text search for specific queries
-                logger.debug(f"Using text search for query: {input_data.query}")
                 attractions = await self._text_search(input_data)
             else:
                 # Use nearby search for location-based discovery
-                logger.debug(f"Using nearby search for location: {input_data.location}")
                 attractions = await self._nearby_search(input_data)
 
             # Filter attractions based on criteria
@@ -224,7 +222,7 @@ class AttractionSearchTool(BaseTool):
                     price_levels=input_data.price_levels
                 )
                 
-                logger.info(f"🔍 Searching attractions in: {location}")
+                logger.info(f"🎡 Searching attractions in: {location}")
                 
                 # Execute single location search by calling the main logic
                 result = await self._execute_single_location_search(single_location_input, context)
@@ -294,11 +292,9 @@ class AttractionSearchTool(BaseTool):
         # Determine search strategy based on input
         if input_data.query:
             # Use text search for specific queries
-            logger.debug(f"Using text search for query: {input_data.query}")
             attractions = await self._text_search(input_data)
         else:
             # Use nearby search for location-based discovery
-            logger.debug(f"Using nearby search for location: {input_data.location}")
             attractions = await self._nearby_search(input_data)
 
         if not attractions:

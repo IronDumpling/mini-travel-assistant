@@ -36,27 +36,13 @@ async def _async_update_plan(session_id: str, user_message: str, agent_response)
             if execution_result:
                 # ✅ Use plan_manager's fast tool-based generation
                 destination = intent.get("destination", {})
-                logger.info(f"🔍 Background: Intent destination: {destination}")
-                logger.info(f"🔍 Background: Intent destination type: {type(destination)}")
                 
                 if isinstance(destination, dict):
                     destination_name = destination.get("primary", "unknown")
                 else:
                     destination_name = str(destination)
                 
-                logger.info(f"🔍 Background: Extracted destination_name: {destination_name}")
-                
                 tool_results = execution_result.get("results", {})
-                logger.info(f"🔍 Background: Tool results keys: {list(tool_results.keys())}")
-                
-                # ✅ Check if we have flight search results with flight chain
-                if "flight_search" in tool_results:
-                    flight_result = tool_results["flight_search"]
-                    logger.info(f"🔍 Background: Flight result has data: {hasattr(flight_result, 'data')}")
-                    if hasattr(flight_result, 'data') and flight_result.data:
-                        logger.info(f"🔍 Background: Flight data search_type: {flight_result.data.get('search_type')}")
-                        if flight_result.data.get("search_type") == "flight_chain":
-                            logger.info(f"🔍 Background: Flight chain detected in tool results!")
                 
                 # ✅ Extract multi-destinations from intent and flight search results
                 multi_destinations = None
@@ -78,15 +64,9 @@ async def _async_update_plan(session_id: str, user_message: str, agent_response)
                             flight_chain = flight_data.get("flight_chain", [])
                             if len(flight_chain) > 3:  # Start + destinations + end
                                 multi_destinations = flight_chain[1:-1]  # Remove start and end
-                                logger.info(f"🔗 Background: Detected flight chain destinations: {multi_destinations}")
                 
                 if multi_destinations:
-                    logger.info(f"🌍 Background: Multi-destinations detected: {multi_destinations}")
-                    logger.info(f"🌍 Background: Multi-destinations count: {len(multi_destinations)}")
-                else:
-                    logger.info(f"🏙️ Background: Single destination planning: {destination_name}")
-                
-                logger.info(f"📞 Background: Calling plan_manager with multi_destinations: {multi_destinations}")
+                    logger.info(f"🌍 Background plan update: Multi-destination trip with {len(multi_destinations)} destinations")
                 
                 # Generate plan directly from tool results using plan_manager
                 plan_update_result = await plan_manager.generate_plan_from_tool_results(

@@ -243,7 +243,7 @@ class HotelSearchTool(BaseTool):
                     required_amenities=input_data.required_amenities
                 )
                 
-                logger.info(f"🔍 Searching hotels in: {location}")
+                logger.info(f"🏨 Searching hotels in: {location}")
                 
                 # Execute single location search by calling the main logic
                 result = await self._execute_single_location_search(single_location_input, context)
@@ -252,7 +252,7 @@ class HotelSearchTool(BaseTool):
                     # Add location context to each hotel
                     for hotel in result.hotels:
                         hotel.search_location = location
-                        logger.debug(f"🏷️ Tagged hotel {hotel.name} with search_location: {location}")
+        
                     all_hotels.extend(result.hotels)
                     successful_locations.append(location)
                     logger.info(f"✅ Found {len(result.hotels)} hotels in {location}, tagged with search context")
@@ -263,7 +263,7 @@ class HotelSearchTool(BaseTool):
             except Exception as e:
                 failed_locations.append(location)
                 logger.error(f"❌ Error searching hotels in {location}: {e}")
-                logger.debug(f"📊 Exception details for {location}: {type(e).__name__}: {str(e)}")
+
         
         # Prepare result summary
         total_results = len(all_hotels)
@@ -379,7 +379,7 @@ class HotelSearchTool(BaseTool):
                 logger.error(f"❌ City code contains non-alphabetic characters: '{cleaned_city_code}'")
                 return []
             
-            logger.info(f"🔍 Searching hotels in city code: '{cleaned_city_code}' (original: '{city_code}')")
+            logger.info(f"🏨 Searching hotels in: {cleaned_city_code}")
             
             async with aiohttp.ClientSession() as session:
                 # AMADEUS Hotel List API endpoint

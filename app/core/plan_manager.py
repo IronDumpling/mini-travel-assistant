@@ -189,9 +189,8 @@ class PlanManager:
         
         try:
             logger.info(f"Generating plan from tool results for destination: {destination}")
-            logger.info(f"🔍 Multi-destinations parameter: {multi_destinations}")
-            logger.info(f"🔍 Multi-destinations type: {type(multi_destinations)}")
-            logger.info(f"🔍 Multi-destinations length: {len(multi_destinations) if multi_destinations else 0}")
+            if multi_destinations and len(multi_destinations) > 1:
+                logger.info(f"🌍 Planning multi-destination trip with {len(multi_destinations)} destinations")
             
             # Get existing plan
             plan = self.get_plan_by_session(session_id)
@@ -419,9 +418,7 @@ class PlanManager:
         
         current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)
         
-        logger.info(f"🔍 _create_events_from_tools received multi_destinations: {multi_destinations}")
-        logger.info(f"🔍 _create_events_from_tools multi_destinations type: {type(multi_destinations)}")
-        logger.info(f"🔍 _create_events_from_tools multi_destinations length: {len(multi_destinations) if multi_destinations else 0}")
+
         
         # ✅ Handle multi-destination trips (passed as parameter)
         if multi_destinations and len(multi_destinations) > 1:
@@ -841,14 +838,7 @@ class PlanManager:
             safe_origin = str(origin).upper() if origin else 'UNKNOWN'
             safe_destination = str(destination).upper() if destination else 'UNKNOWN'
             expected_route = f"{safe_origin} → {safe_destination}"
-            logger.info(f"🔍 Looking for flight route: {expected_route} (sequence: {sequence})")
-            logger.info(f"🔍 Total available flights: {len(flight_result.flights)}")
-            
-            # ✅ Debug: Show some flight details for troubleshooting
-            for i, flight in enumerate(flight_result.flights[:3]):  # Show first 3 flights
-                route_name = flight.details.get('route_name', 'NO_ROUTE') if hasattr(flight, 'details') and flight.details else 'NO_DETAILS'
-                search_dest = getattr(flight, 'search_destination', 'NO_SEARCH_DEST')
-                logger.info(f"   Flight {i+1}: route_name={route_name}, search_destination={search_dest}")
+            logger.debug(f"Looking for flight route: {expected_route} (sequence: {sequence})")
             
             # Try to find a flight for this specific route
             for flight in flight_result.flights:
@@ -887,7 +877,7 @@ class PlanManager:
                 
                 # ✅ Safe destination matching
                 safe_dest_lower = str(destination).lower() if destination else ''
-                logger.info(f"   Fallback matching: looking for '{safe_dest_lower}' in search_dest='{search_dest_lower}' or flight_dest='{flight_dest_lower}'")
+
                 
                 if (safe_dest_lower and (safe_dest_lower in search_dest_lower or 
                     safe_dest_lower in flight_dest_lower)):
@@ -925,10 +915,6 @@ class PlanManager:
                 
         except Exception as e:
             logger.warning(f"Error extracting flight details for {origin} → {destination}: {e}")
-            logger.warning(f"Debug info - origin: {origin}, destination: {destination}, sequence: {sequence}")
-            logger.warning(f"Debug info - available flights: {len(flight_result.flights) if hasattr(flight_result, 'flights') else 0}")
-            import traceback
-            logger.warning(f"Full traceback: {traceback.format_exc()}")
         
         logger.info(f"🔄 Using default flight details for {safe_origin} → {safe_destination}")
         return default_details
