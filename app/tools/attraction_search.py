@@ -243,7 +243,7 @@ class AttractionSearchTool(BaseTool):
                 if result.success and result.attractions:
                     # Add location context to each attraction
                     for attraction in result.attractions:
-                        attraction.search_location = location
+                        attraction.location = location
                     all_attractions.extend(result.attractions)
                     successful_locations.append(location)
                     logger.info(f"✅ Found {len(result.attractions)} attractions in {location}")
@@ -289,7 +289,7 @@ class AttractionSearchTool(BaseTool):
                 "searched_locations": len(locations),
                 "successful_locations": successful_locations,
                 "failed_locations": failed_locations,
-                "results_per_location": {loc: len([a for a in limited_attractions if hasattr(a, 'search_location') and a.search_location == loc]) for loc in successful_locations}
+                "results_per_location": {loc: len([a for a in limited_attractions if a.location == loc]) for loc in successful_locations}
             }
         )
 
@@ -321,7 +321,7 @@ class AttractionSearchTool(BaseTool):
             )
 
         # Apply filters and sorting
-        filtered_attractions = self._filter_and_sort_attractions(
+        filtered_attractions = self._filter_attractions(
             attractions, input_data
         )
 

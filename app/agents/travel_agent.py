@@ -653,7 +653,7 @@ class TravelAgent(BaseAgent):
                 return response
             else:
                 enhanced_response = await self._llm_enhanced_response(
-                    structured_response, result, intent
+                    response, result, intent
                 )
                 self.status = AgentStatus.IDLE
                 return enhanced_response
@@ -2922,9 +2922,9 @@ Please analyze the current message considering the conversation history for bett
                         attractions = result.attractions[:10]  # Top 10
                         tool_parts.append(f"**Current Attractions ({len(attractions)} found)**:")
                         for attr in attractions:
-                            name = attr.get("name", "Unknown")
-                            desc = attr.get("description", "No description")[:100]
-                            rating = attr.get("rating", "No rating")
+                            name = getattr(attr, "name", "Unknown")
+                            desc = getattr(attr, "description", "No description")[:100]
+                            rating = getattr(attr, "rating", "No rating")
                             tool_parts.append(f"- {name} (Rating: {rating}): {desc}")
 
                     elif tool_name == "hotel_search" and hasattr(result, 'hotels'):
@@ -4433,7 +4433,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                         events.append({
                             "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
                             "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
-                            "description": getattr(attraction, 'category', 'Sightseeing activity'),
+                            "description": getattr(attraction, 'description', getattr(attraction, 'category', 'Sightseeing activity')),
                             "event_type": "attraction",
                             "start_time": visit_time.isoformat(),
                             "end_time": (visit_time + timedelta(hours=2)).isoformat(),
@@ -4460,7 +4460,6 @@ This will help me provide you with the most relevant travel guidance possible.""
                         "start_time": event_time.isoformat(),
                         "end_time": (event_time + timedelta(hours=3)).isoformat(),
                         "location": destination,
-                        "coordinates": {"lat": 40.7484, "lng": -73.9857},
                         "details": {
                             "source": "default_generation",
                             "recommendations": ["Bring camera", "Wear comfortable shoes"]
