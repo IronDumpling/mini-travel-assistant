@@ -55,7 +55,9 @@ class TravelAgent(BaseAgent):
         self.user_preferences_history: Dict[str, Any] = {}
 
         # Travel-specific quality configuration
-        self.fast_response_threshold = 0.75  # Threshold for skipping LLM enhancement in process_message
+        self.fast_response_threshold = (
+            0.75  # Threshold for skipping LLM enhancement in process_message
+        )
         self.quality_threshold = 0.87  # Higher threshold for refinement loop iterations
         self.refine_enabled = True  # Enable self-refinement by default
 
@@ -566,11 +568,17 @@ class TravelAgent(BaseAgent):
             },
         )
 
-    async def plan_travel(self, message: AgentMessage, enable_refinement: Optional[bool] = None) -> AgentResponse:
+    async def plan_travel(
+        self, message: AgentMessage, enable_refinement: Optional[bool] = None
+    ) -> AgentResponse:
         """Public method to plan travel with self-refinement enabled"""
-        return await self.process_with_refinement(message, enable_refinement=enable_refinement)
+        return await self.process_with_refinement(
+            message, enable_refinement=enable_refinement
+        )
 
-    async def process_message(self, message: AgentMessage, skip_quality_check: bool = False) -> AgentResponse:
+    async def process_message(
+        self, message: AgentMessage, skip_quality_check: bool = False
+    ) -> AgentResponse:
         """
         Process user message with optimized performance flow:
         1. Intent analysis (with conversation context)
@@ -586,13 +594,15 @@ class TravelAgent(BaseAgent):
             # 0. Process conversation history and maintain agent state
             conversation_history = message.metadata.get("conversation_history", [])
             session_id = message.metadata.get("session_id")
-            
+
             # Update agent's memory with conversation context
             if conversation_history:
                 self._update_agent_memory_from_history(conversation_history, session_id)
-            
+
             # 1. Understand user intent (with conversation context)
-            intent = await self._analyze_user_intent(message.content, conversation_history)
+            intent = await self._analyze_user_intent(
+                message.content, conversation_history
+            )
 
             # 2. Rule-based tool planning (no LLM call)
             action_plan = self._create_rule_based_action_plan(intent, message.content)
@@ -642,8 +652,9 @@ class TravelAgent(BaseAgent):
                 self.status = AgentStatus.IDLE
                 return response
             else:
-                # Try to enhance if needed
-                enhanced_response = await self._llm_enhanced_response(response, result, intent)
+                enhanced_response = await self._llm_enhanced_response(
+                    response, result, intent
+                )
                 self.status = AgentStatus.IDLE
                 return enhanced_response
 
@@ -654,28 +665,34 @@ class TravelAgent(BaseAgent):
                 success=False,
                 content=f"I encountered an error while processing your request: {str(e)}",
                 confidence=0.0,
-                metadata={"error": str(e)}
+                metadata={"error": str(e)},
             )
 
-    def _update_agent_memory_from_history(self, conversation_history: List[Dict], session_id: str):
+    def _update_agent_memory_from_history(
+        self, conversation_history: List[Dict], session_id: str
+    ):
         """Update agent's memory and preferences from conversation history"""
-        logger.debug(f"Updating agent memory from {len(conversation_history)} conversation entries")
-        
+        logger.debug(
+            f"Updating agent memory from {len(conversation_history)} conversation entries"
+        )
+
         # Update current planning context with session info
         if not self.current_planning_context:
             self.current_planning_context = {}
-        
-        self.current_planning_context.update({
-            "session_id": session_id,
-            "conversation_history": conversation_history,
-            "last_updated": datetime.now().isoformat(),
-        })
-        
+
+        self.current_planning_context.update(
+            {
+                "session_id": session_id,
+                "conversation_history": conversation_history,
+                "last_updated": datetime.now().isoformat(),
+            }
+        )
+
         # Extract user preferences from conversation history
         for entry in conversation_history:
             user_msg = entry.get("user", "").lower()
             assistant_msg = entry.get("assistant", "").lower()
-            
+
             # Extract travel preferences
             if any(word in user_msg for word in ["prefer", "like", "love", "enjoy"]):
                 if "budget" in user_msg or "cheap" in user_msg:
@@ -683,42 +700,62 @@ class TravelAgent(BaseAgent):
                 if "luxury" in user_msg or "expensive" in user_msg:
                     self.user_preferences_history["budget_conscious"] = False
                 if "adventure" in user_msg:
-                    self.user_preferences_history.setdefault("interests", []).append("adventure")
+                    self.user_preferences_history.setdefault("interests", []).append(
+                        "adventure"
+                    )
                 if "culture" in user_msg or "museum" in user_msg:
-                    self.user_preferences_history.setdefault("interests", []).append("culture")
+                    self.user_preferences_history.setdefault("interests", []).append(
+                        "culture"
+                    )
                 if "food" in user_msg or "restaurant" in user_msg:
-                    self.user_preferences_history.setdefault("interests", []).append("food")
-            
+                    self.user_preferences_history.setdefault("interests", []).append(
+                        "food"
+                    )
+
             # Extract mentioned destinations for context
             destinations = geo_mappings.get_preference_tracking_destinations()
             for dest in destinations:
                 if dest in user_msg:
-                    self.user_preferences_history.setdefault("visited_destinations", []).append(dest)
-        
+                    self.user_preferences_history.setdefault(
+                        "visited_destinations", []
+                    ).append(dest)
+
         # Remove duplicates from interests and destinations
         if "interests" in self.user_preferences_history:
-            self.user_preferences_history["interests"] = list(set(self.user_preferences_history["interests"]))
+            self.user_preferences_history["interests"] = list(
+                set(self.user_preferences_history["interests"])
+            )
         if "visited_destinations" in self.user_preferences_history:
-            self.user_preferences_history["visited_destinations"] = list(set(self.user_preferences_history["visited_destinations"]))
-        
+            self.user_preferences_history["visited_destinations"] = list(
+                set(self.user_preferences_history["visited_destinations"])
+            )
+
         logger.debug(f"Updated user preferences: {self.user_preferences_history}")
 
-    async def _analyze_user_intent(self, user_message: str, conversation_history: List[Dict] = None) -> Dict[str, Any]:
+    async def _analyze_user_intent(
+        self, user_message: str, conversation_history: List[Dict] = None
+    ) -> Dict[str, Any]:
         """Enhanced intent analysis with information fusion strategy and conversation context"""
 
         # Step 0: Prepare conversation context for intent analysis
         conversation_context = ""
         if conversation_history:
-            recent_context = conversation_history[-3:]  # Use last 3 exchanges for context
+            recent_context = conversation_history[
+                -3:
+            ]  # Use last 3 exchanges for context
             context_parts = []
             for entry in recent_context:
                 context_parts.append(f"User: {entry.get('user', '')}")
                 context_parts.append(f"Assistant: {entry.get('assistant', '')}")
             conversation_context = "\n".join(context_parts)
-            logger.debug(f"Using conversation context for intent analysis: {len(conversation_context)} chars")
+            logger.debug(
+                f"Using conversation context for intent analysis: {len(conversation_context)} chars"
+            )
 
         # Step 1: Get LLM intent analysis using enhanced prompt (with conversation context)
-        llm_analysis = await self._get_enhanced_llm_intent_analysis(user_message, conversation_context)
+        llm_analysis = await self._get_enhanced_llm_intent_analysis(
+            user_message, conversation_context
+        )
 
         # Step 2: Use structured response for deep analysis
         structured_intent = await self._parse_structured_intent(
@@ -732,8 +769,12 @@ class TravelAgent(BaseAgent):
 
         # Step 4: Enhance with agent's learned preferences
         if self.user_preferences_history:
-            enhanced_intent["learned_preferences"] = self.user_preferences_history.copy()
-            logger.debug(f"Added learned preferences to intent: {enhanced_intent['learned_preferences']}")
+            enhanced_intent["learned_preferences"] = (
+                self.user_preferences_history.copy()
+            )
+            logger.debug(
+                f"Added learned preferences to intent: {enhanced_intent['learned_preferences']}"
+            )
 
         return enhanced_intent
 
@@ -759,8 +800,8 @@ Please analyze the current message considering the conversation history for bett
         else:
             # Standard prompt without context
             analysis_prompt = prompt_manager.get_prompt(
-            PromptType.INTENT_ANALYSIS, user_message=user_message
-        )
+                PromptType.INTENT_ANALYSIS, user_message=user_message
+            )
 
         try:
             if self.llm_service:
@@ -840,7 +881,7 @@ Please analyze the current message considering the conversation history for bett
                 "information_fusion_strategy", {}
             ),
         }
-        
+
         # Add user message to structured analysis for fallback origin extraction
         if "structured_analysis" in legacy_format:
             legacy_format["structured_analysis"]["user_message"] = user_message
@@ -939,6 +980,7 @@ Please analyze the current message considering the conversation history for bett
         """Enhanced fallback intent analysis with information fusion strategy"""
 
         import re
+
         user_message_lower = user_message.lower()
 
         # ✅ Enhanced intent type detection (more precise)
@@ -1210,8 +1252,10 @@ Please analyze the current message considering the conversation history for bett
             return "english"
 
     async def _retrieve_knowledge_context(
-        self, query: str, structured_intent: Optional[Dict[str, Any]] = None,
-        session_id: Optional[str] = None  # Add session_id parameter
+        self,
+        query: str,
+        structured_intent: Optional[Dict[str, Any]] = None,
+        session_id: Optional[str] = None,  # Add session_id parameter
     ) -> Dict[str, Any]:
         """
         Retrieve knowledge context for the query, including existing plan context
@@ -1223,7 +1267,7 @@ Please analyze the current message considering the conversation history for bett
                 "total_docs": 0,
                 "search_strategy": "none",
                 "plan_context": {},
-                "has_existing_plan": False
+                "has_existing_plan": False,
             }
 
             if not self.rag_engine:
@@ -1251,35 +1295,45 @@ Please analyze the current message considering the conversation history for bett
             retrieval_result = await self.rag_engine.retrieve(
                 query, top_k=docs_limit, structured_intent=structured_intent
             )
-            
+
             # Extract documents from retrieval result
             relevant_docs = []
-            if retrieval_result and hasattr(retrieval_result, 'documents'):
+            if retrieval_result and hasattr(retrieval_result, "documents"):
                 for doc in retrieval_result.documents:
-                    relevant_docs.append({
-                        "id": getattr(doc, 'id', 'unknown'),
-                        "content": getattr(doc, 'content', ''),
-                        "metadata": getattr(doc, 'metadata', {}),
-                        "score": getattr(doc, 'score', 0.0)
-                    })
+                    relevant_docs.append(
+                        {
+                            "id": getattr(doc, "id", "unknown"),
+                            "content": getattr(doc, "content", ""),
+                            "metadata": getattr(doc, "metadata", {}),
+                            "score": getattr(doc, "score", 0.0),
+                        }
+                    )
 
-            context.update({
-                "relevant_docs": relevant_docs,
-                "total_docs": len(relevant_docs),
-                "search_strategy": search_strategy,
-                "confidence_threshold": confidence_threshold,
-            })
+            context.update(
+                {
+                    "relevant_docs": relevant_docs,
+                    "total_docs": len(relevant_docs),
+                    "search_strategy": search_strategy,
+                    "confidence_threshold": confidence_threshold,
+                }
+            )
 
             # NEW: Add plan context retrieval
-            plan_context = await self._retrieve_plan_context(session_id, query, structured_intent)
-            context.update({
-                "plan_context": plan_context,
-                "has_existing_plan": plan_context.get("has_plan", False),
-                "plan_events": plan_context.get("events", []),
-                "plan_metadata": plan_context.get("metadata", {})
-            })
+            plan_context = await self._retrieve_plan_context(
+                session_id, query, structured_intent
+            )
+            context.update(
+                {
+                    "plan_context": plan_context,
+                    "has_existing_plan": plan_context.get("has_plan", False),
+                    "plan_events": plan_context.get("events", []),
+                    "plan_metadata": plan_context.get("metadata", {}),
+                }
+            )
 
-            logger.info(f"Retrieved {len(relevant_docs)} docs with {search_strategy} strategy, plan context: {plan_context.get('has_plan', False)}")
+            logger.info(
+                f"Retrieved {len(relevant_docs)} docs with {search_strategy} strategy, plan context: {plan_context.get('has_plan', False)}"
+            )
             return context
 
         except Exception as e:
@@ -1290,7 +1344,7 @@ Please analyze the current message considering the conversation history for bett
                 "total_docs": 0,
                 "search_strategy": "error",
                 "plan_context": {},
-                "has_existing_plan": False
+                "has_existing_plan": False,
             }
 
     async def _retrieve_plan_context(
@@ -1299,18 +1353,21 @@ Please analyze the current message considering the conversation history for bett
         """Retrieve existing plan context for the session"""
         if not session_id:
             return {"has_plan": False}
-        
+
         try:
             from app.core.plan_manager import get_plan_manager
+
             plan_manager = get_plan_manager()
-            
+
             existing_plan = plan_manager.get_plan_by_session(session_id)
             if not existing_plan or not existing_plan.events:
                 return {"has_plan": False}
-            
+
             # Analyze plan relevance to current query
-            relevant_events = self._filter_relevant_events(existing_plan.events, query, intent)
-            
+            relevant_events = self._filter_relevant_events(
+                existing_plan.events, query, intent
+            )
+
             return {
                 "has_plan": True,
                 "plan_id": existing_plan.plan_id,
@@ -1318,9 +1375,9 @@ Please analyze the current message considering the conversation history for bett
                 "metadata": existing_plan.metadata.model_dump(),
                 "last_updated": existing_plan.updated_at,
                 "event_summary": self._summarize_plan_events(existing_plan.events),
-                "gaps_identified": self._identify_plan_gaps(existing_plan, intent)
+                "gaps_identified": self._identify_plan_gaps(existing_plan, intent),
             }
-        
+
         except Exception as e:
             logger.error(f"Error retrieving plan context: {e}")
             return {"has_plan": False}
@@ -1331,89 +1388,111 @@ Please analyze the current message considering the conversation history for bett
         """Filter events relevant to current query"""
         if not events:
             return []
-        
+
         query_lower = query.lower()
         relevant_events = []
-        
+
         # Check for date-related queries
-        date_keywords = ["today", "tomorrow", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        date_keywords = [
+            "today",
+            "tomorrow",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        ]
         time_keywords = ["morning", "afternoon", "evening", "night"]
-        
+
         # Check for activity-related queries
-        activity_keywords = ["flight", "hotel", "attraction", "restaurant", "visit", "tour"]
-        
+        activity_keywords = [
+            "flight",
+            "hotel",
+            "attraction",
+            "restaurant",
+            "visit",
+            "tour",
+        ]
+
         for event in events:
             is_relevant = False
-            
+
             # Check if query mentions specific event types
             if intent and intent.get("type") == "specific_query":
                 for keyword in activity_keywords:
-                    if keyword in query_lower and keyword in str(event.event_type).lower():
+                    if (
+                        keyword in query_lower
+                        and keyword in str(event.event_type).lower()
+                    ):
                         is_relevant = True
                         break
-            
+
             # Check if query mentions location in event
-            if event.location and any(word in query_lower for word in event.location.lower().split()):
+            if event.location and any(
+                word in query_lower for word in event.location.lower().split()
+            ):
                 is_relevant = True
-            
+
             # Check if query mentions event title
-            if event.title and any(word in query_lower for word in event.title.lower().split()):
+            if event.title and any(
+                word in query_lower for word in event.title.lower().split()
+            ):
                 is_relevant = True
-            
+
             # If no specific filters match, include recent events
             if not is_relevant and len(relevant_events) < 5:
                 is_relevant = True
-            
+
             if is_relevant:
                 relevant_events.append(event)
-        
+
         return relevant_events[:10]  # Limit to 10 most relevant events
 
     def _summarize_plan_events(self, events: List) -> str:
         """Create human-readable summary of plan events"""
         if not events:
             return "No events scheduled"
-        
+
         summary_parts = []
         event_types = {}
-        
+
         for event in events:
             event_type = str(event.event_type).lower()
             if event_type not in event_types:
                 event_types[event_type] = 0
             event_types[event_type] += 1
-        
+
         for event_type, count in event_types.items():
             if count == 1:
                 summary_parts.append(f"1 {event_type}")
             else:
                 summary_parts.append(f"{count} {event_type}s")
-        
+
         return f"Current plan includes: {', '.join(summary_parts)}"
 
-    def _identify_plan_gaps(
-        self, plan, intent: Optional[Dict[str, Any]]
-    ) -> List[str]:
+    def _identify_plan_gaps(self, plan, intent: Optional[Dict[str, Any]]) -> List[str]:
         """Identify missing elements in the plan"""
         gaps = []
-        
+
         if not plan.events:
             return ["No events scheduled"]
-        
+
         # Check for common travel components
         event_types = [str(event.event_type).lower() for event in plan.events]
-        
+
         essential_types = ["flight", "hotel"]
         recommended_types = ["attraction", "restaurant"]
-        
+
         for essential in essential_types:
             if essential not in event_types:
                 gaps.append(f"Missing {essential} arrangements")
-        
+
         for recommended in recommended_types:
             if recommended not in event_types:
                 gaps.append(f"Could add {recommended} recommendations")
-        
+
         # Check for timeline gaps (more than 8 hours between events on same day)
         # This would need more sophisticated date analysis
         return gaps
@@ -1503,7 +1582,7 @@ Please analyze the current message considering the conversation history for bett
     def _extract_origin_from_message(self, user_message: str) -> str:
         """Extract origin city from user message using improved text parsing"""
         import re
-        
+
         # Convert to lowercase for easier matching
         message_lower = user_message.lower()
         
@@ -1530,7 +1609,7 @@ Please analyze the current message considering the conversation history for bett
             r'starting\s+from\s+([a-zA-Z\s]+?)(?:\s|$|,|\.|!|\?)',  # "starting from Paris"
             r'travel\s+from\s+([a-zA-Z\s]+?)\s+to\s+([a-zA-Z\s]+)',  # "travel from Paris to Rome"
         ]
-        
+
         for pattern in patterns:
             match = re.search(pattern, message_lower)
             if match:
@@ -1560,10 +1639,6 @@ Please analyze the current message considering the conversation history for bett
         
         # If no valid origin found, return "Unknown" (will default to Toronto)
         return "Unknown"
-
-
-
-
 
 
     async def _generate_intent_based_actions(
@@ -2005,9 +2080,10 @@ Please analyze the current message considering the conversation history for bett
 
         # Set default dates (7 days from now for check-in, 10 days from now for check-out)
         from datetime import datetime, timedelta
+
         default_check_in = datetime.now() + timedelta(days=7)
         default_check_out = datetime.now() + timedelta(days=10)
-        
+
         params = {
             "location": iata_result,  # Use IATA code(s) for AMADEUS API
             "destination": destination,  # Keep original for display
@@ -2291,9 +2367,9 @@ Please analyze the current message considering the conversation history for bett
             plan["actions"] = [
                 "retrieve_knowledge",
                 "search_flights",
-                "search_hotels", 
+                "search_hotels",
                 "search_attractions",
-                "generate_plan"
+                "generate_plan",
             ]
             plan["tools_to_use"] = [
                 "flight_search",
@@ -2373,10 +2449,12 @@ Please analyze the current message considering the conversation history for bett
             destination = plan.get("destination", "unknown")
             if destination != "unknown":
                 query = f"{query} {destination}"
-            
-            knowledge_context = await self._retrieve_knowledge_context(query, session_id=session_id)
+
+            knowledge_context = await self._retrieve_knowledge_context(
+                query, session_id=session_id
+            )
             results["knowledge_context"] = knowledge_context
-            
+
             # Add planning context to results
             results["actions"] = plan.get("actions", [])
             results["next_steps"] = plan.get("next_steps", [])
@@ -2407,7 +2485,9 @@ Please analyze the current message considering the conversation history for bett
                     if tool_name == "attraction_search":
                         # Convert travel agent parameters to AttractionSearchInput format
                         attraction_params = {
-                            "location": tool_params.get("location", "unknown"),  # attraction_search uses "location" key
+                            "location": tool_params.get(
+                                "location", "unknown"
+                            ),  # attraction_search uses "location" key
                             "query": None,  # Let the tool use location-based search
                             "max_results": tool_params.get("max_results", 10),
                             "include_photos": True,
@@ -2447,7 +2527,7 @@ Please analyze the current message considering the conversation history for bett
                             "rooms": 1,
                             "min_rating": 4.0,
                         }
-                        
+
                         # Add debugging to see what's being sent to tool executor
 
                         logger.info(f"🏨 Travel agent - Creating hotel search ToolCall")
@@ -2465,6 +2545,7 @@ Please analyze the current message considering the conversation history for bett
                     elif tool_name == "flight_search":
                         # For flight search, we need proper date handling
                         from datetime import datetime, timedelta
+
                         # Use a future date for the search
                         future_date = datetime.now() + timedelta(days=30)
                         
@@ -2491,7 +2572,9 @@ Please analyze the current message considering the conversation history for bett
                             "origin": tool_params.get("origin", "PAR"),
                             "destination": destination_result,  # Use IATA code(s) for AMADEUS API
                             "start_date": future_date,
-                            "passengers": tool_params.get("passengers", 1),  # flight_search uses "passengers" key
+                            "passengers": tool_params.get(
+                                "passengers", 1
+                            ),  # flight_search uses "passengers" key
                             "class_type": "ECONOMY",
                             "budget_level": tool_params.get("budget_level", "mid-range"),
                             "flight_chain": flight_chain_enabled,  # Enable flight chain for multi-city trips
@@ -2519,14 +2602,16 @@ Please analyze the current message considering the conversation history for bett
                     # Store tool results and track which tools were used
                     results["results"] = execution_result.results
                     results["execution_time"] = execution_result.execution_time
-                    
+
                     # Populate tools_used list with the names of tools that were executed
                     for tool_call in tool_calls:
                         tool_name = tool_call.tool_name
                         if tool_name in execution_result.results:
                             results["tools_used"].append(tool_name)
-                    
-                    logger.info(f"Tools executed and added to tools_used: {results['tools_used']}")
+
+                    logger.info(
+                        f"Tools executed and added to tools_used: {results['tools_used']}"
+                    )
 
                     if not execution_result.success:
                         results["success"] = False
@@ -2555,7 +2640,7 @@ Please analyze the current message considering the conversation history for bett
             knowledge_context = execution_result.get("knowledge_context", {})
             tool_results = execution_result.get("results", {})
             user_message = execution_result.get("original_message", "")
-            
+
             # NEW: Extract plan context
             plan_context = knowledge_context.get("plan_context", {})
             has_existing_plan = plan_context.get("has_plan", False)
@@ -2569,7 +2654,9 @@ Please analyze the current message considering the conversation history for bett
             logger.info(f"  - Has existing plan: {has_existing_plan}")
             if has_existing_plan:
                 logger.info(f"  - Plan events: {len(plan_context.get('events', []))}")
-                logger.info(f"  - Plan summary: {plan_context.get('event_summary', 'N/A')}")
+                logger.info(
+                    f"  - Plan summary: {plan_context.get('event_summary', 'N/A')}"
+                )
 
             if execution_result["success"]:
                 # Try intelligent information fusion using LLM
@@ -2590,8 +2677,11 @@ Please analyze the current message considering the conversation history for bett
                         # NEW: Choose fusion prompt based on plan context
                         if has_existing_plan:
                             fusion_prompt = self._create_plan_aware_fusion_prompt(
-                                user_message, formatted_knowledge, formatted_tools, 
-                                formatted_intent, plan_context
+                                user_message,
+                                formatted_knowledge,
+                                formatted_tools,
+                                formatted_intent,
+                                plan_context,
                             )
                         else:
                             # Use information fusion template from prompt manager
@@ -2739,8 +2829,10 @@ Please analyze the current message considering the conversation history for bett
         """Format tool results for information fusion"""
         logger.info(f"=== FORMATTING TOOL RESULTS ===")
         logger.info(f"Tool results type: {type(tool_results)}")
-        logger.info(f"Tool results keys: {list(tool_results.keys()) if tool_results else 'None'}")
-        
+        logger.info(
+            f"Tool results keys: {list(tool_results.keys()) if tool_results else 'None'}"
+        )
+
         if not tool_results:
             logger.info("No tool results available")
             return "No dynamic tool results available."
@@ -2750,14 +2842,22 @@ Please analyze the current message considering the conversation history for bett
             logger.info(f"=== TOOL: {tool_name} ===")
             logger.info(f"Result type: {type(result)}")
             logger.info(f"Result success: {getattr(result, 'success', 'N/A')}")
-            if hasattr(result, 'hotels'):
-                logger.info(f"Hotels count: {len(result.hotels) if result.hotels else 0}")
+            if hasattr(result, "hotels"):
+                logger.info(
+                    f"Hotels count: {len(result.hotels) if result.hotels else 0}"
+                )
                 if result.hotels:
-                    logger.info(f"First hotel: {result.hotels[0] if result.hotels else 'None'}")
-            if hasattr(result, 'flights'):
-                logger.info(f"Flights count: {len(result.flights) if result.flights else 0}")
+                    logger.info(
+                        f"First hotel: {result.hotels[0] if result.hotels else 'None'}"
+                    )
+            if hasattr(result, "flights"):
+                logger.info(
+                    f"Flights count: {len(result.flights) if result.flights else 0}"
+                )
                 if result.flights:
-                    logger.info(f"First flight: {result.flights[0] if result.flights else 'None'}")
+                    logger.info(
+                        f"First flight: {result.flights[0] if result.flights else 'None'}"
+                    )
             logger.info(f"Result data: {getattr(result, 'data', 'N/A')}")
             logger.info(f"Result error: {getattr(result, 'error', 'N/A')}")
 
@@ -2765,10 +2865,12 @@ Please analyze the current message considering the conversation history for bett
         for tool_name, result in tool_results.items():
             logger.info(f"Processing tool: {tool_name}")
             logger.info(f"Result type: {type(result)}")
-            logger.info(f"Result attributes: {dir(result) if hasattr(result, '__dict__') else 'No attributes'}")
-            
+            logger.info(
+                f"Result attributes: {dir(result) if hasattr(result, '__dict__') else 'No attributes'}"
+            )
+
             # Handle ToolOutput objects
-            if hasattr(result, 'success') and hasattr(result, 'data'):
+            if hasattr(result, "success") and hasattr(result, "data"):
                 logger.info(f"Tool {tool_name} success: {result.success}")
                 if result.success:
                     if tool_name == "flight_search" and hasattr(result, 'flights'):
@@ -2820,16 +2922,18 @@ Please analyze the current message considering the conversation history for bett
                         attractions = result.attractions[:10]  # Top 10
                         tool_parts.append(f"**Current Attractions ({len(attractions)} found)**:")
                         for attr in attractions:
-                            name = attr.get("name", "Unknown")
-                            desc = attr.get("description", "No description")[:100]
-                            rating = attr.get("rating", "No rating")
+                            name = getattr(attr, "name", "Unknown")
+                            desc = getattr(attr, "description", "No description")[:100]
+                            rating = getattr(attr, "rating", "No rating")
                             tool_parts.append(f"- {name} (Rating: {rating}): {desc}")
 
                     elif tool_name == "hotel_search" and hasattr(result, 'hotels'):
                         hotels = result.hotels[:5]  # Top 5
                         logger.info(f"Found {len(hotels)} hotels for {tool_name}")
                         if hotels:
-                            tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
+                            tool_parts.append(
+                                f"**Current Hotels ({len(hotels)} found)**:"
+                            )
                             for hotel in hotels:
                                 name = getattr(hotel, 'name', 'Unknown')
                                 # Defensive: try price_per_night first, never access 'price' directly for hotels
@@ -2844,21 +2948,29 @@ Please analyze the current message considering the conversation history for bett
                                 tool_parts.append(f"- {name} (Rating: {rating}): {price_str}")
                                 logger.info(f"Added hotel: {name} - Rating: {rating}, Price: {price_str}")
                         else:
-                            tool_parts.append("**Hotel Search**: No hotels found for the specified location.")
+                            tool_parts.append(
+                                "**Hotel Search**: No hotels found for the specified location."
+                            )
                             logger.info("No hotels found for hotel_search")
 
-                    elif hasattr(result, 'data') and result.data:
-                        tool_parts.append(f"**{tool_name.replace('_', ' ').title()}**: Data available")
+                    elif hasattr(result, "data") and result.data:
+                        tool_parts.append(
+                            f"**{tool_name.replace('_', ' ').title()}**: Data available"
+                        )
                 else:
-                    tool_parts.append(f"**{tool_name.replace('_', ' ').title()}**: Error - {result.error}")
+                    tool_parts.append(
+                        f"**{tool_name.replace('_', ' ').title()}**: Error - {result.error}"
+                    )
                     logger.error(f"Tool {tool_name} failed: {result.error}")
-            
+
             # Handle dictionary results (fallback)
             elif isinstance(result, dict):
                 logger.info(f"Processing {tool_name} as dictionary")
                 if tool_name == "attraction_search" and "attractions" in result:
                     attractions = result["attractions"][:3]  # Top 3
-                    tool_parts.append(f"**Current Attractions ({len(attractions)} found)**:")
+                    tool_parts.append(
+                        f"**Current Attractions ({len(attractions)} found)**:"
+                    )
                     for attr in attractions:
                         name = attr.get("name", "Unknown")
                         desc = attr.get("description", "No description")[:100]
@@ -2867,7 +2979,9 @@ Please analyze the current message considering the conversation history for bett
 
                 elif tool_name == "hotel_search" and "hotels" in result:
                     hotels = result["hotels"][:3]  # Top 3
-                    logger.info(f"Found {len(hotels)} hotels for {tool_name} (dict format)")
+                    logger.info(
+                        f"Found {len(hotels)} hotels for {tool_name} (dict format)"
+                    )
                     if hotels:
                         tool_parts.append(f"**Current Hotels ({len(hotels)} found)**:")
                         for hotel in hotels:
@@ -2876,11 +2990,21 @@ Please analyze the current message considering the conversation history for bett
                             price = hotel.get("price_per_night", "Price unavailable")
                             rating = hotel.get("rating", "No rating")
                             currency = hotel.get("currency", "")
-                            price_str = f"{price} {currency}" if price and price != 'Price unavailable' else 'Price unavailable'
-                            tool_parts.append(f"- {name} (Rating: {rating}): {price_str}")
-                            logger.info(f"Added hotel (dict): {name} - Rating: {rating}, Price: {price_str}")
+                            price_str = (
+                                f"{price} {currency}"
+                                if price and price != "Price unavailable"
+                                else "Price unavailable"
+                            )
+                            tool_parts.append(
+                                f"- {name} (Rating: {rating}): {price_str}"
+                            )
+                            logger.info(
+                                f"Added hotel (dict): {name} - Rating: {rating}, Price: {price_str}"
+                            )
                     else:
-                        tool_parts.append("**Hotel Search**: No hotels found for the specified location.")
+                        tool_parts.append(
+                            "**Hotel Search**: No hotels found for the specified location."
+                        )
                         logger.info("No hotels found for hotel_search (dict format)")
 
                 elif tool_name == "flight_search" and "flights" in result:
@@ -2893,9 +3017,15 @@ Please analyze the current message considering the conversation history for bett
                         tool_parts.append(f"- {airline}: {price} ({duration})")
 
                 elif "message" in result:
-                    tool_parts.append(f"**{tool_name.replace('_', ' ').title()}**: {result['message']}")
+                    tool_parts.append(
+                        f"**{tool_name.replace('_', ' ').title()}**: {result['message']}"
+                    )
 
-        formatted_result = "\n".join(tool_parts) if tool_parts else "Tool results available but not formatted."
+        formatted_result = (
+            "\n".join(tool_parts)
+            if tool_parts
+            else "Tool results available but not formatted."
+        )
         logger.info(f"Final formatted tool result: {formatted_result[:200]}...")
         logger.info(f"Tool parts count: {len(tool_parts)}")
         logger.info(f"Tool parts: {tool_parts}")
@@ -3471,7 +3601,7 @@ This will help me provide you with the most relevant travel guidance possible.""
         """Convert city/region name to IATA code(s), handling regions that map to multiple cities"""
         # Add debugging information
         logger.info(f"🌍 Converting city to IATA code - Input: '{city_name}'")
-        
+
         # Handle unknown/empty destination case - return empty string to indicate invalid destination
         if not city_name or city_name.lower() in ['unknown', '']:
             logger.error(f"❌ Invalid destination '{city_name}' - cannot convert to IATA code")
@@ -3517,20 +3647,22 @@ This will help me provide you with the most relevant travel guidance possible.""
         
         # Normalize city name
         normalized_city = city_name.lower().strip()
-        
+
         # Handle special cases
-        if 'tokyo' in normalized_city and 'japan' in normalized_city:
-            normalized_city = 'tokyo'
-        
+        if "tokyo" in normalized_city and "japan" in normalized_city:
+            normalized_city = "tokyo"
+
         # Get IATA code
         iata_code = city_to_iata.get(normalized_city)
-        
+
         # Add debugging information
         logger.info(f"🌍 Normalized city: '{normalized_city}'")
         logger.info(f"🌍 Found IATA code: '{iata_code}'")
-        
+
         if iata_code:
-            logger.info(f"✅ Successfully converted '{city_name}' to IATA code '{iata_code}'")
+            logger.info(
+                f"✅ Successfully converted '{city_name}' to IATA code '{iata_code}'"
+            )
             # Ensure the IATA code is clean
             clean_iata = iata_code.strip().upper()
             logger.info(f"✅ Clean IATA code: '{clean_iata}'")
@@ -3566,7 +3698,7 @@ This will help me provide you with the most relevant travel guidance possible.""
     def _extract_destination_from_message(self, message: str) -> str:
         """Extract destination from user message"""
         logger.info(f"🌍 Extracting destination from message: '{message}'")
-        
+
         message_lower = message.lower()
 
         # Common destinations with more comprehensive list
@@ -3575,7 +3707,9 @@ This will help me provide you with the most relevant travel guidance possible.""
         # First, try exact destination matching
         for dest in destinations:
             if dest in message_lower:
-                logger.info(f"🌍 Found destination '{dest}' in message using exact match")
+                logger.info(
+                    f"🌍 Found destination '{dest}' in message using exact match"
+                )
                 return dest.title()  # Return title case for consistency
 
         # Try to find destination with common patterns
@@ -3601,15 +3735,21 @@ This will help me provide you with the most relevant travel guidance possible.""
             match = re.search(pattern, message_lower)
             if match:
                 location = match.group(1).strip()
-                if len(location) < 30 and len(location) > 0:  # Reasonable destination name
-                    logger.info(f"🌍 Found destination '{location}' using pattern '{pattern}'")
+                if (
+                    len(location) < 30 and len(location) > 0
+                ):  # Reasonable destination name
+                    logger.info(
+                        f"🌍 Found destination '{location}' using pattern '{pattern}'"
+                    )
                     return location.title()  # Return title case for consistency
 
         # If still no match, try to find any known destination in the message
         # This is a fallback for cases where the pattern matching fails
         for dest in destinations:
             if dest in message_lower:
-                logger.info(f"🌍 Found destination '{dest}' in message using fallback search")
+                logger.info(
+                    f"🌍 Found destination '{dest}' in message using fallback search"
+                )
                 return dest.title()
 
         logger.warning(f"🌍 No destination found in message, returning 'Unknown'")
@@ -3624,8 +3764,12 @@ This will help me provide you with the most relevant travel guidance possible.""
     ):
         """Configure self-refinement settings with two-tier thresholds"""
         self.refine_enabled = enabled
-        self.fast_response_threshold = fast_response_threshold  # For process_message LLM enhancement decision
-        self.quality_threshold = quality_threshold  # For refinement loop iteration decision
+        self.fast_response_threshold = (
+            fast_response_threshold  # For process_message LLM enhancement decision
+        )
+        self.quality_threshold = (
+            quality_threshold  # For refinement loop iteration decision
+        )
         self.max_refine_iterations = max_iterations
 
     def _create_rule_based_action_plan(
@@ -3640,7 +3784,7 @@ This will help me provide you with the most relevant travel guidance possible.""
             intent_type = intent.get("type") or intent.get("intent_type", "query")
             destination = intent.get("destination", "unknown")
             user_message_lower = user_message.lower()
-            
+
             # Initialize plan
             plan = {
                 "intent_type": intent_type,
@@ -3650,32 +3794,40 @@ This will help me provide you with the most relevant travel guidance possible.""
                 "actions": [],
                 "next_steps": [],
                 "confidence": 0.8,
-                "planning_method": "rule_based"
+                "planning_method": "rule_based",
             }
-            
+
             # Rule-based tool selection using keyword matching and intent analysis
-            selected_tools = self._select_tools_by_rules(intent_type, user_message_lower, destination)
-            
+            selected_tools = self._select_tools_by_rules(
+                intent_type, user_message_lower, destination
+            )
+
             # Generate tool parameters using extracted intent information
             tool_parameters = self._extract_tool_parameters_from_intent(
                 selected_tools, intent, user_message
             )
-            
+
             # Generate actions and next steps based on intent and tools
-            actions = self._generate_rule_based_actions(intent_type, selected_tools, destination)
-            next_steps = self._generate_rule_based_next_steps(intent_type, selected_tools)
-            
+            actions = self._generate_rule_based_actions(
+                intent_type, selected_tools, destination
+            )
+            next_steps = self._generate_rule_based_next_steps(
+                intent_type, selected_tools
+            )
+
             # Update plan
-            plan.update({
-                "tools_to_use": selected_tools,
-                "strategy": "parallel",
-                "tool_parameters": tool_parameters,
-                "actions": actions,
-                "next_steps": next_steps
-            })
-            
+            plan.update(
+                {
+                    "tools_to_use": selected_tools,
+                    "strategy": "parallel",
+                    "tool_parameters": tool_parameters,
+                    "actions": actions,
+                    "next_steps": next_steps,
+                }
+            )
+
             return plan
-            
+
         except Exception as e:
             logger.error(f"Error in rule-based action planning: {e}")
             # Return minimal safe plan
@@ -3686,78 +3838,96 @@ This will help me provide you with the most relevant travel guidance possible.""
                 "actions": ["search_attractions", "provide_information"],
                 "next_steps": ["Let me know if you need more specific information"],
                 "confidence": 0.5,
-                "planning_method": "fallback"
+                "planning_method": "fallback",
             }
 
     def _select_tools_by_rules(
         self, intent_type: str, user_message_lower: str, destination: str
     ) -> List[str]:
         """Fast rule-based tool selection using keyword matching and intent patterns"""
-        
+
         selected_tools = []
-        
+
         # Tool selection rules based on keywords and intent
         tool_rules = {
             "flight_search": {
                 "keywords": ["flight", "fly", "airline", "airport", "ticket", "plane"],
                 "intent_weight": {"planning": 0.8, "booking": 0.9, "query": 0.3},
-                "priority": 1
+                "priority": 1,
             },
             "hotel_search": {
-                "keywords": ["hotel", "stay", "accommodation", "sleep", "room", "lodge"],
+                "keywords": [
+                    "hotel",
+                    "stay",
+                    "accommodation",
+                    "sleep",
+                    "room",
+                    "lodge",
+                ],
                 "intent_weight": {"planning": 0.9, "booking": 0.9, "query": 0.4},
-                "priority": 2
+                "priority": 2,
             },
             "attraction_search": {
-                "keywords": ["attraction", "visit", "see", "tour", "activity", "explore", "museum", "park"],
+                "keywords": [
+                    "attraction",
+                    "visit",
+                    "see",
+                    "tour",
+                    "activity",
+                    "explore",
+                    "museum",
+                    "park",
+                ],
                 "intent_weight": {"planning": 0.7, "recommendation": 0.9, "query": 0.8},
-                "priority": 3
-            }
+                "priority": 3,
+            },
         }
-        
+
         # Calculate scores for each tool
         tool_scores = {}
         for tool_name, rules in tool_rules.items():
             score = 0.0
-            
+
             # Keyword matching score
-            keyword_matches = sum(1 for keyword in rules["keywords"] if keyword in user_message_lower)
+            keyword_matches = sum(
+                1 for keyword in rules["keywords"] if keyword in user_message_lower
+            )
             if keyword_matches > 0:
                 score += min(keyword_matches * 0.3, 1.0)
-            
+
             # Intent type bonus
             intent_bonus = rules["intent_weight"].get(intent_type, 0.1)
             score += intent_bonus
-            
+
             # Destination bonus (all tools benefit from known destinations)
             if destination != "unknown":
                 score += 0.2
-                
+
             tool_scores[tool_name] = score
-        
+
         # Select tools above threshold
         threshold = 0.4
         for tool_name, score in tool_scores.items():
             if score >= threshold:
                 selected_tools.append(tool_name)
-        
+
         # Ensure we have at least one tool for any travel request
         if not selected_tools:
             selected_tools = ["attraction_search"]  # Default fallback
-            
+
         # Sort by score (highest first) and limit to 3 tools max for performance
         selected_tools.sort(key=lambda x: tool_scores.get(x, 0), reverse=True)
         selected_tools = selected_tools[:3]
-        
+
         return selected_tools
 
     def _extract_tool_parameters_from_intent(
         self, selected_tools: List[str], intent: Dict[str, Any], user_message: str
     ) -> Dict[str, Dict[str, Any]]:
         """Extract tool parameters from intent analysis with safe defaults"""
-        
+
         import datetime
-        
+
         tool_parameters = {}
         destination_raw = intent.get("destination", "unknown")
         
@@ -3769,15 +3939,21 @@ This will help me provide you with the most relevant travel guidance possible.""
             destination = destination_raw if destination_raw else "unknown"
         
         # Generate safe default dates (30 days from now)
-        default_check_in = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
-        default_check_out = (datetime.datetime.now() + datetime.timedelta(days=33)).strftime("%Y-%m-%d")
-        default_departure = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
-        
+        default_check_in = (
+            datetime.datetime.now() + datetime.timedelta(days=30)
+        ).strftime("%Y-%m-%d")
+        default_check_out = (
+            datetime.datetime.now() + datetime.timedelta(days=33)
+        ).strftime("%Y-%m-%d")
+        default_departure = (
+            datetime.datetime.now() + datetime.timedelta(days=30)
+        ).strftime("%Y-%m-%d")
+
         # Extract structured analysis if available
         structured_analysis = intent.get("structured_analysis", {})
         travel_details = structured_analysis.get("travel_details", {})
         preferences = structured_analysis.get("preferences", {})
-        
+
         for tool_name in selected_tools:
             if tool_name == "attraction_search":
                 # Convert destination to IATA code(s) for consistent multi-location support
@@ -3790,15 +3966,15 @@ This will help me provide you with the most relevant travel guidance possible.""
                     "include_photos": True,
                     "min_rating": 4.0,
                     "radius_meters": 10000,
-                    "interests": preferences.get("interests", [])
+                    "interests": preferences.get("interests", []),
                 }
-                
+
             elif tool_name == "hotel_search":
                 # Extract dates safely with proper format
                 dates_info = travel_details.get("dates", {})
                 check_in_date = dates_info.get("departure", default_check_in)
                 check_out_date = dates_info.get("return", default_check_out)
-                
+
                 # Ensure dates are in correct format
                 if check_in_date in ["unknown", "", None]:
                     check_in_date = default_check_in
@@ -3815,17 +3991,19 @@ This will help me provide you with the most relevant travel guidance possible.""
                     "guests": max(travel_details.get("travelers", 1), 1),
                     "rooms": 1,
                     "min_rating": 4.0,
-                    "budget_level": travel_details.get("budget", {}).get("level", "mid-range")
+                    "budget_level": travel_details.get("budget", {}).get(
+                        "level", "mid-range"
+                    ),
                 }
-                
+
             elif tool_name == "flight_search":
                 # Extract departure date safely
                 dates_info = travel_details.get("dates", {})
                 departure_date = dates_info.get("departure", default_departure)
-                
+
                 if departure_date in ["unknown", "", None]:
                     departure_date = default_departure
-                
+
                 # Extract origin from user message
                 origin = self._extract_origin_from_message(user_message)
                 if origin == "Unknown":
@@ -3855,7 +4033,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                     "budget_level": travel_details.get("budget", {}).get("level", "mid-range"),
                     "flight_chain": flight_chain_enabled,  # Enable flight chain for multi-city trips
                 }
-        
+
         logger.info(f"Generated tool parameters: {tool_parameters}")
         return tool_parameters
 
@@ -3863,28 +4041,34 @@ This will help me provide you with the most relevant travel guidance possible.""
         self, intent_type: str, selected_tools: List[str], destination: str
     ) -> List[str]:
         """Generate action sequence based on intent and selected tools"""
-        
+
         actions = []
-        
+
         # Intent-based action templates
         if intent_type == "planning":
-            actions.extend([
-                f"Analyze travel requirements for {destination}",
-                "Search for comprehensive travel options"
-            ])
+            actions.extend(
+                [
+                    f"Analyze travel requirements for {destination}",
+                    "Search for comprehensive travel options",
+                ]
+            )
         elif intent_type == "recommendation":
-            actions.extend([
-                f"Find top recommendations for {destination}",
-                "Analyze user preferences"
-            ])
+            actions.extend(
+                [
+                    f"Find top recommendations for {destination}",
+                    "Analyze user preferences",
+                ]
+            )
         elif intent_type == "query":
-            actions.extend([
-                f"Search for information about {destination}",
-                "Provide relevant details"
-            ])
+            actions.extend(
+                [
+                    f"Search for information about {destination}",
+                    "Provide relevant details",
+                ]
+            )
         else:
             actions.append(f"Process travel request for {destination}")
-        
+
         # Tool-specific actions
         for tool in selected_tools:
             if tool == "attraction_search":
@@ -3893,49 +4077,57 @@ This will help me provide you with the most relevant travel guidance possible.""
                 actions.append("Search for accommodation options")
             elif tool == "flight_search":
                 actions.append("Search for flight information")
-        
+
         actions.append("Compile comprehensive travel information")
-        
+
         return actions
 
     def _generate_rule_based_next_steps(
         self, intent_type: str, selected_tools: List[str]
     ) -> List[str]:
         """Generate next steps based on intent and tools used"""
-        
+
         next_steps = []
-        
+
         # Intent-based next steps
         if intent_type == "planning":
-            next_steps.extend([
-                "Review the travel plan and let me know your preferences",
-                "I can help create a detailed day-by-day itinerary"
-            ])
+            next_steps.extend(
+                [
+                    "Review the travel plan and let me know your preferences",
+                    "I can help create a detailed day-by-day itinerary",
+                ]
+            )
         elif intent_type == "recommendation":
-            next_steps.extend([
-                "Let me know which recommendations interest you most",
-                "I can provide more details about specific attractions"
-            ])
+            next_steps.extend(
+                [
+                    "Let me know which recommendations interest you most",
+                    "I can provide more details about specific attractions",
+                ]
+            )
         elif intent_type == "booking":
-            next_steps.extend([
-                "Compare the options and choose your preferences",
-                "I can help you with the booking process"
-            ])
+            next_steps.extend(
+                [
+                    "Compare the options and choose your preferences",
+                    "I can help you with the booking process",
+                ]
+            )
         else:
             next_steps.append("Let me know if you need more specific information")
-        
+
         # Tool-specific next steps
         if "flight_search" in selected_tools:
             next_steps.append("Consider booking flights early for better prices")
         if "hotel_search" in selected_tools:
             next_steps.append("Check hotel reviews and amenities")
-        
+
         # General travel planning steps
-        next_steps.extend([
-            "Verify visa requirements if traveling internationally",
-            "Consider travel insurance for your trip"
-        ])
-        
+        next_steps.extend(
+            [
+                "Verify visa requirements if traveling internationally",
+                "Consider travel insurance for your trip",
+            ]
+        )
+
         return next_steps
 
     async def _generate_structured_response(
@@ -3965,9 +4157,9 @@ This will help me provide you with the most relevant travel guidance possible.""
             
             # Determine response success based on whether we can provide useful content
             has_useful_content = (
-                destination != "unknown" or 
-                tool_results or 
-                intent_type in ["query", "recommendation", "planning"]
+                destination != "unknown"
+                or tool_results
+                or intent_type in ["query", "recommendation", "planning"]
             )
             
             # Create fast response with plan generation metadata
@@ -3992,13 +4184,17 @@ This will help me provide you with the most relevant travel guidance possible.""
                     # ✅ 传递execution_result给后台plan generation使用
                     "execution_result_for_plan": execution_result if is_plan_request else None,
                     "tool_execution_success": execution_success,
-                    "partial_tool_success": bool(tool_results)
-                }
+                    "partial_tool_success": bool(tool_results),
+                },
+            )
+
+            logger.info(
+                f"Structured response generated: success={response_success}, {len(content)} chars, confidence: {confidence}"
             )
             
             logger.info(f"Fast response generated: success={response_success}, plan_required={is_plan_request}, {len(content)} chars")
             return response
-            
+
         except Exception as e:
             logger.error(f"Error generating structured response: {e}")
             # Emergency fallback
@@ -4006,7 +4202,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                 success=False,
                 content=f"I apologize, but I encountered an issue processing your travel request. Please try rephrasing your question.",
                 confidence=0.3,
-                metadata={"error": str(e), "response_method": "emergency_fallback"}
+                metadata={"error": str(e), "response_method": "emergency_fallback"},
             )
     
     def _build_quick_response_content(
@@ -4237,7 +4433,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                         events.append({
                             "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
                             "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
-                            "description": getattr(attraction, 'category', 'Sightseeing activity'),
+                            "description": getattr(attraction, 'description', getattr(attraction, 'category', 'Sightseeing activity')),
                             "event_type": "attraction",
                             "start_time": visit_time.isoformat(),
                             "end_time": (visit_time + timedelta(hours=2)).isoformat(),
@@ -4264,7 +4460,6 @@ This will help me provide you with the most relevant travel guidance possible.""
                         "start_time": event_time.isoformat(),
                         "end_time": (event_time + timedelta(hours=3)).isoformat(),
                         "location": destination,
-                        "coordinates": {"lat": 40.7484, "lng": -73.9857},
                         "details": {
                             "source": "default_generation",
                             "recommendations": ["Bring camera", "Wear comfortable shoes"]
@@ -4439,42 +4634,52 @@ This will help me provide you with the most relevant travel guidance possible.""
             )
 
     def _build_structured_content(
-        self, intent_type: str, destination: str, tools_used: List[str], 
-        tool_results: Dict[str, Any], user_message: str
+        self,
+        intent_type: str,
+        destination: str,
+        tools_used: List[str],
+        tool_results: Dict[str, Any],
+        user_message: str,
     ) -> str:
         """Build response content using structured templates"""
-        
+
         logger.info(f"=== BUILDING STRUCTURED CONTENT ===")
         logger.info(f"Intent type: {intent_type}")
         logger.info(f"Destination: {destination}")
         logger.info(f"Tools used: {tools_used}")
         logger.info(f"Tool results keys: {list(tool_results.keys())}")
-        
+
         content_parts = []
-        
+
         # Add greeting/acknowledgment based on intent
         greeting = self._get_intent_greeting(intent_type, destination)
         content_parts.append(greeting)
-        
+
         # Add tool-specific content sections
         for tool_name in tools_used:
             logger.info(f"Processing tool: {tool_name}")
             if tool_name in tool_results:
                 logger.info(f"Tool {tool_name} found in results")
-                tool_content = self._format_tool_results(tool_name, tool_results[tool_name], destination)
+                tool_content = self._format_tool_results(
+                    tool_name, tool_results[tool_name], destination
+                )
                 if tool_content:
-                    logger.info(f"Tool {tool_name} content generated: {len(tool_content)} chars")
+                    logger.info(
+                        f"Tool {tool_name} content generated: {len(tool_content)} chars"
+                    )
                     content_parts.append(tool_content)
                 else:
                     logger.info(f"Tool {tool_name} content is empty")
             else:
                 logger.info(f"Tool {tool_name} NOT found in results")
-        
+
         # Add recommendations and next steps
-        recommendations = self._generate_template_recommendations(intent_type, destination, tools_used)
+        recommendations = self._generate_template_recommendations(
+            intent_type, destination, tools_used
+        )
         if recommendations:
             content_parts.append(recommendations)
-        
+
         # Join all parts with proper spacing
         final_content = "\n\n".join(content_parts)
         logger.info(f"Final content length: {len(final_content)} chars")
@@ -4483,38 +4688,40 @@ This will help me provide you with the most relevant travel guidance possible.""
 
     def _get_intent_greeting(self, intent_type: str, destination: str) -> str:
         """Get appropriate greeting based on intent type"""
-        
+
         greetings = {
             "planning": f"I'll help you plan your trip to {destination}! Here's what I found:",
             "recommendation": f"Here are my top recommendations for {destination}:",
             "query": f"Here's information about {destination}:",
             "booking": f"I found these booking options for {destination}:",
-            "modification": f"Here are updated options for your {destination} trip:"
+            "modification": f"Here are updated options for your {destination} trip:",
         }
-        
+
         return greetings.get(intent_type, f"Here's information about {destination}:")
 
-    def _format_tool_results(self, tool_name: str, tool_result: Dict[str, Any], destination: str) -> str:
+    def _format_tool_results(
+        self, tool_name: str, tool_result: Dict[str, Any], destination: str
+    ) -> str:
         """Format individual tool results using templates"""
-        
+
         logger.info(f"=== FORMATTING TOOL: {tool_name} ===")
         logger.info(f"Tool result type: {type(tool_result)}")
         logger.info(f"Tool result success: {getattr(tool_result, 'success', 'N/A')}")
         logger.info(f"Tool result error: {getattr(tool_result, 'error', 'N/A')}")
-        
+
         # Handle both Pydantic models and dictionaries for error checking
         has_error = False
         if not tool_result:
             has_error = True
-        elif hasattr(tool_result, 'error') and tool_result.error:
+        elif hasattr(tool_result, "error") and tool_result.error:
             has_error = True
         elif isinstance(tool_result, dict) and "error" in tool_result:
             has_error = True
-        
+
         if has_error:
             logger.info(f"Tool {tool_name} has error or is empty")
             return f"I had trouble finding {tool_name.replace('_', ' ')} information, but I can still help with general advice about {destination}."
-        
+
         if tool_name == "attraction_search":
             logger.info(f"Formatting attraction search results")
             return self._format_attraction_results(tool_result, destination)
@@ -4530,51 +4737,130 @@ This will help me provide you with the most relevant travel guidance possible.""
 
     def _format_attraction_results(self, result: Any, destination: str) -> str:
         """Format attraction search results"""
-        
+
         content = f"🎯 **Top Attractions in {destination}**\n"
-        
+
         # Handle both ToolOutput objects and dictionaries
-        if hasattr(result, 'attractions'):
+        if hasattr(result, "attractions"):
             attractions = result.attractions
         else:
-            attractions = result.get("attractions", []) if isinstance(result, dict) else []
-        
+            attractions = (
+                result.get("attractions", []) if isinstance(result, dict) else []
+            )
+
         if attractions:
             for i, attraction in enumerate(attractions[:5], 1):  # Top 5
                 # Handle both Pydantic models and dictionaries
-                if hasattr(attraction, 'name'):
+                if hasattr(attraction, "name"):
                     # Pydantic model
-                    name = getattr(attraction, 'name', 'Unknown Attraction')
-                    rating = getattr(attraction, 'rating', 'No rating')
-                    description = getattr(attraction, 'description', '')
+                    name = getattr(attraction, "name", "Unknown Attraction")
+                    rating = getattr(attraction, "rating", "No rating")
+                    description = getattr(attraction, "description", "")
+                    cost_range = getattr(
+                        attraction, "cost_range", "Price not available"
+                    )
+                    opening_hours = getattr(attraction, "opening_hours", {})
+                    address = getattr(attraction, "formatted_address", "")
+                    phone = getattr(attraction, "phone_number", "")
+                    website = getattr(attraction, "website", "")
+                    reviews_count = getattr(attraction, "reviews_count", 0)
+                    review_summary = getattr(attraction, "review_summary", "")
+                    individual_reviews = getattr(attraction, "individual_reviews", [])
+                    accessibility_info = getattr(attraction, "accessibility_info", "")
                 else:
                     # Dictionary
                     name = attraction.get("name", "Unknown Attraction")
                     rating = attraction.get("rating", "No rating")
                     description = attraction.get("description", "")
-                
-                # Truncate description if too long
-                if len(description) > 100:
-                    description = description[:100] + "..."
-                
-                content += f"{i}. **{name}** (Rating: {rating})\n   {description}\n"
+                    cost_range = attraction.get("cost_range", "Price not available")
+                    opening_hours = attraction.get("opening_hours", {})
+                    address = attraction.get("formatted_address", "")
+                    phone = attraction.get("phone_number", "")
+                    website = attraction.get("website", "")
+                    reviews_count = attraction.get("reviews_count", 0)
+                    review_summary = attraction.get("review_summary", "")
+                    individual_reviews = attraction.get("individual_reviews", [])
+                    accessibility_info = attraction.get("accessibility_info", "")
+
+                # Build the content
+                content += f"{i}. **{name}**\n"
+                content += f"   Rating: {rating}"
+                if reviews_count:
+                    content += f" ({reviews_count} reviews)"
+                content += f" | Cost: {cost_range}\n"
+
+                if address:
+                    content += f"   📍 {address}\n"
+
+                # Add opening hours if available
+                if opening_hours:
+                    content += "   ⏰ Opening Hours: "
+                    # Group days with same hours
+                    hours_to_days = {}
+                    for day, hours in opening_hours.items():
+                        hours_to_days.setdefault(hours, []).append(day)
+
+                    # Format grouped hours
+                    hour_strings = []
+                    for hours, days in hours_to_days.items():
+                        if len(days) == 1:
+                            hour_strings.append(f"{days[0]}: {hours}")
+                        else:
+                            first_day = days[0]
+                            last_day = days[-1]
+                            hour_strings.append(f"{first_day}-{last_day}: {hours}")
+
+                    content += ", ".join(hour_strings) + "\n"
+
+                # Add description
+                if description:
+                    if len(description) > 200:
+                        description = description[:200] + "..."
+                    content += f"   📝 {description}\n"
+
+                # Add review summary if available
+                if review_summary:
+                    content += f"   💭 {review_summary}\n"
+
+                # Add individual reviews
+                if individual_reviews:
+                    content += "   ⭐ Recent Reviews:\n"
+                    for review in individual_reviews[:2]:  # Show top 2 reviews
+                        review_text = review.get("text", "")
+                        if len(review_text) > 100:
+                            review_text = review_text[:100] + "..."
+                        content += f"      • {review.get('author_name', 'Anonymous')} ({review.get('rating', 'No rating')}★): {review_text}\n"
+
+                # Add accessibility info if available
+                if accessibility_info:
+                    content += f"   ♿ {accessibility_info}\n"
+
+                # Add contact info
+                if phone or website:
+                    content += "   📞 Contact:\n"
+                    if phone:
+                        content += f"      • Phone: {phone}\n"
+                    if website:
+                        content += f"      • Website: {website}\n"
+
+                content += "\n"
         else:
             content += f"I found several popular attractions in {destination} that are worth visiting. "
             content += "The area offers great opportunities for sightseeing and cultural experiences."
-        
+
         return content
 
     def _format_hotel_results(self, result: Dict[str, Any], destination: str) -> str:
         """Format hotel search results"""
-        
+
         content = f"🏨 **Accommodation Options in {destination}**\n"
-        
+
         # Handle both ToolOutput objects and dictionaries
-        if hasattr(result, 'hotels'):
+        if hasattr(result, "hotels"):
             hotels = result.hotels
         else:
             hotels = result.get("hotels", [])
-        
+
         if hotels:
             for i, hotel in enumerate(hotels[:5], 1):  # Top 5
                 # Handle both Pydantic models and dictionaries
@@ -4592,90 +4878,114 @@ This will help me provide you with the most relevant travel guidance possible.""
                     rating = hotel.get("rating", "No rating")
                     location = hotel.get("location", destination)
                     currency = hotel.get("currency", "")
-                
+
                 # Format price with currency
-                price_str = f"{price} {currency}".strip() if price and price != 'Price available' else 'Price available'
-                
+                price_str = (
+                    f"{price} {currency}".strip()
+                    if price and price != "Price available"
+                    else "Price available"
+                )
+
                 content += f"{i}. **{name}** (Rating: {rating})\n   Location: {location} | Price: {price_str}\n"
         else:
-            content += f"There are good accommodation options available in {destination}. "
-            content += "I recommend booking in advance for better rates and availability."
-        
+            content += (
+                f"There are good accommodation options available in {destination}. "
+            )
+            content += (
+                "I recommend booking in advance for better rates and availability."
+            )
+
         return content
 
     def _format_flight_results(self, result: Dict[str, Any], destination: str) -> str:
         """Format flight search results"""
-        
+
         content = f"✈️ **Flight Information to {destination}**\n"
-        
+
         # Handle both ToolOutput objects and dictionaries
-        if hasattr(result, 'flights'):
+        if hasattr(result, "flights"):
             flights = result.flights
         else:
             flights = result.get("flights", [])
-        
+
         if flights:
             for i, flight in enumerate(flights[:3], 1):  # Top 3
                 # Handle both Pydantic models and dictionaries
-                if hasattr(flight, 'airline'):
+                if hasattr(flight, "airline"):
                     # Pydantic model
-                    airline = getattr(flight, 'airline', 'Unknown Airline')
-                    price = getattr(flight, 'price', 'Price available')
-                    duration = getattr(flight, 'duration', 'Duration varies')
-                    currency = getattr(flight, 'currency', '')
+                    airline = getattr(flight, "airline", "Unknown Airline")
+                    price = getattr(flight, "price", "Price available")
+                    duration = getattr(flight, "duration", "Duration varies")
+                    currency = getattr(flight, "currency", "")
                 else:
                     # Dictionary
                     airline = flight.get("airline", "Unknown Airline")
                     price = flight.get("price", "Price available")
                     duration = flight.get("duration", "Duration varies")
                     currency = flight.get("currency", "")
-                
+
                 # Format price with currency
-                price_str = f"{price} {currency}".strip() if price and price != 'Price available' else 'Price available'
-                
-                content += f"{i}. **{airline}** | Price: {price_str} | Duration: {duration}\n"
+                price_str = (
+                    f"{price} {currency}".strip()
+                    if price and price != "Price available"
+                    else "Price available"
+                )
+
+                content += (
+                    f"{i}. **{airline}** | Price: {price_str} | Duration: {duration}\n"
+                )
         else:
             content += f"Flight options are available to {destination}. "
             content += "I recommend comparing prices across different booking platforms and being flexible with dates."
-        
+
         return content
 
     def _generate_template_recommendations(
         self, intent_type: str, destination: str, tools_used: List[str]
     ) -> str:
         """Generate recommendations using templates"""
-        
+
         recommendations = []
-        
+
         # Intent-specific recommendations
         if intent_type == "planning":
-            recommendations.extend([
-                "💡 **Travel Tips:**",
-                f"• Research local customs and etiquette for {destination}",
-                "• Check weather conditions for your travel dates",
-                "• Consider getting travel insurance"
-            ])
+            recommendations.extend(
+                [
+                    "💡 **Travel Tips:**",
+                    f"• Research local customs and etiquette for {destination}",
+                    "• Check weather conditions for your travel dates",
+                    "• Consider getting travel insurance",
+                ]
+            )
         elif intent_type == "recommendation":
-            recommendations.extend([
-                "💡 **Additional Suggestions:**",
-                "• Check opening hours and seasonal availability",
-                "• Read recent reviews from other travelers",
-                "• Consider booking popular attractions in advance"
-            ])
-        
+            recommendations.extend(
+                [
+                    "💡 **Additional Suggestions:**",
+                    "• Check opening hours and seasonal availability",
+                    "• Read recent reviews from other travelers",
+                    "• Consider booking popular attractions in advance",
+                ]
+            )
+
         # Tool-specific recommendations
         if "flight_search" in tools_used:
-            recommendations.append("• Book flights 2-3 months in advance for better prices")
+            recommendations.append(
+                "• Book flights 2-3 months in advance for better prices"
+            )
         if "hotel_search" in tools_used:
             recommendations.append("• Compare amenities and read recent guest reviews")
         if "attraction_search" in tools_used:
-            recommendations.append("• Check for combo tickets or city passes for multiple attractions")
-        
+            recommendations.append(
+                "• Check for combo tickets or city passes for multiple attractions"
+            )
+
         return "\n".join(recommendations) if recommendations else ""
 
-    def _build_fallback_content(self, intent_type: str, destination: str, user_message: str) -> str:
+    def _build_fallback_content(
+        self, intent_type: str, destination: str, user_message: str
+    ) -> str:
         """Build fallback content when tools fail"""
-        
+
         content_parts = [
             f"I understand you're interested in {intent_type} for {destination}.",
             "",
@@ -4685,110 +4995,136 @@ This will help me provide you with the most relevant travel guidance possible.""
             "• Local customs and cultural information",
             "• Transportation options and guidance",
             "",
-            "Please let me know what specific aspect of your trip you'd like to discuss, and I'll provide helpful information based on my knowledge."
+            "Please let me know what specific aspect of your trip you'd like to discuss, and I'll provide helpful information based on my knowledge.",
         ]
-        
+
         return "\n".join(content_parts)
 
     def _build_mixed_content(
-        self, intent_type: str, destination: str, tools_used: List[str], 
-        tool_results: Dict[str, Any], user_message: str
+        self,
+        intent_type: str,
+        destination: str,
+        tools_used: List[str],
+        tool_results: Dict[str, Any],
+        user_message: str,
     ) -> str:
         """Build content when some tools succeed and others fail"""
-        
+
         content_parts = []
-        
+
         # Add greeting/acknowledgment
         greeting = self._get_intent_greeting(intent_type, destination)
         content_parts.append(greeting)
-        
+
         # Process available tool results
         successful_tools = []
         failed_tools = []
-        
+
         for tool_name in tools_used:
             if tool_name in tool_results and not tool_results[tool_name].get("error"):
                 successful_tools.append(tool_name)
-                tool_content = self._format_tool_results(tool_name, tool_results[tool_name], destination)
+                tool_content = self._format_tool_results(
+                    tool_name, tool_results[tool_name], destination
+                )
                 if tool_content:
                     content_parts.append(tool_content)
             else:
                 failed_tools.append(tool_name)
-        
+
         # Add information about what we couldn't retrieve
         if failed_tools:
-            failed_info = self._generate_fallback_info_for_failed_tools(failed_tools, destination)
+            failed_info = self._generate_fallback_info_for_failed_tools(
+                failed_tools, destination
+            )
             if failed_info:
                 content_parts.append(failed_info)
-        
+
         # Add general recommendations based on destination knowledge
         if destination != "unknown":
             general_advice = self._generate_destination_advice(destination, intent_type)
             if general_advice:
                 content_parts.append(general_advice)
-        
+
         # Add helpful next steps
-        recommendations = self._generate_template_recommendations(intent_type, destination, successful_tools)
+        recommendations = self._generate_template_recommendations(
+            intent_type, destination, successful_tools
+        )
         if recommendations:
             content_parts.append(recommendations)
-        
+
         return "\n\n".join(content_parts)
 
-    def _generate_fallback_info_for_failed_tools(self, failed_tools: List[str], destination: str) -> str:
+    def _generate_fallback_info_for_failed_tools(
+        self, failed_tools: List[str], destination: str
+    ) -> str:
         """Generate helpful information for failed tools"""
-        
+
         if not failed_tools:
             return ""
-        
+
         info_parts = ["ℹ️ **Additional Information:**"]
-        
+
         for tool_name in failed_tools:
             if tool_name == "hotel_search":
-                info_parts.append(f"• For accommodation in {destination}, I recommend checking major booking platforms like Booking.com, Hotels.com, or Expedia")
+                info_parts.append(
+                    f"• For accommodation in {destination}, I recommend checking major booking platforms like Booking.com, Hotels.com, or Expedia"
+                )
             elif tool_name == "flight_search":
-                info_parts.append(f"• For flights to {destination}, compare prices on Google Flights, Kayak, or airline websites directly")
+                info_parts.append(
+                    f"• For flights to {destination}, compare prices on Google Flights, Kayak, or airline websites directly"
+                )
             elif tool_name == "attraction_search":
-                info_parts.append(f"• For attractions in {destination}, check TripAdvisor, local tourism websites, or travel guides")
-        
+                info_parts.append(
+                    f"• For attractions in {destination}, check TripAdvisor, local tourism websites, or travel guides"
+                )
+
         return "\n".join(info_parts) if len(info_parts) > 1 else ""
 
     def _generate_destination_advice(self, destination: str, intent_type: str) -> str:
         """Generate general advice based on destination knowledge"""
-        
+
         # Basic destination advice based on common knowledge
         destination_lower = destination.lower()
-        
+
         advice_parts = ["🗺️ **General Travel Advice:**"]
-        
+
         if destination_lower in ["tokyo", "japan"]:
-            advice_parts.extend([
-                "• Consider getting a JR Pass for convenient train travel",
-                "• Try local cuisine like sushi, ramen, and tempura",
-                "• Visit during spring (cherry blossoms) or fall (autumn colors)",
-                "• Learn basic Japanese phrases - locals appreciate the effort"
-            ])
+            advice_parts.extend(
+                [
+                    "• Consider getting a JR Pass for convenient train travel",
+                    "• Try local cuisine like sushi, ramen, and tempura",
+                    "• Visit during spring (cherry blossoms) or fall (autumn colors)",
+                    "• Learn basic Japanese phrases - locals appreciate the effort",
+                ]
+            )
         elif destination_lower in ["paris", "france"]:
-            advice_parts.extend([
-                "• Visit iconic landmarks like the Eiffel Tower and Louvre Museum",
-                "• Try authentic French cuisine and visit local cafés", 
-                "• Consider a Seine river cruise for beautiful city views",
-                "• Book popular attractions in advance to avoid long lines"
-            ])
+            advice_parts.extend(
+                [
+                    "• Visit iconic landmarks like the Eiffel Tower and Louvre Museum",
+                    "• Try authentic French cuisine and visit local cafés",
+                    "• Consider a Seine river cruise for beautiful city views",
+                    "• Book popular attractions in advance to avoid long lines",
+                ]
+            )
         elif destination_lower in ["london", "uk"]:
-            advice_parts.extend([
-                "• Use an Oyster Card for convenient public transportation",
-                "• Visit free museums like the British Museum and Tate Modern",
-                "• Experience traditional afternoon tea and pub culture",
-                "• Check the weather and pack layers for unpredictable conditions"
-            ])
+            advice_parts.extend(
+                [
+                    "• Use an Oyster Card for convenient public transportation",
+                    "• Visit free museums like the British Museum and Tate Modern",
+                    "• Experience traditional afternoon tea and pub culture",
+                    "• Check the weather and pack layers for unpredictable conditions",
+                ]
+            )
         else:
-            advice_parts.extend([
-                f"• Research local customs and etiquette for {destination}",
-                "• Check visa requirements and travel documentation needed",
-                "• Look into local transportation options and travel cards",
-                "• Try authentic local cuisine and cultural experiences"
-            ])
-        
+            advice_parts.extend(
+                [
+                    f"• Research local customs and etiquette for {destination}",
+                    "• Check visa requirements and travel documentation needed",
+                    "• Look into local transportation options and travel cards",
+                    "• Try authentic local cuisine and cultural experiences",
+                ]
+            )
+
         return "\n".join(advice_parts)
 
     async def _fast_quality_assessment(
@@ -4802,43 +5138,49 @@ This will help me provide you with the most relevant travel guidance possible.""
             user_message = original_message.content.lower()
             response_content = response.content.lower()
             metadata = response.metadata
-            
+
             # Initialize score
             total_score = 0.0
             max_score = 0.0
-            
+
             # 1. Relevance assessment (weight: 0.3)
-            relevance_score = self._assess_relevance_heuristic(user_message, response_content, metadata)
+            relevance_score = self._assess_relevance_heuristic(
+                user_message, response_content, metadata
+            )
             total_score += relevance_score * 0.3
             max_score += 0.3
-            
+
             # 2. Completeness assessment (weight: 0.25)
-            completeness_score = self._assess_completeness_heuristic(user_message, response_content, metadata)
+            completeness_score = self._assess_completeness_heuristic(
+                user_message, response_content, metadata
+            )
             total_score += completeness_score * 0.25
             max_score += 0.25
-            
+
             # 3. Actionability assessment (weight: 0.2)
             actionability_score = self._assess_actionability_heuristic(response)
             total_score += actionability_score * 0.2
             max_score += 0.2
-            
+
             # 4. Information fusion assessment (weight: 0.15)
             fusion_score = self._assess_fusion_heuristic(metadata, response_content)
             total_score += fusion_score * 0.15
             max_score += 0.15
-            
+
             # 5. Response structure assessment (weight: 0.1)
             structure_score = self._assess_structure_heuristic(response_content)
             total_score += structure_score * 0.1
             max_score += 0.1
-            
+
             # Calculate final normalized score
             final_score = total_score / max_score if max_score > 0 else 0.5
-            
-            logger.debug(f"Fast quality assessment: {final_score:.3f} (relevance: {relevance_score:.2f}, completeness: {completeness_score:.2f}, actionability: {actionability_score:.2f})")
-            
+
+            logger.debug(
+                f"Fast quality assessment: {final_score:.3f} (relevance: {relevance_score:.2f}, completeness: {completeness_score:.2f}, actionability: {actionability_score:.2f})"
+            )
+
             return min(final_score, 1.0)
-            
+
         except Exception as e:
             logger.error(f"Error in fast quality assessment: {e}")
             return 0.5  # Default neutral score
@@ -4847,161 +5189,218 @@ This will help me provide you with the most relevant travel guidance possible.""
         self, user_message: str, response_content: str, metadata: Dict[str, Any]
     ) -> float:
         """Assess relevance using keyword matching and intent alignment"""
-        
+
         score = 0.4  # Base score
-        
+
         # Extract key travel-related terms from user message
         travel_keywords = [
-            "trip", "travel", "visit", "plan", "go", "tour", "vacation", "holiday",
-            "flight", "hotel", "attraction", "restaurant", "activity", "sightseeing"
+            "trip",
+            "travel",
+            "visit",
+            "plan",
+            "go",
+            "tour",
+            "vacation",
+            "holiday",
+            "flight",
+            "hotel",
+            "attraction",
+            "restaurant",
+            "activity",
+            "sightseeing",
         ]
-        
+
         user_keywords = [word for word in travel_keywords if word in user_message]
-        response_keywords = [word for word in travel_keywords if word in response_content]
-        
+        response_keywords = [
+            word for word in travel_keywords if word in response_content
+        ]
+
         # Keyword overlap score
         if user_keywords:
-            overlap_ratio = len(set(user_keywords) & set(response_keywords)) / len(user_keywords)
+            overlap_ratio = len(set(user_keywords) & set(response_keywords)) / len(
+                user_keywords
+            )
             score += overlap_ratio * 0.3
-        
+
         # Destination mention check
         destination = metadata.get("destination", "unknown")
         if destination != "unknown" and destination.lower() in response_content:
             score += 0.2
-        
+
         # Intent alignment check
         intent_type = metadata.get("intent_type", "")
         intent_keywords = {
             "planning": ["plan", "itinerary", "schedule", "organize"],
             "recommendation": ["recommend", "suggest", "best", "top"],
             "query": ["information", "about", "details", "facts"],
-            "booking": ["book", "reserve", "purchase", "buy"]
+            "booking": ["book", "reserve", "purchase", "buy"],
         }
-        
+
         if intent_type in intent_keywords:
             intent_words = intent_keywords[intent_type]
             if any(word in response_content for word in intent_words):
                 score += 0.1
-        
+
         return min(score, 1.0)
 
     def _assess_completeness_heuristic(
         self, user_message: str, response_content: str, metadata: Dict[str, Any]
     ) -> float:
         """Assess completeness based on response structure and content"""
-        
+
         score = 0.3  # Base score
-        
+
         # Response length assessment (indicates thoroughness)
         if len(response_content) >= 200:
             score += 0.2
         elif len(response_content) >= 100:
             score += 0.1
-        
+
         # Tools used assessment
         tools_used = metadata.get("tools_used", [])
         if tools_used:
             score += min(len(tools_used) * 0.1, 0.3)
-        
+
         # Structured content indicators
         structure_indicators = ["**", "•", "1.", "2.", "3.", "🎯", "🏨", "✈️", "💡"]
-        structure_count = sum(1 for indicator in structure_indicators if indicator in response_content)
+        structure_count = sum(
+            1 for indicator in structure_indicators if indicator in response_content
+        )
         if structure_count >= 3:
             score += 0.2
         elif structure_count >= 1:
             score += 0.1
-        
+
         # Information variety (multiple aspects covered)
-        info_aspects = ["attraction", "hotel", "flight", "tip", "recommendation", "price", "rating"]
-        aspects_covered = sum(1 for aspect in info_aspects if aspect in response_content)
+        info_aspects = [
+            "attraction",
+            "hotel",
+            "flight",
+            "tip",
+            "recommendation",
+            "price",
+            "rating",
+        ]
+        aspects_covered = sum(
+            1 for aspect in info_aspects if aspect in response_content
+        )
         if aspects_covered >= 3:
             score += 0.1
-        
+
         return min(score, 1.0)
 
     def _assess_actionability_heuristic(self, response: AgentResponse) -> float:
         """Assess how actionable the response is"""
-        
+
         score = 0.4  # Base score
-        
+
         # Check for actionable elements
         if response.actions_taken:
             score += min(len(response.actions_taken) * 0.1, 0.2)
-        
+
         if response.next_steps:
             score += min(len(response.next_steps) * 0.1, 0.3)
-        
+
         # Check for actionable language in content
         actionable_phrases = [
-            "book", "reserve", "check", "compare", "consider", "visit", "contact",
-            "search", "browse", "review", "verify", "plan", "schedule"
+            "book",
+            "reserve",
+            "check",
+            "compare",
+            "consider",
+            "visit",
+            "contact",
+            "search",
+            "browse",
+            "review",
+            "verify",
+            "plan",
+            "schedule",
         ]
-        
+
         content_lower = response.content.lower()
-        actionable_count = sum(1 for phrase in actionable_phrases if phrase in content_lower)
+        actionable_count = sum(
+            1 for phrase in actionable_phrases if phrase in content_lower
+        )
         if actionable_count >= 3:
             score += 0.1
-        
+
         return min(score, 1.0)
 
-    def _assess_fusion_heuristic(self, metadata: Dict[str, Any], response_content: str) -> float:
+    def _assess_fusion_heuristic(
+        self, metadata: Dict[str, Any], response_content: str
+    ) -> float:
         """Assess information fusion quality"""
-        
+
         score = 0.5  # Base score
-        
+
         # Check if multiple information sources were used
         tools_used = metadata.get("tools_used", [])
         if len(tools_used) >= 2:
             score += 0.3
         elif len(tools_used) >= 1:
             score += 0.1
-        
+
         # Check for integration indicators
         integration_phrases = [
-            "based on", "found", "available", "options", "information shows",
-            "according to", "results indicate", "search shows"
+            "based on",
+            "found",
+            "available",
+            "options",
+            "information shows",
+            "according to",
+            "results indicate",
+            "search shows",
         ]
-        
-        integration_count = sum(1 for phrase in integration_phrases if phrase in response_content)
+
+        integration_count = sum(
+            1 for phrase in integration_phrases if phrase in response_content
+        )
         if integration_count >= 2:
             score += 0.2
         elif integration_count >= 1:
             score += 0.1
-        
+
         return min(score, 1.0)
 
     def _assess_structure_heuristic(self, response_content: str) -> float:
         """Assess response structure and formatting"""
-        
+
         score = 0.4  # Base score
-        
+
         # Check for good formatting
         formatting_elements = [
             "**",  # Bold text
-            "•",   # Bullet points
-            "\n\n", # Paragraph breaks
-            ":",   # Section separators
+            "•",  # Bullet points
+            "\n\n",  # Paragraph breaks
+            ":",  # Section separators
             "1.",  # Numbered lists
         ]
-        
-        formatting_count = sum(1 for element in formatting_elements if element in response_content)
+
+        formatting_count = sum(
+            1 for element in formatting_elements if element in response_content
+        )
         if formatting_count >= 3:
             score += 0.4
         elif formatting_count >= 2:
             score += 0.2
         elif formatting_count >= 1:
             score += 0.1
-        
+
         # Check for logical structure (sections)
-        has_sections = ("**" in response_content and 
-                       ("\n\n" in response_content or ":" in response_content))
+        has_sections = "**" in response_content and (
+            "\n\n" in response_content or ":" in response_content
+        )
         if has_sections:
             score += 0.2
-        
+
         return min(score, 1.0)
 
     async def _llm_enhanced_response(
-        self, structured_response: AgentResponse, execution_result: Dict[str, Any], intent: Dict[str, Any]
+        self,
+        structured_response: AgentResponse,
+        execution_result: Dict[str, Any],
+        intent: Dict[str, Any],
     ) -> AgentResponse:
         """
         Enhance structured response using LLM when quality is insufficient
@@ -5009,22 +5408,22 @@ This will help me provide you with the most relevant travel guidance possible.""
         """
         try:
             logger.info("Enhancing response with LLM due to quality concerns")
-            
+
             # Prepare context for LLM enhancement
             user_message = execution_result.get("original_message", "")
             knowledge_context = execution_result.get("knowledge_context", {})
             tool_results = execution_result.get("results", {})
-            
+
             # Retrieve knowledge context if not available
             if not knowledge_context:
                 structured_analysis = intent.get("structured_analysis", {})
                 knowledge_context = await self._retrieve_knowledge_context(
                     query=user_message, structured_intent=structured_analysis
                 )
-            
+
             # Use existing LLM-based response generation
             enhanced_content = await self._generate_response(execution_result, intent)
-            
+
             # Create enhanced response
             enhanced_response = AgentResponse(
                 success=structured_response.success,
@@ -5035,15 +5434,19 @@ This will help me provide you with the most relevant travel guidance possible.""
                 metadata={
                     **structured_response.metadata,
                     "response_method": "llm_enhanced",
-                    "original_quality": structured_response.metadata.get("quality_score", 0.0),
+                    "original_quality": structured_response.metadata.get(
+                        "quality_score", 0.0
+                    ),
                     "enhancement_applied": True,
-                    "knowledge_context": knowledge_context
-                }
+                    "knowledge_context": knowledge_context,
+                },
             )
-            
-            logger.info(f"LLM enhancement completed, content length: {len(enhanced_content)}")
+
+            logger.info(
+                f"LLM enhancement completed, content length: {len(enhanced_content)}"
+            )
             return enhanced_response
-            
+
         except Exception as e:
             logger.error(f"Error in LLM enhancement: {e}")
             # Return original structured response if enhancement fails
@@ -5051,11 +5454,15 @@ This will help me provide you with the most relevant travel guidance possible.""
             return structured_response
 
     def _create_plan_aware_fusion_prompt(
-        self, user_message: str, formatted_knowledge: str, formatted_tools: str,
-        formatted_intent: str, plan_context: Dict[str, Any]
+        self,
+        user_message: str,
+        formatted_knowledge: str,
+        formatted_tools: str,
+        formatted_intent: str,
+        plan_context: Dict[str, Any],
     ) -> str:
         """Create fusion prompt that considers existing plan"""
-        
+
         existing_events = plan_context.get("event_summary", "")
         plan_gaps = plan_context.get("gaps_identified", [])
         last_updated = plan_context.get("last_updated", "Unknown")
@@ -5078,18 +5485,21 @@ This will help me provide you with the most relevant travel guidance possible.""
 # Global travel agent instance (singleton pattern)
 _travel_agent: Optional[TravelAgent] = None
 
+
 def get_travel_agent() -> TravelAgent:
     """Get travel agent instance (singleton pattern)"""
     global _travel_agent
     if _travel_agent is None:
         _travel_agent = TravelAgent()
         logger.info("✅ Created singleton Travel Agent instance")
-        
+
         # Register with agent manager
         from app.agents.base_agent import agent_manager
+
         agent_manager.register_agent(_travel_agent)
-        
+
     return _travel_agent
+
 
 # Initialize the singleton instance on module import
 travel_agent = get_travel_agent()
