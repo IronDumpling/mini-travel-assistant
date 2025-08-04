@@ -4174,11 +4174,19 @@ This will help me provide you with the most relevant travel guidance possible.""
 
         for tool_name in selected_tools:
             if tool_name == "attraction_search":
-                # Convert destination to IATA code(s) for consistent multi-location support
-                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                # Handle multi-destination attraction search like flight_search does
+                if multi_destinations and len(multi_destinations) > 1:
+                    # Convert multi-destinations to IATA codes for attraction search
+                    multi_dest_iata = self._convert_city_to_iata_code(multi_destinations)
+                    attraction_location = multi_dest_iata
+                    logger.info(f"🎯 ✅ MULTI-DESTINATION ATTRACTION SEARCH: {attraction_location}")
+                else:
+                    # Single destination - convert to IATA code
+                    attraction_location = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                    logger.info(f"🎯 Single destination attraction search: {attraction_location}")
                 
                 tool_parameters[tool_name] = {
-                    "location": destination_result,  # Can be single IATA code or list for multi-location
+                    "location": attraction_location,  # Can be single IATA code or list for multi-location
                     "query": None,  # Let tool use location-based search
                     "max_results": 10,
                     "include_photos": True,

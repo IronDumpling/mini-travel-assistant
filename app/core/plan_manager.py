@@ -643,7 +643,7 @@ class PlanManager:
             else:
                 logger.info(f"🛫 Multi-city trip starting from: {origin}")
             
-            # ✅ Calculate days per destination with proper distribution
+            # Calculate days per destination with proper distribution
             # Ensure total days equals requested duration, not compressed by destination count
             base_days_per_destination = max(1, duration // len(destinations))
             extra_days = duration % len(destinations)  # Distribute remaining days
@@ -667,17 +667,17 @@ class PlanManager:
             
             current_date = start_date
             
-            # ✅ Create complete flight chain: Start → A → B → C → ... → N → Start
+            # Create complete flight chain: Start → A → B → C → ... → N → Start
             flight_chain = [origin] + destinations + [origin]
             logger.info(f"✈️ Flight chain: {' → '.join(flight_chain)}")
             
-            for i, destination in enumerate(destinations):  # ✅ Process ALL destinations, no limit
-                # ✅ Get the specific number of days for this destination
+            for i, destination in enumerate(destinations):  
+                
                 destination_days = days_allocation[i]
                 logger.info(f"🏙️ Planning destination {i+1}/{len(destinations)}: {destination} ({destination_days} days)")
                 
-                # ✅ Create flight to this destination
-                # ✅ Get proper city names from IATA codes
+                # Create flight to this destination
+                # Get proper city names from IATA codes
                 from app.knowledge.geographical_data import GeographicalMappings
                 destination_city_name = GeographicalMappings.get_city_name(destination)
                 logger.info(f"🌍 Converting IATA '{destination}' to city name: '{destination_city_name}'")
@@ -800,41 +800,93 @@ class PlanManager:
                 else:
                     logger.error(f"❌ Failed to create hotel event")
                 
-                # ✅ Attractions for each destination
-                logger.info(f"🎯 Creating {destination_days} attraction events for {city_name}")
-                for day in range(destination_days):
-                    activity_date = current_date + timedelta(days=day)
-                    activity_time = activity_date.replace(hour=10, minute=0)
+                # Create attraction events for this destination using actual search results
+                city_attractions = self._get_attractions_for_destination(tool_results, destination, city_name)
+                
+                if city_attractions:
+                    logger.info(f"🎯 Creating {len(city_attractions)} specific attraction events for {city_name}")
                     
-                    activity_title = f"Explore {city_name} - Day {day+1}"
-                    logger.info(f"🎯 Creating activity event: {activity_title}")
+                    # Create events for available attractions, distributed across days
+                    max_attractions_per_day = 2  # Allow multiple attractions per day
+                    attractions_to_use = city_attractions[:destination_days * max_attractions_per_day]
                     
-                    activity_event = self._create_calendar_event_from_data({
-                        "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
-                        "title": activity_title,
-                        "description": f"Discover attractions and culture in {city_name}",
-                        "event_type": "attraction",
-                        "start_time": activity_time.isoformat(),
-                        "end_time": (activity_time + timedelta(hours=4)).isoformat(),
-                        "location": city_name,
-                        "details": {
-                            "source": "multi_destination_planning",
-                            "day_in_destination": day + 1,
-                            "destination_sequence": i + 1,
-                            "total_days_in_destination": destination_days,  # ✅ Add this for better tracking
-                            "recommendations": ["Visit main attractions", "Try local cuisine", "Explore cultural sites"]
-                        }
-                    })
-                    if activity_event:
-                        events.append(activity_event)
-                        logger.info(f"✅ Activity event created and added")
-                    else:
-                        logger.error(f"❌ Failed to create activity event")
+                    for attr_idx, attraction in enumerate(attractions_to_use):
+                        # Distribute attractions across destination days
+                        day_offset = attr_idx // max_attractions_per_day
+                        attraction_of_day = attr_idx % max_attractions_per_day
+                        
+                        activity_date = current_date + timedelta(days=day_offset)
+                        
+                        # Schedule attractions at different times of day
+                        if attraction_of_day == 0:
+                            visit_hour = 10  # Morning activity (10 AM)
+                        else:
+                            visit_hour = 14  # Afternoon activity (2 PM)
+                            
+                        activity_time = activity_date.replace(hour=visit_hour, minute=0)
+                        
+                        activity_title = f"Visit {getattr(attraction, 'name', f'Attraction in {city_name}')}"
+                        logger.info(f"🎯 Creating specific attraction event: {activity_title}")
+                        
+                        activity_event = self._create_calendar_event_from_data({
+                            "id": f"attraction_{destination}_{attr_idx+1}_{str(uuid.uuid4())[:8]}",
+                            "title": activity_title,
+                            "description": getattr(attraction, 'description', f'Visit {getattr(attraction, "category", "attraction")} in {city_name}'),
+                            "event_type": "attraction",
+                            "start_time": activity_time.isoformat(),
+                            "end_time": (activity_time + timedelta(hours=3)).isoformat(),
+                            "location": getattr(attraction, 'location', city_name),
+                            "details": {
+                                "source": "attraction_search",
+                                "destination_sequence": i + 1,
+                                "day_in_destination": day_offset + 1,
+                                "attraction_of_day": attraction_of_day + 1,
+                                "rating": getattr(attraction, 'rating', None),
+                                "category": getattr(attraction, 'category', 'Tourism'),
+                                "place_id": getattr(attraction, 'place_id', None)
+                            }
+                        })
+                        if activity_event:
+                            events.append(activity_event)
+                            logger.info(f"✅ Specific attraction event created and added")
+                        else:
+                            logger.error(f"❌ Failed to create attraction event")
+                else:
+                    # Fallback to generic events if no specific attractions found
+                    logger.info(f"🎯 No specific attractions found for {city_name}, creating generic activity events")
+                    for day in range(destination_days):
+                        activity_date = current_date + timedelta(days=day)
+                        activity_time = activity_date.replace(hour=10, minute=0)
+                        
+                        activity_title = f"Explore {city_name} - Day {day+1}"
+                        logger.info(f"🎯 Creating fallback activity event: {activity_title}")
+                        
+                        activity_event = self._create_calendar_event_from_data({
+                            "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
+                            "title": activity_title,
+                            "description": f"Discover attractions and culture in {city_name}",
+                            "event_type": "attraction",
+                            "start_time": activity_time.isoformat(),
+                            "end_time": (activity_time + timedelta(hours=4)).isoformat(),
+                            "location": city_name,
+                            "details": {
+                                "source": "multi_destination_planning_fallback",
+                                "day_in_destination": day + 1,
+                                "destination_sequence": i + 1,
+                                "total_days_in_destination": destination_days,
+                                "recommendations": ["Visit main attractions", "Try local cuisine", "Explore cultural sites"]
+                            }
+                        })
+                        if activity_event:
+                            events.append(activity_event)
+                            logger.info(f"✅ Fallback activity event created and added")
+                        else:
+                            logger.error(f"❌ Failed to create fallback activity event")
                 
                 # Move to next destination period
                 current_date += timedelta(days=destination_days)
             
-            # ✅ Final return flight: Last Destination → Origin
+            # Final return flight: Last Destination → Origin
             final_destination = destinations[-1]
             final_destination_city_name = GeographicalMappings.get_city_name(final_destination)
             origin_city_name = GeographicalMappings.get_city_name(origin)
@@ -890,6 +942,59 @@ class PlanManager:
             logger.error(f"❌ Error creating multi-destination events: {e}")
             # Fallback to single destination
             return self._create_single_destination_fallback(destinations[0], start_date, duration)
+    
+    def _get_attractions_for_destination(self, tool_results: Dict[str, Any], destination_iata: str, city_name: str) -> List:
+        """Extract attractions for a specific destination from multi-city attraction search results"""
+        if "attraction_search" not in tool_results:
+            logger.info(f"🎯 No attraction_search results found in tool_results")
+            return []
+        
+        attraction_result = tool_results["attraction_search"]
+        if not hasattr(attraction_result, 'attractions') or not attraction_result.attractions:
+            logger.info(f"🎯 No attractions found in attraction_search results")
+            return []
+        
+        # Filter attractions for this specific destination
+        # In multi-city mode, each attraction has location set to IATA code
+        city_attractions = []
+        
+        # 🔧 Convert city name to IATA code for matching
+        from app.knowledge.geographical_data import GeographicalMappings
+        city_iata = None
+        
+        # Find IATA code for this city
+        for iata, city in GeographicalMappings.IATA_TO_CITY.items():
+            if city.lower() == city_name.lower():
+                city_iata = iata
+                break
+        
+        logger.info(f"🎯 Looking for attractions with location matching:")
+        logger.info(f"🎯   - Destination IATA: '{destination_iata}'")
+        logger.info(f"🎯   - City name: '{city_name}'")
+        logger.info(f"🎯   - City IATA: '{city_iata}'")
+        
+        for attraction in attraction_result.attractions:
+            attraction_location = getattr(attraction, 'location', '')
+            logger.debug(f"🎯 Checking attraction location: '{attraction_location}'")
+            
+            # Match by multiple criteria
+            if (attraction_location == destination_iata or           # Direct IATA match
+                attraction_location == city_iata or                 # City's IATA code match
+                attraction_location.lower() == city_name.lower() or # City name match
+                city_name.lower() in attraction_location.lower()):  # Partial city name match
+                city_attractions.append(attraction)
+                logger.info(f"🎯 ✅ Matched attraction: {getattr(attraction, 'name', 'Unknown')} (location: {attraction_location})")
+                
+        logger.info(f"🎯 Found {len(city_attractions)} attractions for {city_name} (IATA: {destination_iata})")
+        logger.info(f"🎯 Total attractions in search results: {len(attraction_result.attractions)}")
+        
+        # 🔍 Debug: Show all attraction locations if no matches found
+        if len(city_attractions) == 0 and len(attraction_result.attractions) > 0:
+            logger.info(f"🎯 ❌ No matches found. All attraction locations in results:")
+            for i, attraction in enumerate(attraction_result.attractions[:10]):  # Show first 10
+                logger.info(f"🎯   [{i+1}] {getattr(attraction, 'name', 'Unknown')} -> location: '{getattr(attraction, 'location', 'None')}'")
+        
+        return city_attractions
     
     def _extract_origin_from_message(self, user_message: str) -> Optional[str]:
         """Extract origin city/airport from user message"""
