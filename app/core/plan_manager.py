@@ -612,6 +612,13 @@ class PlanManager:
         from datetime import timedelta
         import uuid
         
+        logger.info(f"🗺️ === MULTI-DESTINATION EVENT CREATION START ===")
+        logger.info(f"🗺️ Destinations: {destinations}")
+        logger.info(f"🗺️ Duration: {duration} days")
+        logger.info(f"🗺️ Travelers: {travelers}")
+        logger.info(f"🗺️ Start date: {start_date}")
+        logger.info(f"🗺️ Tool results keys: {list(tool_results.keys())}")
+        
         try:
             logger.info(f"🗺️ Creating multi-destination itinerary for {len(destinations)} cities: {destinations}")
             
@@ -673,6 +680,7 @@ class PlanManager:
                 # ✅ Get proper city names from IATA codes
                 from app.knowledge.geographical_data import GeographicalMappings
                 destination_city_name = GeographicalMappings.get_city_name(destination)
+                logger.info(f"🌍 Converting IATA '{destination}' to city name: '{destination_city_name}'")
                 
                 if i == 0:
                     # First flight: Origin → First Destination
@@ -696,7 +704,8 @@ class PlanManager:
                     tool_results, departure_city, destination, flight_sequence
                 )
                 
-                flight_event = self._create_calendar_event_from_data({
+                logger.info(f"✈️ Creating flight event: {flight_title}")
+                flight_event_data = {
                     "id": f"flight_{departure_city}_to_{destination}_{str(uuid.uuid4())[:8]}",
                     "title": flight_title,
                     "description": flight_description,
@@ -715,9 +724,14 @@ class PlanManager:
                         "flight_number": flight_details.get("flight_number", "TBA"),
                         "duration_minutes": flight_details.get("duration_hours", 3) * 60
                     }
-                })
+                }
+                
+                flight_event = self._create_calendar_event_from_data(flight_event_data)
                 if flight_event:
                     events.append(flight_event)
+                    logger.info(f"✅ Flight event created and added")
+                else:
+                    logger.error(f"❌ Failed to create flight event")
                 
                 # ✅ Hotel for each destination
                 checkin_time = current_date.replace(hour=15, minute=0)
@@ -744,9 +758,12 @@ class PlanManager:
                         matching_hotel = None
                         for hotel in hotel_result.hotels:
                             # Check if hotel is for this destination
-                            hotel_search_location = getattr(hotel, 'search_location', '')
+                            hotel_search_location = getattr(hotel, 'search_location', '') or ''
+                            hotel_location_upper = hotel_search_location.upper() if hotel_search_location else ''
+                            destination_upper = destination.upper() if destination else ''
+                            
                             if (hotel_search_location == destination or 
-                                hotel_search_location.upper() == destination.upper()):
+                                hotel_location_upper == destination_upper):
                                 matching_hotel = hotel
                                 break
                         
@@ -766,6 +783,7 @@ class PlanManager:
                                 }
                             })
                 
+                logger.info(f"🏨 Creating hotel event: {hotel_name}")
                 hotel_event = self._create_calendar_event_from_data({
                     "id": f"hotel_{destination}_{str(uuid.uuid4())[:8]}",
                     "title": hotel_name,
@@ -778,15 +796,22 @@ class PlanManager:
                 })
                 if hotel_event:
                     events.append(hotel_event)
+                    logger.info(f"✅ Hotel event created and added")
+                else:
+                    logger.error(f"❌ Failed to create hotel event")
                 
                 # ✅ Attractions for each destination
+                logger.info(f"🎯 Creating {destination_days} attraction events for {city_name}")
                 for day in range(destination_days):
                     activity_date = current_date + timedelta(days=day)
                     activity_time = activity_date.replace(hour=10, minute=0)
                     
+                    activity_title = f"Explore {city_name} - Day {day+1}"
+                    logger.info(f"🎯 Creating activity event: {activity_title}")
+                    
                     activity_event = self._create_calendar_event_from_data({
                         "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
-                        "title": f"Explore {city_name} - Day {day+1}",
+                        "title": activity_title,
                         "description": f"Discover attractions and culture in {city_name}",
                         "event_type": "attraction",
                         "start_time": activity_time.isoformat(),
@@ -802,6 +827,9 @@ class PlanManager:
                     })
                     if activity_event:
                         events.append(activity_event)
+                        logger.info(f"✅ Activity event created and added")
+                    else:
+                        logger.error(f"❌ Failed to create activity event")
                 
                 # Move to next destination period
                 current_date += timedelta(days=destination_days)
@@ -818,9 +846,12 @@ class PlanManager:
                 tool_results, final_destination, origin, return_flight_sequence
             )
             
+            return_flight_title = f"Return Flight: {final_destination_city_name} → {origin_city_name}"
+            logger.info(f"✈️ Creating return flight event: {return_flight_title}")
+            
             return_flight_event = self._create_calendar_event_from_data({
                 "id": f"flight_{final_destination}_to_{origin}_{str(uuid.uuid4())[:8]}",
-                "title": f"Return Flight: {final_destination_city_name} → {origin_city_name}",
+                "title": return_flight_title,
                 "description": f"Return journey from {final_destination_city_name} to {origin_city_name} - End of multi-city trip",
                 "event_type": "flight",
                 "start_time": return_flight_time.isoformat(),
@@ -842,6 +873,9 @@ class PlanManager:
             })
             if return_flight_event:
                 events.append(return_flight_event)
+                logger.info(f"✅ Return flight event created and added")
+            else:
+                logger.error(f"❌ Failed to create return flight event")
             
             logger.info(f"✅ Created {len(events)} events for multi-destination trip:")
             logger.info(f"   📍 {len(destinations)} destinations: {', '.join(destinations)}")
