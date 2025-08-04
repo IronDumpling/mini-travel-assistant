@@ -418,9 +418,7 @@ class PlanManager:
         
         current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)
         
-
-        
-        # ✅ Handle multi-destination trips (passed as parameter)
+        # Handle multi-destination trips (passed as parameter)
         if multi_destinations and len(multi_destinations) > 1:
             logger.info(f"🌍 Planning multi-destination trip: {multi_destinations}")
             return self._create_multi_destination_events(
@@ -516,10 +514,30 @@ class PlanManager:
             if "attraction_search" in tool_results:
                 attraction_result = tool_results["attraction_search"]
                 if hasattr(attraction_result, 'attractions') and len(attraction_result.attractions) > 0:
-                    attractions = attraction_result.attractions[:min(3, duration-2)]  # Limit based on duration
+                    # Day 1: Arrival, Day N: Departure, Days 2 to N-1: Activities
+                    available_activity_days = max(1, duration - 2)  # At least 1 day of activities
+                    max_attractions_per_day = 2  # Allow multiple attractions per day
+                    max_attractions = available_activity_days * max_attractions_per_day
+                    
+                    # Use available attractions up to our calculated maximum
+                    attractions = attraction_result.attractions[:min(len(attraction_result.attractions), max_attractions)]
+                    
+                    logger.info(f"📅 Creating {len(attractions)} attraction events across {available_activity_days} days (max {max_attractions_per_day} per day)")
+                    
                     for i, attraction in enumerate(attractions):
-                        visit_day = start_date + timedelta(days=i+1)  # Start from day 2
-                        visit_time = visit_day.replace(hour=10 + i*2, minute=0)  # 10 AM, 12 PM, 2 PM
+                        # Distribute attractions across available activity days
+                        day_offset = (i // max_attractions_per_day) + 1  # Start from day 2
+                        attraction_of_day = i % max_attractions_per_day  # 0 or 1 (morning/afternoon)
+                        
+                        visit_day = start_date + timedelta(days=day_offset)  
+                        
+                        # Schedule attractions at different times of day
+                        if attraction_of_day == 0:
+                            visit_hour = 10  # Morning activity (10 AM)
+                        else:
+                            visit_hour = 14  # Afternoon activity (2 PM)
+                            
+                        visit_time = visit_day.replace(hour=visit_hour, minute=0)
                         
                         event = self._create_calendar_event_from_data({
                             "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
@@ -527,7 +545,7 @@ class PlanManager:
                             "description": getattr(attraction, 'category', 'Sightseeing activity'),
                             "event_type": "attraction",
                             "start_time": visit_time.isoformat(),
-                            "end_time": (visit_time + timedelta(hours=2)).isoformat(),
+                            "end_time": (visit_time + timedelta(hours=3)).isoformat(),
                             "location": getattr(attraction, 'location', destination),
                             "details": {
                                 "source": "attraction_search",
@@ -540,16 +558,19 @@ class PlanManager:
             
             # Add default activities if no specific events were created
             if len(events) <= 2:  # Only flights
-                for i in range(min(3, duration-1)):
+                # Create activities for all available days, not just 3
+                available_activity_days = max(1, duration - 2)  # At least 1 day of activities
+                
+                for i in range(available_activity_days):
                     day = start_date + timedelta(days=i+1)
-                    event_time = day.replace(hour=10 + i*3, minute=0)
+                    event_time = day.replace(hour=10, minute=0)  # Consistent 10 AM start
                     event = self._create_calendar_event_from_data({
                         "id": f"activity_{i+1}_{str(uuid.uuid4())[:8]}",
                         "title": f"Explore {destination} - Day {i+1}",
                         "description": f"Discover the best of {destination}",
                         "event_type": "activity",
                         "start_time": event_time.isoformat(),
-                        "end_time": (event_time + timedelta(hours=3)).isoformat(),
+                        "end_time": (event_time + timedelta(hours=6)).isoformat(),  # Full day activity
                         "location": destination,
                         "details": {
                             "source": "default_generation",
@@ -1880,17 +1901,20 @@ If no changes are needed, return empty arrays for each section."""
         
         # Look for attraction mentions - spread across trip days
         if any(word in response_lower for word in ["visit", "attraction", "museum", "park", "tour", "sightseeing"]):
+            # ✅ FIXED: Create attractions for all available activity days, not just 3
+            available_activity_days = max(1, duration_days - 2)  # At least 1 day of activities
+            
             # Create attractions for middle days of the trip
-            for day in range(min(duration_days, 3)):  # Max 3 attractions
-                visit_date = start_date + timedelta(days=day)
+            for day in range(available_activity_days):
+                visit_date = start_date + timedelta(days=day + 1)  # Start from day 2
                 # Safe time calculation to avoid exceeding 24-hour format
-                base_hour = 9
-                hour_offset = min(day * 2, 12)  # Max offset 12 hours, avoiding past 21:00
+                base_hour = 10
+                hour_offset = min(day * 2, 8)  # Max offset 8 hours, avoiding past 18:00
                 target_hour = base_hour + hour_offset
                 visit_start = visit_date.replace(hour=target_hour, minute=0, second=0, microsecond=0)
-                visit_end = visit_start + timedelta(hours=2)  # 2 hour visits
+                visit_end = visit_start + timedelta(hours=3)  # 3 hour visits
                 
-                attraction_names = ["City Tour", "Local Attractions", "Cultural Sites"]
+                attraction_names = ["City Tour", "Local Attractions", "Cultural Sites", "Historic District", "Shopping District", "Art Galleries", "Local Markets"]
                 
                 events.append(CalendarEvent(
                     id=f"event_{uuid.uuid4().hex[:8]}",
