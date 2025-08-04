@@ -8,7 +8,6 @@ Features include text search, nearby search, place details, and photo retrieval.
 import os
 from typing import List, Optional, Dict, Any, Union
 import aiohttp
-import json
 from pydantic import BaseModel, Field
 from app.tools.base_tool import (
     BaseTool,
@@ -17,6 +16,7 @@ from app.tools.base_tool import (
     ToolExecutionContext,
     ToolMetadata,
 )
+from app.knowledge.geographical_data import GeographicalMappings
 from app.core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -124,6 +124,44 @@ class AttractionSearchTool(BaseTool):
                     "ATTRACTION_SEARCH_API_KEY environment variable is required"
                 )
 
+    def _convert_iata_to_city(self, location: str) -> str:
+        """Convert IATA code to city name for geocoding using centralized mappings"""
+        # Check if location looks like an IATA code (3 uppercase letters)
+        if len(location) == 3 and location.isupper() and location.isalpha():
+            # Use centralized geographical mappings
+            city_name = GeographicalMappings.get_city_name(location)
+            if city_name != location:  # get_city_name returns the original if not found
+                logger.info(f"🌍 Converted IATA code '{location}' to city '{city_name}'")
+                return city_name
+            else:
+                logger.warning(f"⚠️ Unknown IATA code '{location}', using as-is")
+                return location
+        return location
+
+    def _get_fallback_coordinates(self, location: str, original_location: str) -> Dict[str, float]:
+        """Get intelligent fallback coordinates based on location context using centralized mappings"""
+        # First, try to find coordinates based on the converted city name
+        try:
+            coords = GeographicalMappings.get_fallback_coordinates(location)
+            logger.info(f"✅ Found fallback coordinates for '{location}' -> {coords}")
+            return coords
+        except KeyError:
+            pass
+        
+        # Check original IATA code for fallback
+        if len(original_location) == 3 and original_location.isupper():
+            # Try to find city name from IATA and match fallback using centralized mappings
+            city_name = GeographicalMappings.get_city_name(original_location)
+            try:
+                coords = GeographicalMappings.get_fallback_coordinates(city_name)
+                logger.info(f"✅ Found fallback coordinates via IATA '{original_location}' -> {coords}")
+                return coords
+            except KeyError:
+                pass
+        
+        # Last resort: raise error instead of defaulting to NYC
+        raise Exception(f"Could not geocode location '{location}' (original: '{original_location}') and no fallback coordinates available. Please use a more specific location name.")
+
     async def _execute(
         self, input_data: AttractionSearchInput, context: ToolExecutionContext
     ) -> AttractionSearchOutput:
@@ -145,6 +183,12 @@ class AttractionSearchTool(BaseTool):
                     total_results=0,
                     search_location=input_data.location or "unknown",
                 )
+
+            # ✅ NEW: Log location conversion for debugging
+            original_location = input_data.location
+            converted_location = self._convert_iata_to_city(input_data.location)
+            if original_location != converted_location:
+                logger.info(f"🔄 Location conversion: '{original_location}' -> '{converted_location}'")
 
             logger.info(
                 f"Searching attractions in {input_data.location}, query: {input_data.query or 'nearby search'}"
@@ -447,6 +491,13 @@ class AttractionSearchTool(BaseTool):
 
     async def _geocode_location(self, location: str) -> Dict[str, float]:
         """Geocode a location string to coordinates using Google Geocoding API"""
+        original_location = location
+        
+        # ✅ FIXED: Convert IATA codes to city names first
+        location = self._convert_iata_to_city(location)
+        
+        logger.info(f"🌍 Geocoding location: '{location}' (original: '{original_location}')")
+        
         async with aiohttp.ClientSession() as session:
             params = {"address": location, "key": self.api_key}
 
@@ -456,12 +507,15 @@ class AttractionSearchTool(BaseTool):
                 if response.status == 200:
                     data = await response.json()
                     if data["results"]:
-                        return data["results"][0]["geometry"]["location"]
+                        coords = data["results"][0]["geometry"]["location"]
+                        logger.info(f"✅ Successfully geocoded '{location}' to {coords}")
+                        return coords
                     else:
-                        # Default to a reasonable location if geocoding fails
-                        return {"lat": 40.7128, "lng": -74.0060}  # New York City
+                        logger.warning(f"⚠️ No geocoding results for '{location}', using fallback coordinates")
+                        return self._get_fallback_coordinates(location, original_location)
                 else:
-                    raise Exception(f"Geocoding error: {response.status}")
+                    logger.error(f"❌ Geocoding API error: {response.status}")
+                    return self._get_fallback_coordinates(location, original_location)
 
     async def _parse_place(
         self, place_data: dict, include_photos: bool = True

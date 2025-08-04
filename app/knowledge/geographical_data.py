@@ -270,7 +270,7 @@ class GeographicalMappings:
         codes = cls.get_airport_codes(city)
         return codes[0] if codes else cls.get_iata_code(city)
     
-    # ✅ Reverse mapping: IATA code to city name
+    # Reverse mapping: IATA code to city name
     IATA_TO_CITY = {
         # European cities (available in our documents)
         'AMS': 'Amsterdam',
@@ -357,11 +357,61 @@ class GeographicalMappings:
         'SKG': 'Thessaloniki'
     }
     
+    # Location-specific fallback coordinates for geocoding when API fails
+    LOCATION_FALLBACKS = {
+        "london": {"lat": 51.5074, "lng": -0.1278},
+        "paris": {"lat": 48.8566, "lng": 2.3522},
+        "new york": {"lat": 40.7128, "lng": -74.0060},
+        "tokyo": {"lat": 35.6762, "lng": 139.6503},
+        "singapore": {"lat": 1.3521, "lng": 103.8198},
+        "sydney": {"lat": -33.8688, "lng": 151.2093},
+        "rome": {"lat": 41.9028, "lng": 12.4964},
+        "madrid": {"lat": 40.4168, "lng": -3.7038},
+        "barcelona": {"lat": 41.3851, "lng": 2.1734},
+        "amsterdam": {"lat": 52.3676, "lng": 4.9041},
+        "berlin": {"lat": 52.5200, "lng": 13.4050},
+        "munich": {"lat": 48.1351, "lng": 11.5820},
+        "vienna": {"lat": 48.2082, "lng": 16.3738},
+        "prague": {"lat": 50.0755, "lng": 14.4378},
+        "budapest": {"lat": 47.4979, "lng": 19.0402},
+        "seoul": {"lat": 37.5665, "lng": 126.9780},
+        "shanghai": {"lat": 31.2304, "lng": 121.4737},
+        "beijing": {"lat": 39.9042, "lng": 116.4074},
+        "hong kong": {"lat": 22.3193, "lng": 114.1694},
+        "bangkok": {"lat": 13.7563, "lng": 100.5018},
+        "dubai": {"lat": 25.2048, "lng": 55.2708},
+        "cairo": {"lat": 30.0444, "lng": 31.2357},
+        "johannesburg": {"lat": -26.2041, "lng": 28.0473},
+        "cape town": {"lat": -33.9249, "lng": 18.4241},
+        "são paulo": {"lat": -23.5505, "lng": -46.6333},
+        "rio de janeiro": {"lat": -22.9068, "lng": -43.1729},
+        "buenos aires": {"lat": -34.6118, "lng": -58.3960},
+        "santiago": {"lat": -33.4489, "lng": -70.6693},
+        "mexico city": {"lat": 19.4326, "lng": -99.1332},
+        "toronto": {"lat": 43.6532, "lng": -79.3832},
+        "vancouver": {"lat": 49.2827, "lng": -123.1207},
+        "montreal": {"lat": 45.5017, "lng": -73.5673},
+    }
+
     @classmethod
     def get_city_name(cls, iata_code: str) -> str:
         """Get city name from IATA code (case-insensitive)"""
         return cls.IATA_TO_CITY.get(iata_code.upper().strip(), iata_code)
     
+    @classmethod
+    def get_fallback_coordinates(cls, location: str) -> Dict[str, float]:
+        """Get fallback coordinates for a location (case-insensitive)"""
+        from typing import Dict
+        location_lower = location.lower().strip()
+        
+        # Check direct matches in fallback map
+        for city_key, coords in cls.LOCATION_FALLBACKS.items():
+            if city_key in location_lower:
+                return coords
+        
+        # If no match found, raise exception
+        raise KeyError(f"No fallback coordinates available for location: {location}")
+
     @classmethod
     def is_region(cls, location: str) -> bool:
         """Check if a location is a region/area rather than a specific city"""
