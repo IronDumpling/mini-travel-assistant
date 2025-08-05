@@ -604,7 +604,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
 
   if (!sessionId) {
     return (
-      <div className="w-[1000px] bg-gray-50 border-l border-gray-200 flex items-center justify-center">
+      <div className="w-[800px] bg-gray-50 border-l border-gray-200 flex items-center justify-center">
         <div className="text-center text-gray-500 p-6">
           <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <h3 className="font-medium mb-2">Travel Calendar</h3>

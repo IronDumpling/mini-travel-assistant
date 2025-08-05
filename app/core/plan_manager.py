@@ -824,8 +824,8 @@ class PlanManager:
                         activity_date = current_date + timedelta(days=day_offset)
                         
                         # 🔥 NEW APPROACH: Don't set fixed times - let scheduler assign them dynamically
-                        # Just set placeholder times that will be overridden by the scheduler
-                        activity_date_start = activity_date.replace(hour=9, minute=0)  # Placeholder time
+                        # Just set clean placeholder times that will be overridden by the scheduler
+                        activity_date_start = activity_date.replace(hour=9, minute=0, second=0, microsecond=0)  # Clean placeholder
                         
                         activity_title = f"Visit {getattr(attraction, 'name', f'Attraction in {city_name}')}"
                         logger.info(f"🎯 📅 Creating {activity_title} for {activity_date.strftime('%Y-%m-%d')} (day {day_offset+1}/{destination_days}) - time will be assigned by scheduler")
@@ -1047,7 +1047,8 @@ class PlanManager:
         from copy import deepcopy
         import random
         
-        logger.info(f"🔄 🎯 DYNAMIC scheduling {len(attractions)} attractions for {event_date}")
+        logger.info(f"🔄 🎯 ENHANCED DYNAMIC scheduling {len(attractions)} attractions for {event_date}")
+        logger.info(f"🔄 🔧 Features: Clean 30-min intervals, conflict resolution, business hours enforcement")
         
         # Business hours: 9 AM - 5 PM (8 hours total)
         business_start = datetime.combine(event_date, datetime.min.time().replace(hour=9))
@@ -1067,38 +1068,44 @@ class PlanManager:
         next_day_attractions = []
         current_time = business_start
         
+        # 🔥 TRACK ALL SCHEDULED PERIODS to prevent overlaps
+        scheduled_periods = list(blocked_periods)  # Start with fixed events
+        
         for i, attraction in enumerate(attractions):
-            # Calculate dynamic duration (2-3.5 hours, varying for realism)
-            min_duration_hours = 2.0
-            max_duration_hours = 3.5
-            duration_hours = random.uniform(min_duration_hours, max_duration_hours)
+            # Use clean 30-minute intervals
+            # Duration: 2.0h, 2.5h, 3.0h, or 3.5h (30-min multiples)
+            duration_options = [2.0, 2.5, 3.0, 3.5, 4]
+            duration_hours = random.choice(duration_options)
             duration = timedelta(hours=duration_hours)
             
-            # Calculate gap before next attraction (30-60 minutes)
-            gap_minutes = random.randint(30, 60)
+            # Gap: 30min or 60min (clean intervals)
+            gap_minutes = random.choice([30, 60, 90])
             gap = timedelta(minutes=gap_minutes)
+            
+            # Round current_time to nearest 30-minute mark
+            current_time = self._round_to_30min(current_time)
             
             # Check if we can fit this attraction in the current slot
             required_end_time = current_time + duration
             next_start_time = required_end_time + gap
             
-            # Check for conflicts with fixed events
-            conflicts_with_fixed = any(
-                not (required_end_time <= block_start or current_time >= block_end)
-                for block_start, block_end in blocked_periods
+            # Check conflicts with ALL scheduled periods (fixed + attractions)
+            conflicts_with_any = any(
+                not (required_end_time <= period_start or current_time >= period_end)
+                for period_start, period_end in scheduled_periods
             )
             
-            # If there's a conflict with fixed events, try to schedule after the conflict
-            if conflicts_with_fixed:
-                # Find the next available time after fixed event conflicts
+            # If there's a conflict, find the next available slot
+            if conflicts_with_any:
+                # Find the next available time after ALL conflicts
                 latest_conflict_end = max(
-                    block_end for block_start, block_end in blocked_periods
-                    if not (required_end_time <= block_start or current_time >= block_end)
+                    period_end for period_start, period_end in scheduled_periods
+                    if not (required_end_time <= period_start or current_time >= period_end)
                 )
-                current_time = latest_conflict_end + timedelta(minutes=15)  # Small buffer after flight
+                current_time = self._round_to_30min(latest_conflict_end + timedelta(minutes=15))
                 required_end_time = current_time + duration
                 next_start_time = required_end_time + gap
-                logger.info(f"🔄 ⚠️  Adjusting for flight conflict: new start time {current_time.strftime('%H:%M')}")
+                logger.info(f"🔄 ⚠️  Conflict detected! Adjusted start time to {current_time.strftime('%H:%M')}")
             
             # Check if it fits within business hours
             if required_end_time <= business_end:
@@ -1108,12 +1115,16 @@ class PlanManager:
                 new_attraction.end_time = required_end_time
                 
                 scheduled_attractions.append(new_attraction)
+                
+                # Add this attraction to scheduled periods to prevent future conflicts
+                scheduled_periods.append((current_time, required_end_time))
+                
                 logger.info(f"🔄 ✅ Scheduled: {attraction.title}")
                 logger.info(f"🔄     📅 Time: {current_time.strftime('%H:%M')} - {required_end_time.strftime('%H:%M')} ({duration_hours:.1f}h)")
                 logger.info(f"🔄     ⏰ Gap after: {gap_minutes} minutes")
                 
                 # Update current time for next attraction
-                current_time = next_start_time
+                current_time = self._round_to_30min(next_start_time)
                 
             else:
                 # Can't fit in today - move to next day
@@ -1129,6 +1140,10 @@ class PlanManager:
                 []  # No fixed events on moved day
             )
             scheduled_attractions.extend(next_day_scheduled)
+        
+        # 🔥 FIX 1: Final conflict verification and resolution
+        if len(scheduled_attractions) > 1:
+            scheduled_attractions = self._verify_and_resolve_conflicts(scheduled_attractions, event_date)
         
         logger.info(f"🔄 ✅ Completed DYNAMIC scheduling for {event_date.strftime('%Y-%m-%d')}: {len(scheduled_attractions)} total attractions")
         return scheduled_attractions
@@ -1156,6 +1171,92 @@ class PlanManager:
             end = end.replace(tzinfo=None)
         
         return start, end
+    
+    def _round_to_30min(self, dt):
+        """Round datetime to nearest 30-minute mark for clean scheduling"""
+        from datetime import datetime, timedelta
+        
+        # Get current minutes
+        current_minutes = dt.minute
+        
+        # Round to nearest 30-minute mark
+        if current_minutes <= 15:
+            # Round down to :00
+            rounded_minutes = 0
+        elif current_minutes <= 45:
+            # Round to :30
+            rounded_minutes = 30
+        else:
+            # Round up to next hour :00
+            dt = dt + timedelta(hours=1)
+            rounded_minutes = 0
+        
+        # Create clean time
+        clean_time = dt.replace(minute=rounded_minutes, second=0, microsecond=0)
+        return clean_time
+    
+    def _verify_and_resolve_conflicts(self, attractions, event_date):
+        """
+        🔥 FINAL CONFLICT RESOLUTION: Verify and iteratively resolve any remaining conflicts
+        """
+        from datetime import datetime, timedelta
+        from copy import deepcopy
+        
+        logger.info(f"🔄 🔍 Verifying {len(attractions)} attractions for conflicts on {event_date.strftime('%Y-%m-%d')}")
+        
+        max_iterations = 5
+        iteration = 0
+        
+        while iteration < max_iterations:
+            iteration += 1
+            conflicts_found = False
+            
+            # Check all pairs for conflicts
+            for i, attr1 in enumerate(attractions):
+                for j, attr2 in enumerate(attractions[i+1:], i+1):
+                    start1, end1 = self._extract_naive_times(attr1)
+                    start2, end2 = self._extract_naive_times(attr2)
+                    
+                    # Check if they overlap
+                    if not (end1 <= start2 or end2 <= start1):
+                        logger.info(f"🔄 ⚠️  CONFLICT DETECTED (iter {iteration}): {attr1.title} vs {attr2.title}")
+                        logger.info(f"🔄     📅 {start1.strftime('%H:%M')}-{end1.strftime('%H:%M')} vs {start2.strftime('%H:%M')}-{end2.strftime('%H:%M')}")
+                        
+                        # Resolve by moving the later one
+                        if start2 >= start1:
+                            # Move attr2 after attr1
+                            new_start = self._round_to_30min(end1 + timedelta(minutes=30))
+                            duration = end2 - start2
+                            new_end = new_start + duration
+                            
+                            attr2.start_time = new_start
+                            attr2.end_time = new_end
+                            
+                            logger.info(f"🔄 ✅ Resolved: Moved {attr2.title} to {new_start.strftime('%H:%M')}-{new_end.strftime('%H:%M')}")
+                        else:
+                            # Move attr1 after attr2
+                            new_start = self._round_to_30min(end2 + timedelta(minutes=30))
+                            duration = end1 - start1
+                            new_end = new_start + duration
+                            
+                            attr1.start_time = new_start
+                            attr1.end_time = new_end
+                            
+                            logger.info(f"🔄 ✅ Resolved: Moved {attr1.title} to {new_start.strftime('%H:%M')}-{new_end.strftime('%H:%M')}")
+                        
+                        conflicts_found = True
+                        break
+                if conflicts_found:
+                    break
+            
+            if not conflicts_found:
+                logger.info(f"🔄 ✅ No conflicts found after {iteration} iteration(s)")
+                break
+        
+        if iteration >= max_iterations:
+            logger.warning(f"🔄 ⚠️  Max iterations reached, some conflicts may remain")
+        
+        return attractions
     
     def _generate_time_slots(self, business_start: datetime, business_end: datetime, blocked_periods: list):
         """Generate available time slots, avoiding blocked periods"""
