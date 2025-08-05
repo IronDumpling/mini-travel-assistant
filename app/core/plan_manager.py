@@ -811,30 +811,32 @@ class PlanManager:
                     attractions_to_use = city_attractions[:destination_days * max_attractions_per_day]
                     
                     for attr_idx, attraction in enumerate(attractions_to_use):
+                        # 🔥 FIX: Properly distribute attractions to avoid same-day overlaps
                         # Distribute attractions across destination days
                         day_offset = attr_idx // max_attractions_per_day
                         attraction_of_day = attr_idx % max_attractions_per_day
                         
+                        # Ensure we don't exceed destination days
+                        if day_offset >= destination_days:
+                            logger.warning(f"🎯 ⚠️  Skipping attraction {attr_idx+1} - exceeds {destination_days} days for {city_name}")
+                            continue
+                            
                         activity_date = current_date + timedelta(days=day_offset)
                         
-                        # Schedule attractions at different times of day
-                        if attraction_of_day == 0:
-                            visit_hour = 10  # Morning activity (10 AM)
-                        else:
-                            visit_hour = 14  # Afternoon activity (2 PM)
-                            
-                        activity_time = activity_date.replace(hour=visit_hour, minute=0)
+                        # 🔥 NEW APPROACH: Don't set fixed times - let scheduler assign them dynamically
+                        # Just set placeholder times that will be overridden by the scheduler
+                        activity_date_start = activity_date.replace(hour=9, minute=0)  # Placeholder time
                         
                         activity_title = f"Visit {getattr(attraction, 'name', f'Attraction in {city_name}')}"
-                        logger.info(f"🎯 Creating specific attraction event: {activity_title}")
+                        logger.info(f"🎯 📅 Creating {activity_title} for {activity_date.strftime('%Y-%m-%d')} (day {day_offset+1}/{destination_days}) - time will be assigned by scheduler")
                         
                         activity_event = self._create_calendar_event_from_data({
                             "id": f"attraction_{destination}_{attr_idx+1}_{str(uuid.uuid4())[:8]}",
                             "title": activity_title,
                             "description": getattr(attraction, 'description', f'Visit {getattr(attraction, "category", "attraction")} in {city_name}'),
                             "event_type": "attraction",
-                            "start_time": activity_time.isoformat(),
-                            "end_time": (activity_time + timedelta(hours=3)).isoformat(),
+                            "start_time": activity_date_start.isoformat(),  # Placeholder - will be rescheduled
+                            "end_time": (activity_date_start + timedelta(hours=2)).isoformat(),  # Minimum 2h placeholder
                             "location": getattr(attraction, 'location', city_name),
                             "details": {
                                 "source": "attraction_search",
@@ -1034,128 +1036,126 @@ class PlanManager:
         return resolved_events
     
     def _schedule_daily_attractions(self, event_date, attractions: List, fixed_events: List):
-        """Schedule attractions for a single day, avoiding conflicts with fixed events"""
+        """
+        🔥 NEW DYNAMIC SCHEDULING: Schedule attractions with flexible timing
+        - Each attraction: minimum 2 hours, flexible duration
+        - Between attractions: 30-60 minute gaps
+        - Business hours: 9:00-17:00
+        - No overlaps, intelligent spacing
+        """
         from datetime import datetime, timedelta
         from copy import deepcopy
+        import random
         
-        logger.info(f"🔄 🎯 Scheduling {len(attractions)} attractions for {event_date}")
+        logger.info(f"🔄 🎯 DYNAMIC scheduling {len(attractions)} attractions for {event_date}")
         
-        # Define business hours (9 AM - 6 PM) - Keep simple for scheduling logic
-        business_start_hour = 9
-        business_end_hour = 18
+        # Business hours: 9 AM - 5 PM (8 hours total)
+        business_start = datetime.combine(event_date, datetime.min.time().replace(hour=9))
+        business_end = datetime.combine(event_date, datetime.min.time().replace(hour=17))
         
-        # Create simple naive datetime objects for scheduling (avoid timezone comparison issues)
-        business_start = datetime.combine(event_date, datetime.min.time().replace(hour=business_start_hour))
-        business_end = datetime.combine(event_date, datetime.min.time().replace(hour=business_end_hour))
+        logger.info(f"🔄 📊 Business hours: {business_start.strftime('%H:%M')} - {business_end.strftime('%H:%M')}")
         
-        # Store location for reference (timezone conversion disabled)
-        location = None
-        if attractions:
-            location = getattr(attractions[0], 'location', '')
-        
-        # Collect blocked time periods from fixed events (convert to naive for consistent comparison)
+        # Collect blocked periods from fixed events (flights)
         blocked_periods = []
         for fixed_event in fixed_events:
-            if isinstance(fixed_event.start_time, str):
-                start = datetime.fromisoformat(fixed_event.start_time.replace('Z', '+00:00'))
-                end = datetime.fromisoformat(fixed_event.end_time.replace('Z', '+00:00'))
-            else:
-                start = fixed_event.start_time
-                end = fixed_event.end_time
-            
-            # Convert to naive datetime for consistent scheduling comparison
-            if hasattr(start, 'tzinfo') and start.tzinfo is not None:
-                start = start.replace(tzinfo=None)
-            if hasattr(end, 'tzinfo') and end.tzinfo is not None:
-                end = end.replace(tzinfo=None)
-            
+            start, end = self._extract_naive_times(fixed_event)
             blocked_periods.append((start, end))
-            logger.info(f"🔄 🚫 Blocked period: {start.strftime('%H:%M')} - {end.strftime('%H:%M')} ({fixed_event.title})")
+            logger.info(f"🔄 🚫 Fixed blocked period: {start.strftime('%H:%M')} - {end.strftime('%H:%M')} ({fixed_event.title})")
         
-        # Generate available time slots (1-hour buffer between events)
-        available_slots = self._generate_time_slots(business_start, business_end, blocked_periods)
-        logger.info(f"🔄 🕐 Generated {len(available_slots)} available time slots")
-        
-        # Assign attractions to available slots intelligently
+        # Start scheduling attractions dynamically
         scheduled_attractions = []
         next_day_attractions = []
-        
-        # Sort available slots by start time for systematic allocation
-        available_slots.sort(key=lambda x: x[0])
+        current_time = business_start
         
         for i, attraction in enumerate(attractions):
-            # Calculate required duration (use naive datetimes for consistent scheduling)
-            if isinstance(attraction.start_time, str):
-                original_start = datetime.fromisoformat(attraction.start_time.replace('Z', '+00:00'))
-                original_end = datetime.fromisoformat(attraction.end_time.replace('Z', '+00:00'))
+            # Calculate dynamic duration (2-3.5 hours, varying for realism)
+            min_duration_hours = 2.0
+            max_duration_hours = 3.5
+            duration_hours = random.uniform(min_duration_hours, max_duration_hours)
+            duration = timedelta(hours=duration_hours)
+            
+            # Calculate gap before next attraction (30-60 minutes)
+            gap_minutes = random.randint(30, 60)
+            gap = timedelta(minutes=gap_minutes)
+            
+            # Check if we can fit this attraction in the current slot
+            required_end_time = current_time + duration
+            next_start_time = required_end_time + gap
+            
+            # Check for conflicts with fixed events
+            conflicts_with_fixed = any(
+                not (required_end_time <= block_start or current_time >= block_end)
+                for block_start, block_end in blocked_periods
+            )
+            
+            # If there's a conflict with fixed events, try to schedule after the conflict
+            if conflicts_with_fixed:
+                # Find the next available time after fixed event conflicts
+                latest_conflict_end = max(
+                    block_end for block_start, block_end in blocked_periods
+                    if not (required_end_time <= block_start or current_time >= block_end)
+                )
+                current_time = latest_conflict_end + timedelta(minutes=15)  # Small buffer after flight
+                required_end_time = current_time + duration
+                next_start_time = required_end_time + gap
+                logger.info(f"🔄 ⚠️  Adjusting for flight conflict: new start time {current_time.strftime('%H:%M')}")
+            
+            # Check if it fits within business hours
+            if required_end_time <= business_end:
+                # Schedule this attraction
+                new_attraction = deepcopy(attraction)
+                new_attraction.start_time = current_time
+                new_attraction.end_time = required_end_time
+                
+                scheduled_attractions.append(new_attraction)
+                logger.info(f"🔄 ✅ Scheduled: {attraction.title}")
+                logger.info(f"🔄     📅 Time: {current_time.strftime('%H:%M')} - {required_end_time.strftime('%H:%M')} ({duration_hours:.1f}h)")
+                logger.info(f"🔄     ⏰ Gap after: {gap_minutes} minutes")
+                
+                # Update current time for next attraction
+                current_time = next_start_time
+                
             else:
-                original_start = attraction.start_time
-                original_end = attraction.end_time
-            
-            # Convert to naive datetime for consistent scheduling
-            if hasattr(original_start, 'tzinfo') and original_start.tzinfo is not None:
-                original_start = original_start.replace(tzinfo=None)
-            if hasattr(original_end, 'tzinfo') and original_end.tzinfo is not None:
-                original_end = original_end.replace(tzinfo=None)
-            
-            duration = original_end - original_start
-            
-            # Find the best suitable slot (earliest available)
-            assigned = False
-            best_slot = None
-            
-            for j, (slot_start, slot_end) in enumerate(available_slots):
-                slot_duration = slot_end - slot_start
-                if slot_duration >= duration:
-                    best_slot = (j, slot_start, slot_end)
-                    break
-            
-            if best_slot:
-                slot_index, slot_start, slot_end = best_slot
-                
-                # Assign to this slot
-                adjusted_attraction = deepcopy(attraction)
-                adjusted_attraction.start_time = slot_start
-                adjusted_attraction.end_time = slot_start + duration
-                
-                scheduled_attractions.append(adjusted_attraction)
-                
-                # Remove the used slot
-                available_slots.pop(slot_index)
-                
-                # If slot is larger than needed, add remaining time back
-                remaining_start = slot_start + duration + timedelta(hours=1)  # 1-hour buffer
-                if remaining_start < slot_end:
-                    available_slots.append((remaining_start, slot_end))
-                    available_slots.sort(key=lambda x: x[0])  # Re-sort after adding
-                
-                logger.info(f"🔄 ✅ Scheduled: {attraction.title} at {slot_start.strftime('%H:%M')} - {(slot_start + duration).strftime('%H:%M')}")
-                assigned = True
-            
-            if not assigned:
-                # Move to next day
-                next_day_date = event_date + timedelta(days=1)
-                adjusted_attraction = deepcopy(attraction)
-                
-                # Set to next day 9 AM (keep simple for scheduling)
-                next_day_start = datetime.combine(next_day_date, datetime.min.time().replace(hour=9))
-                adjusted_attraction.start_time = next_day_start
-                adjusted_attraction.end_time = next_day_start + duration
-                
-                next_day_attractions.append(adjusted_attraction)
-                logger.info(f"🔄 📅 Moved to next day: {attraction.title} -> {next_day_date}")
+                # Can't fit in today - move to next day
+                logger.info(f"🔄 📅 Moving to next day: {attraction.title} (would end at {required_end_time.strftime('%H:%M')}, past business hours)")
+                next_day_attractions.append(attraction)
         
-        # If we have next-day attractions, recursively schedule them
+        # Schedule remaining attractions on next day
         if next_day_attractions:
+            logger.info(f"🔄 📅 Scheduling {len(next_day_attractions)} attractions on next day")
             next_day_scheduled = self._schedule_daily_attractions(
                 event_date + timedelta(days=1),
                 next_day_attractions,
-                []  # No fixed events on the moved day
+                []  # No fixed events on moved day
             )
             scheduled_attractions.extend(next_day_scheduled)
         
-        # Return scheduled attractions (no timezone conversion)
+        logger.info(f"🔄 ✅ Completed DYNAMIC scheduling for {event_date.strftime('%Y-%m-%d')}: {len(scheduled_attractions)} total attractions")
         return scheduled_attractions
+    
+    def _extract_naive_times(self, event):
+        """Extract naive datetime objects from event start/end times"""
+        from datetime import datetime
+        
+        # Handle start time
+        if isinstance(event.start_time, str):
+            start = datetime.fromisoformat(event.start_time.replace('Z', '+00:00'))
+        else:
+            start = event.start_time
+        
+        # Handle end time
+        if isinstance(event.end_time, str):
+            end = datetime.fromisoformat(event.end_time.replace('Z', '+00:00'))
+        else:
+            end = event.end_time
+        
+        # Convert to naive datetime for consistent scheduling
+        if hasattr(start, 'tzinfo') and start.tzinfo is not None:
+            start = start.replace(tzinfo=None)
+        if hasattr(end, 'tzinfo') and end.tzinfo is not None:
+            end = end.replace(tzinfo=None)
+        
+        return start, end
     
     def _generate_time_slots(self, business_start: datetime, business_end: datetime, blocked_periods: list):
         """Generate available time slots, avoiding blocked periods"""
