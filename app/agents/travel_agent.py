@@ -784,7 +784,16 @@ class TravelAgent(BaseAgent):
             logger.info(f" Intent updated with multi-destinations: {structured_intent['multi_destinations']}")
         elif extracted_destinations and extracted_destinations != "Unknown":
             # Single destination override if our extraction is better
-            if structured_intent.get("destination", {}).get("primary", "Unknown") in ["Unknown", ""]:
+            # SAFETY CHECK: Handle both string and dict format for destination
+            current_destination = structured_intent.get("destination", {})
+            if isinstance(current_destination, dict):
+                current_primary = current_destination.get("primary", "Unknown")
+            elif isinstance(current_destination, str):
+                current_primary = current_destination
+            else:
+                current_primary = "Unknown"
+                
+            if current_primary in ["Unknown", ""]:
                 logger.info(f" Single destination override: {extracted_destinations}")
                 structured_intent["destination"] = {"primary": extracted_destinations}
                 structured_intent["multi_destinations"] = None
@@ -888,7 +897,15 @@ Please analyze the current message considering the conversation history for bett
 
         # Convert to legacy format for backward compatibility
         #  Fix: Ensure destination is always a string, not a list
-        destination_primary = llm_analysis["destination"]["primary"]
+        # SAFETY CHECK: Handle cases where destination might be a string instead of dict
+        destination_data = llm_analysis["destination"]
+        if isinstance(destination_data, str):
+            # If destination is a string, convert to expected dict format
+            destination_primary = destination_data
+        elif isinstance(destination_data, dict):
+            destination_primary = destination_data.get("primary", "unknown")
+        else:
+            destination_primary = "unknown"
         if isinstance(destination_primary, list):
             # If it's a list, take the first item or default to "unknown"
             destination_str = destination_primary[0] if destination_primary else "unknown"
