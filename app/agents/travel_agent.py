@@ -896,7 +896,7 @@ Please analyze the current message considering the conversation history for bett
                 return await self._enhanced_fallback_intent_analysis(user_message)
 
         # Convert to legacy format for backward compatibility
-        #  Fix: Ensure destination is always a string, not a list
+        # Ensure destination is always a string, not a list
         # SAFETY CHECK: Handle cases where destination might be a string instead of dict
         destination_data = llm_analysis["destination"]
         if isinstance(destination_data, str):

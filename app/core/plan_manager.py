@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from app.api.schemas import SessionTravelPlan, CalendarEvent, TravelPlanMetadata, CalendarEventType
 from app.core.logging_config import get_logger
+from app.core.prompt_manager import prompt_manager, PromptType
 
 logger = get_logger(__name__)
 
@@ -116,11 +117,14 @@ class PlanManager:
             logger.info(f"  - Modification reason: {modifications.get('plan_modifications', {}).get('reason', 'Unknown')}")
             
             # Apply modifications
+            modifications_applied = False
+            
             if modifications.get("new_events"):
                 existing_plan.events.extend(modifications["new_events"])
                 update_summary["events_added"] = len(modifications["new_events"])
                 update_summary["changes_made"].append(f"Added {len(modifications['new_events'])} new events")
                 logger.info(f"Added {len(modifications['new_events'])} new events to plan {existing_plan.plan_id}")
+                modifications_applied = True
 
             if modifications.get("updated_events"):
                 for updated_event in modifications["updated_events"]:
@@ -128,6 +132,7 @@ class PlanManager:
                 update_summary["events_updated"] = len(modifications["updated_events"])
                 update_summary["changes_made"].append(f"Updated {len(modifications['updated_events'])} events")
                 logger.info(f"Updated {len(modifications['updated_events'])} events in plan {existing_plan.plan_id}")
+                modifications_applied = True
 
             if modifications.get("deleted_event_ids"):
                 for event_id in modifications["deleted_event_ids"]:
@@ -135,6 +140,18 @@ class PlanManager:
                 update_summary["events_deleted"] = len(modifications["deleted_event_ids"])
                 update_summary["changes_made"].append(f"Deleted {len(modifications['deleted_event_ids'])} events")
                 logger.info(f"Deleted {len(modifications['deleted_event_ids'])} events from plan {existing_plan.plan_id}")
+                modifications_applied = True
+            
+            # 🔥 CRITICAL FIX: Apply time conflict resolution after any modifications
+            if modifications_applied:
+                logger.info(f"Applying time conflict resolution to updated plan with {len(existing_plan.events)} events...")
+                try:
+                    existing_plan.events = self._resolve_time_conflicts(existing_plan.events)
+                    update_summary["changes_made"].append("Applied time conflict resolution")
+                    logger.info(f"Time conflict resolution completed: {len(existing_plan.events)} events final")
+                except Exception as e:
+                    logger.error(f"Time conflict resolution failed: {e}")
+                    update_summary["changes_made"].append(f"Time conflict resolution failed: {str(e)}")
 
             # Update metadata
             metadata_updates = self._extract_metadata_updates(user_message, agent_response, response_metadata)
@@ -970,11 +987,15 @@ class PlanManager:
         flight_events = [e for e in events if e.event_type == 'flight']
         hotel_events = [e for e in events if e.event_type == 'hotel']  # All-day, no conflicts
         attraction_events = [e for e in events if e.event_type == 'attraction']
+        meal_events = [e for e in events if e.event_type == 'meal']
+        transport_events = [e for e in events if e.event_type == 'transportation']
+        activity_events = [e for e in events if e.event_type == 'activity']
+        other_events = [e for e in events if e.event_type not in ['flight', 'hotel', 'attraction', 'meal', 'transportation', 'activity']]
         
-        logger.info(f"🕐 Events breakdown: {len(flight_events)} flights, {len(hotel_events)} hotels, {len(attraction_events)} attractions")
+        logger.info(f"Events breakdown: {len(flight_events)} flights, {len(hotel_events)} hotels, {len(attraction_events)} attractions, {len(meal_events)} meals, {len(transport_events)} transport, {len(activity_events)} activities, {len(other_events)} others")
         
-        # Sort by start time for conflict detection
-        scheduled_events = sorted(flight_events + attraction_events, 
+        # Sort by start time for conflict detection (include all non-hotel events)
+        scheduled_events = sorted(flight_events + attraction_events + meal_events + transport_events + activity_events + other_events, 
                                  key=lambda x: x.start_time)
         
         # Detect and resolve conflicts
@@ -987,11 +1008,10 @@ class PlanManager:
         
         resolved_events = self._build_conflict_free_schedule(scheduled_events)
         
-        # Combine all events (flights + adjusted attractions + hotels)
+        # Combine all events (resolved scheduled events + all-day hotel events)
         final_events = resolved_events + hotel_events
         
-        # ❌ COMMENTED OUT: Apply uniform timezone conversion to ALL events
-        # timezone_aware_final_events = self._apply_uniform_timezone_to_all_events(final_events)
+        logger.info(f"Final events composition: {len(resolved_events)} scheduled events + {len(hotel_events)} hotel events = {len(final_events)} total events")
         
         logger.info(f"🔄 ✅ Final schedule: {len(final_events)} total events (NO timezone conversion)")
         return final_events
@@ -1033,20 +1053,22 @@ class PlanManager:
                 
                 # Separate fixed vs flexible events
                 fixed_events = [e for e in daily_events if e.event_type == 'flight']
-                flexible_events = [e for e in daily_events if e.event_type == 'attraction']
+                flexible_events = [e for e in daily_events if e.event_type in ['attraction', 'meal', 'transportation', 'activity']]
+                hotel_events = [e for e in daily_events if e.event_type == 'hotel']  # All-day events
+                other_events = [e for e in daily_events if e.event_type not in ['flight', 'attraction', 'meal', 'transportation', 'activity', 'hotel']]
                 
-                logger.info(f"🔄 📊 Daily breakdown for {event_date}:")
-                logger.info(f"🔄   - Fixed events (flights): {len(fixed_events)}")
-                for fe in fixed_events:
-                    logger.info(f"🔄     * {fe.title}")
-                logger.info(f"🔄   - Flexible events (attractions): {len(flexible_events)}")
-                for fe in flexible_events:
-                    logger.info(f"🔄     * {fe.title}")
+                attraction_count = len([e for e in flexible_events if e.event_type == 'attraction'])
+                meal_count = len([e for e in flexible_events if e.event_type == 'meal'])
+                
+                logger.debug(f"Daily breakdown for {event_date}: {len(fixed_events)} flights, {len(flexible_events)} flexible events ({attraction_count} attractions, {meal_count} meals), {len(hotel_events)} hotels")
                 
                 # Add fixed events as-is (flights have fixed times)
                 for event in fixed_events:
                     daily_resolved_events.append(event)
-                    logger.info(f"🔄 ✈️  Fixed: {event.title} at {event.start_time}")
+                
+                # Add other events that don't need scheduling (e.g., meeting, free_time)
+                for event in other_events:
+                    daily_resolved_events.append(event)
                 
                 # Schedule flexible events with cross-day movement detection
                 if flexible_events:
@@ -1467,102 +1489,9 @@ class PlanManager:
         
         return sorted(slots)
     
-    # ❌ COMMENTED OUT: Apply uniform timezone conversion to all event types
-    # def _apply_uniform_timezone_to_all_events(self, all_events: List):
-    #     """Apply uniform timezone conversion to all event types"""
-    #     from copy import deepcopy
-    #     import pytz
-    #     from app.knowledge.geographical_data import GeographicalMappings
-    #     
-    #     logger.info(f"🌍 === APPLYING UNIFORM TIMEZONE TO ALL EVENTS ===")
-    #     
-    #     timezone_converted_events = []
-    #     
-    #     for event in all_events:
-    #         # Determine the appropriate location for this event
-    #         event_location = self._determine_event_location(event)
-    #         
-    #         if not event_location:
-    #             # Fallback to original event if no location found
-    #             timezone_converted_events.append(event)
-    #             logger.warning(f"🌍 ⚠️  No location found for {event.title}, keeping original timezone")
-    #             continue
-    #         
-    #         # Get timezone for the location
-    #         try:
-    #             timezone_str = GeographicalMappings.get_timezone(event_location)
-    #             tz = pytz.timezone(timezone_str)
-    #             logger.info(f"🌍 🎯 Converting {event.title} to {timezone_str} timezone")
-    #         except:
-    #             logger.warning(f"🌍 ⚠️  Invalid timezone for location {event_location}, keeping original event")
-    #             timezone_converted_events.append(event)
-    #             continue
-    #         
-    #         # Convert the event's times to timezone-aware
-    #         converted_event = deepcopy(event)
-    #         
-    #         # Convert start_time
-    #         if hasattr(converted_event.start_time, 'tzinfo') and converted_event.start_time.tzinfo is None:
-    #             # Naive datetime - localize to the target timezone
-    #             converted_event.start_time = tz.localize(converted_event.start_time)
-    #         elif hasattr(converted_event.start_time, 'tzinfo') and converted_event.start_time.tzinfo is not None:
-    #             # Already timezone-aware - convert to target timezone
-    #             converted_event.start_time = converted_event.start_time.astimezone(tz)
-    #         
-    #         # Convert end_time
-    #         if hasattr(converted_event.end_time, 'tzinfo') and converted_event.end_time.tzinfo is None:
-    #             # Naive datetime - localize to the target timezone
-    #             converted_event.end_time = tz.localize(converted_event.end_time)
-    #         elif hasattr(converted_event.end_time, 'tzinfo') and converted_event.end_time.tzinfo is not None:
-    #             # Already timezone-aware - convert to target timezone
-    #             converted_event.end_time = converted_event.end_time.astimezone(tz)
-    #         
-    #         timezone_converted_events.append(converted_event)
-    #         logger.info(f"🌍 ✅ Timezone applied: {event.title} -> {converted_event.start_time} ({timezone_str})")
-    #     
-    #     logger.info(f"🌍 ✅ All {len(timezone_converted_events)} events converted to appropriate timezones")
-    #     return timezone_converted_events
-    
-    # ❌ COMMENTED OUT: Location determination for timezone conversion
-    # def _determine_event_location(self, event):
-    #     """Determine the appropriate location for any event type"""
-    #     from app.knowledge.geographical_data import GeographicalMappings
-    #     
-    #     # Get location from event
-    #     event_location = getattr(event, 'location', '')
-    #     
-    #     if event.event_type == 'flight':
-    #         # For flights, use destination location
-    #         details = getattr(event, 'details', {})
-    #         destination = details.get('destination', '')
-    #         
-    #         if destination:
-    #             iata_code = GeographicalMappings.get_iata_code(destination)
-    #             if iata_code:
-    #                 return iata_code
-    #             return destination
-    #         
-    #         # Fallback: extract from location field
-    #         if '→' in event_location:
-    #             destination = event_location.split('→')[-1].strip()
-    #             iata_code = GeographicalMappings.get_iata_code(destination)
-    #             if iata_code:
-    #                 return iata_code
-    #             return destination
-    #     
-    #     elif event.event_type in ['attraction', 'hotel']:
-    #         # For attractions and hotels, use their location directly
-    #         if event_location and event_location != 'Unknown':
-    #             return event_location
-    #     
-    #     # Fallback: return whatever location we have
-    #     return event_location or 'PAR'  # Default fallback
-    
     def _adjust_attraction_time(self, attraction_event, scheduled_events: List):
         """Adjust attraction event time to avoid conflicts with scheduled events"""
         from datetime import datetime, timedelta
-        import re
-        from app.api.schemas import CalendarEvent
         
         # Log the input event for debugging
         logger.debug(f"🕐 🔍 Adjusting time for: {attraction_event.title}")
@@ -2228,7 +2157,7 @@ class PlanManager:
         """Create calendar event from structured event data with event type validation"""
         try:
             # Import required classes
-            from app.api.schemas import CalendarEvent, CalendarEventType
+            from app.api.schemas import CalendarEvent
             import uuid
             
             # Parse timestamps
@@ -2256,7 +2185,10 @@ class PlanManager:
                 details=event_data.get("details", {})
             )
             
-            return event
+            # Apply meal timing correction if this is a meal event
+            corrected_event = self._correct_meal_timing(event)
+            
+            return corrected_event
             
         except Exception as e:
             logger.error(f"Failed to create calendar event from structured data: {e}")
@@ -2298,6 +2230,63 @@ class PlanManager:
         logger.warning(f"Unknown event type '{raw_type}', defaulting to 'activity'")
         return CalendarEventType.ACTIVITY
 
+    def _correct_meal_timing(self, event: 'CalendarEvent') -> 'CalendarEvent':
+        """Correct meal event timing to ensure proper meal hours and durations"""
+        from app.api.schemas import CalendarEventType
+        
+        if event.event_type != CalendarEventType.MEAL:
+            return event  # Only process meal events
+        
+        # Determine meal type from title/description
+        title_lower = event.title.lower()
+        description_lower = event.description.lower()
+        
+        # Map meal types to appropriate times
+        meal_timing = {
+            'breakfast': {'start_hour': 8, 'duration_hours': 1},
+            'brunch': {'start_hour': 10, 'duration_hours': 2}, 
+            'lunch': {'start_hour': 12, 'duration_hours': 1.5},
+            'afternoon tea': {'start_hour': 15, 'duration_hours': 1},
+            'snack': {'start_hour': 15, 'duration_hours': 1},
+            'dinner': {'start_hour': 19, 'duration_hours': 2},
+            'late dinner': {'start_hour': 20, 'duration_hours': 2},
+            'drinks': {'start_hour': 18, 'duration_hours': 2},
+            'bar': {'start_hour': 18, 'duration_hours': 2}
+        }
+        
+        # Detect meal type
+        detected_type = None
+        for meal_type in meal_timing.keys():
+            if meal_type in title_lower or meal_type in description_lower:
+                detected_type = meal_type
+                break
+        
+        # Default to dinner if no specific type detected
+        if not detected_type:
+            detected_type = 'dinner'
+            logger.info(f"Could not detect meal type for '{event.title}', defaulting to dinner timing")
+        
+        # Get timing config
+        timing_config = meal_timing[detected_type]
+        
+        # Preserve the original date but correct the time
+        original_date = event.start_time.date()
+        corrected_start = datetime.combine(
+            original_date, 
+            datetime.min.time().replace(hour=timing_config['start_hour'], minute=0)
+        ).replace(tzinfo=event.start_time.tzinfo)
+        
+        corrected_end = corrected_start + timedelta(hours=timing_config['duration_hours'])
+        
+        # Log the correction
+        logger.info(f"Corrected meal timing for '{event.title}': {event.start_time.strftime('%H:%M')} -> {corrected_start.strftime('%H:%M')} (detected as {detected_type})")
+        
+        # Create corrected event
+        event.start_time = corrected_start
+        event.end_time = corrected_end
+        
+        return event
+
     async def _extract_plan_modifications(
         self, 
         user_message: str, 
@@ -2326,75 +2315,12 @@ class PlanManager:
             else:
                 logger.info("No existing events to format for LLM context")
             
-            prompt = f"""Analyze this travel planning conversation and determine what changes should be made to the existing travel plan.
-
-EXISTING PLAN EVENTS:
-{existing_events_context}
-
-USER REQUEST: {user_message}
-AGENT RESPONSE: {agent_response}
-
-TASK: Determine what modifications should be made to the existing plan based on this conversation.
-
-CRITICAL DELETION RULES:
-- If user wants to REMOVE a city/destination, you MUST delete ALL related events:
-  * ALL hotel events for that city
-  * ALL activity/attraction events for that city
-  * ALL connecting flights to/from that city
-- Look for phrases like "remove", "delete", "skip", "don't go to", "take out", "exclude"
-- When removing destinations from multi-city trips, be thorough in cleaning up ALL related events
-
-Analyze for:
-1. NEW events to add (flights, hotels, attractions, restaurants, activities)
-2. UPDATES to existing events (time changes, location changes, details updates)
-3. DELETIONS of existing events (if user wants to remove something)
-   - Pay special attention to city/destination removals
-   - Include ALL events related to removed destinations
-4. PLAN METADATA changes (destination, dates, budget, etc.)
-
-For each event, determine:
-- Event type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
-- Title and description
-- Start and end times (use ISO format: YYYY-MM-DDTHH:MM:SS+00:00)
-- Location
-- Any specific details mentioned
-
-When identifying events to delete:
-- Check event titles for city names mentioned in removal requests
-- Check event locations for city names
-- Check event details for destination codes (LON, PAR, etc.)
-- Look for hotel events that mention the removed city
-- Look for activities/attractions in the removed city
-
-Return ONLY a valid JSON response with this exact structure:
-{{
-    "new_events": [
-        {{
-            "title": "Event Title",
-            "description": "Event description",
-            "event_type": "flight|hotel|attraction|restaurant|meal|transportation|activity|meeting|free_time",
-            "start_time": "2025-07-27T10:00:00+00:00",
-            "end_time": "2025-07-27T16:00:00+00:00",
-            "location": "Location name",
-            "details": {{}}
-        }}
-    ],
-    "updated_events": [
-        {{
-            "id": "existing_event_id",
-            "title": "Updated Title",
-            "start_time": "2025-07-27T11:00:00+00:00",
-            "end_time": "2025-07-27T17:00:00+00:00"
-        }}
-    ],
-    "deleted_event_ids": ["event_id_to_delete"],
-    "plan_modifications": {{
-        "reason": "Why these changes were made",
-        "impact": "How this affects the overall plan"
-    }}
-}}
-
-If no changes are needed, return empty arrays for each section."""
+            prompt = prompt_manager.get_prompt(
+                PromptType.PLAN_MODIFICATION,
+                existing_events_context=existing_events_context,
+                user_message=user_message,
+                agent_response=agent_response
+            )
 
             response = await llm_service.chat_completion(
                 [{"role": "user", "content": prompt}],
@@ -2433,7 +2359,7 @@ If no changes are needed, return empty arrays for each section."""
                 new_events = []
                 for event_data in modifications.get("new_events", []):
                     try:
-                        event = self._create_calendar_event_from_data(event_data)
+                        event = self._create_calendar_event_from_structured_data(event_data)
                         if event:
                             new_events.append(event)
                     except Exception as e:
@@ -2780,23 +2706,11 @@ If no changes are needed, return empty arrays for each section."""
     ) -> List[CalendarEvent]:
         """Use LLM to extract calendar events from response"""
         try:
-            prompt = f"""
-            Extract calendar events from this travel planning conversation.
-            
-            User: {user_message}
-            Agent: {agent_response}
-            
-            Extract any specific travel events mentioned (flights, hotels, attractions, restaurants, activities).
-            For each event, determine:
-            - Title
-            - Type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
-            - Start time (estimate if not explicit)
-            - Duration/end time
-            - Location
-            - Description
-            
-            Return as JSON array of events. If no specific events are mentioned, return empty array.
-            """
+            prompt = prompt_manager.get_prompt(
+                PromptType.EVENT_EXTRACTION,
+                user_message=user_message,
+                agent_response=agent_response
+            )
             
             # Use LLM to extract events
             response = await llm_service.generate_completion(
