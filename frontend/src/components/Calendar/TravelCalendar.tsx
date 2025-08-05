@@ -141,7 +141,7 @@ const EventComponent = ({ event }: { event: any }) => {
   );
 };
 
-// Utility function for safe datetime parsing
+// Utility function for safe datetime parsing with timezone awareness
 const parseDateTime = (dateString: string): Date => {
   // Standardize datetime format handling
   let normalizedDate = dateString;
@@ -151,8 +151,21 @@ const parseDateTime = (dateString: string): Date => {
     normalizedDate = dateString.replace(' ', 'T');
   }
   
-  // Ensure timezone information is present
-  if (!normalizedDate.includes('+') && !normalizedDate.includes('Z')) {
+  // For travel events, we want to preserve the original time as local time
+  // If the datetime has timezone info (Z or +/-offset), keep it as is
+  // If no timezone info, treat as local time (don't add UTC offset)
+  if (!normalizedDate.includes('+') && !normalizedDate.includes('Z') && !normalizedDate.includes('-', 10)) {
+    // For dates without timezone, treat as local time by creating a Date without timezone conversion
+    try {
+      const parts = normalizedDate.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+      if (parts) {
+        const [, year, month, day, hour, minute, second] = parts;
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+      }
+    } catch (e) {
+      console.warn('Failed to parse as local time, falling back to UTC:', e);
+    }
+    // Fallback: add UTC timezone
     normalizedDate += '+00:00';
   }
   

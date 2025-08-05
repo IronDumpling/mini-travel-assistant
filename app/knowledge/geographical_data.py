@@ -357,37 +357,37 @@ class GeographicalMappings:
         'SKG': 'Thessaloniki'
     }
     
-    # Location-specific fallback coordinates for geocoding when API fails
+    # Location-specific fallback coordinates and timezones for geocoding when API fails
     LOCATION_FALLBACKS = {
-        "london": {"lat": 51.5074, "lng": -0.1278},
-        "paris": {"lat": 48.8566, "lng": 2.3522},
-        "new york": {"lat": 40.7128, "lng": -74.0060},
-        "tokyo": {"lat": 35.6762, "lng": 139.6503},
-        "singapore": {"lat": 1.3521, "lng": 103.8198},
-        "sydney": {"lat": -33.8688, "lng": 151.2093},
-        "rome": {"lat": 41.9028, "lng": 12.4964},
-        "madrid": {"lat": 40.4168, "lng": -3.7038},
-        "barcelona": {"lat": 41.3851, "lng": 2.1734},
-        "amsterdam": {"lat": 52.3676, "lng": 4.9041},
-        "berlin": {"lat": 52.5200, "lng": 13.4050},
-        "munich": {"lat": 48.1351, "lng": 11.5820},
-        "vienna": {"lat": 48.2082, "lng": 16.3738},
-        "prague": {"lat": 50.0755, "lng": 14.4378},
-        "budapest": {"lat": 47.4979, "lng": 19.0402},
-        "seoul": {"lat": 37.5665, "lng": 126.9780},
-        "shanghai": {"lat": 31.2304, "lng": 121.4737},
-        "beijing": {"lat": 39.9042, "lng": 116.4074},
-        "hong kong": {"lat": 22.3193, "lng": 114.1694},
-        "bangkok": {"lat": 13.7563, "lng": 100.5018},
-        "dubai": {"lat": 25.2048, "lng": 55.2708},
-        "cairo": {"lat": 30.0444, "lng": 31.2357},
-        "johannesburg": {"lat": -26.2041, "lng": 28.0473},
-        "cape town": {"lat": -33.9249, "lng": 18.4241},
-        "são paulo": {"lat": -23.5505, "lng": -46.6333},
-        "rio de janeiro": {"lat": -22.9068, "lng": -43.1729},
-        "buenos aires": {"lat": -34.6118, "lng": -58.3960},
-        "santiago": {"lat": -33.4489, "lng": -70.6693},
-        "mexico city": {"lat": 19.4326, "lng": -99.1332},
+        "london": {"lat": 51.5074, "lng": -0.1278, "timezone": "Europe/London"},
+        "paris": {"lat": 48.8566, "lng": 2.3522, "timezone": "Europe/Paris"},
+        "new york": {"lat": 40.7128, "lng": -74.0060, "timezone": "America/New_York"},
+        "tokyo": {"lat": 35.6762, "lng": 139.6503, "timezone": "Asia/Tokyo"},
+        "singapore": {"lat": 1.3521, "lng": 103.8198, "timezone": "Asia/Singapore"},
+        "sydney": {"lat": -33.8688, "lng": 151.2093, "timezone": "Australia/Sydney"},
+        "rome": {"lat": 41.9028, "lng": 12.4964, "timezone": "Europe/Rome"},
+        "madrid": {"lat": 40.4168, "lng": -3.7038, "timezone": "Europe/Madrid"},
+        "barcelona": {"lat": 41.3851, "lng": 2.1734, "timezone": "Europe/Madrid"},
+        "amsterdam": {"lat": 52.3676, "lng": 4.9041, "timezone": "Europe/Amsterdam"},
+        "berlin": {"lat": 52.5200, "lng": 13.4050, "timezone": "Europe/Berlin"},
+        "munich": {"lat": 48.1351, "lng": 11.5820, "timezone": "Europe/Berlin"},
+        "vienna": {"lat": 48.2082, "lng": 16.3738, "timezone": "Europe/Vienna"},
+        "prague": {"lat": 50.0755, "lng": 14.4378, "timezone": "Europe/Prague"},
+        "budapest": {"lat": 47.4979, "lng": 19.0402, "timezone": "Europe/Budapest"},
+        "seoul": {"lat": 37.5665, "lng": 126.9780, "timezone": "Asia/Seoul"},
+        "shanghai": {"lat": 31.2304, "lng": 121.4737, "timezone": "Asia/Shanghai"},
+        "beijing": {"lat": 39.9042, "lng": 116.4074, "timezone": "Asia/Shanghai"},
+        "hong kong": {"lat": 22.3193, "lng": 114.1694, "timezone": "Asia/Hong_Kong"},
+        "bangkok": {"lat": 13.7563, "lng": 100.5018, "timezone": "Asia/Bangkok"},
+        "dubai": {"lat": 25.2048, "lng": 55.2708, "timezone": "Asia/Dubai"},
+        "cairo": {"lat": 30.0444, "lng": 31.2357, "timezone": "Africa/Cairo"},
+        "johannesburg": {"lat": -26.2041, "lng": 28.0473, "timezone": "Africa/Johannesburg"},
+        "cape town": {"lat": -33.9249, "lng": 18.4241, "timezone": "Africa/Johannesburg"},
+        "são paulo": {"lat": -23.5505, "lng": -46.6333, "timezone": "America/Sao_Paulo"},
+        "rio de janeiro": {"lat": -22.9068, "lng": -43.1729, "timezone": "America/Sao_Paulo"},
+        "buenos aires": {"lat": -34.6118, "lng": -58.3960, "timezone": "America/Argentina/Buenos_Aires"},
+        "santiago": {"lat": -33.4489, "lng": -70.6693, "timezone": "America/Santiago"},
+        "mexico city": {"lat": 19.4326, "lng": -99.1332, "timezone": "America/Mexico_City"},
         "toronto": {"lat": 43.6532, "lng": -79.3832},
         "vancouver": {"lat": 49.2827, "lng": -123.1207},
         "montreal": {"lat": 45.5017, "lng": -73.5673},
@@ -411,6 +411,34 @@ class GeographicalMappings:
         
         # If no match found, raise exception
         raise KeyError(f"No fallback coordinates available for location: {location}")
+
+    @classmethod
+    def get_timezone(cls, location: str) -> str:
+        """Get timezone for a location"""
+        from typing import Dict
+        location_lower = location.lower().strip()
+        
+        # Try IATA code to city name conversion first
+        city_name = cls.get_city_name(location)
+        if city_name != location:  # Conversion happened
+            city_lower = city_name.lower().strip()
+            # Check direct matches in fallback map
+            for city_key, data in cls.LOCATION_FALLBACKS.items():
+                if city_key == city_lower:
+                    return data.get("timezone", "UTC")
+        
+        # Check direct matches in fallback map
+        for city_key, data in cls.LOCATION_FALLBACKS.items():
+            if city_key == location_lower:
+                return data.get("timezone", "UTC")
+        
+        # Try partial matches
+        for city_key, data in cls.LOCATION_FALLBACKS.items():
+            if city_key in location_lower or location_lower in city_key:
+                return data.get("timezone", "UTC")
+        
+        # Return UTC as default
+        return "UTC"
 
     @classmethod
     def is_region(cls, location: str) -> bool:

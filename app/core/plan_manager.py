@@ -936,12 +936,339 @@ class PlanManager:
             logger.info(f"   🎯 {sum(days_allocation)} total activity days ({total_allocated_days} days total)")
             logger.info(f"   Days distribution: {dict(zip(destinations, days_allocation))}")
             
+            # Apply intelligent time conflict resolution
+            try:
+                logger.info(f"🕐 === STARTING TIME CONFLICT RESOLUTION ===")
+                events = self._resolve_time_conflicts(events)
+                logger.info(f"🕐 Time conflict resolution completed: {len(events)} final events")
+            except Exception as e:
+                logger.error(f"❌ Error in time conflict resolution: {e}")
+            
             return events
             
         except Exception as e:
             logger.error(f"❌ Error creating multi-destination events: {e}")
             # Fallback to single destination
             return self._create_single_destination_fallback(destinations[0], start_date, duration)
+    
+    def _resolve_time_conflicts(self, events: List) -> List:
+        """Resolve time conflicts between events, prioritizing flights and respecting business hours"""
+        
+        # Separate events by type and priority
+        flight_events = [e for e in events if e.event_type == 'flight']
+        hotel_events = [e for e in events if e.event_type == 'hotel']  # All-day, no conflicts
+        attraction_events = [e for e in events if e.event_type == 'attraction']
+        
+        logger.info(f"🕐 Events breakdown: {len(flight_events)} flights, {len(hotel_events)} hotels, {len(attraction_events)} attractions")
+        
+        # Sort by start time for conflict detection
+        scheduled_events = sorted(flight_events + attraction_events, 
+                                 key=lambda x: x.start_time)
+        
+        # Detect and resolve conflicts
+        resolved_events = []
+        
+        for i, event in enumerate(scheduled_events):
+            if event.event_type == 'flight':
+                # Flights have fixed times (from API), cannot be changed
+                resolved_events.append(event)
+                logger.info(f"🕐 ✈️  Fixed flight time: {event.title} at {event.start_time}")
+            else:
+                # Attraction events can be adjusted
+                adjusted_event = self._adjust_attraction_time(event, resolved_events)
+                resolved_events.append(adjusted_event)
+                
+                if adjusted_event.start_time != event.start_time:
+                    logger.info(f"🕐 🎯 Adjusted attraction: {event.title}")
+                    logger.info(f"🕐    Old time: {event.start_time} - {event.end_time}")
+                    logger.info(f"🕐    New time: {adjusted_event.start_time} - {adjusted_event.end_time}")
+        
+        # Combine all events (flights + adjusted attractions + hotels)
+        final_events = resolved_events + hotel_events
+        
+        return final_events
+    
+    def _adjust_attraction_time(self, attraction_event, scheduled_events: List):
+        """Adjust attraction event time to avoid conflicts with scheduled events"""
+        from datetime import datetime, timedelta
+        import re
+        from app.api.schemas import CalendarEvent
+        
+        # Log the input event for debugging
+        logger.debug(f"🕐 🔍 Adjusting time for: {attraction_event.title}")
+        logger.debug(f"🕐    Original start: {attraction_event.start_time} (type: {type(attraction_event.start_time)})")
+        logger.debug(f"🕐    Original end: {attraction_event.end_time} (type: {type(attraction_event.end_time)})")
+        
+        # Handle both datetime objects and ISO strings
+        if isinstance(attraction_event.start_time, str):
+            original_start = datetime.fromisoformat(attraction_event.start_time.replace('Z', '+00:00'))
+            logger.debug(f"🕐    Parsed start from string: {original_start}")
+        else:
+            original_start = attraction_event.start_time
+            logger.debug(f"🕐    Using datetime object: {original_start}")
+            
+        if isinstance(attraction_event.end_time, str):
+            original_end = datetime.fromisoformat(attraction_event.end_time.replace('Z', '+00:00'))
+            logger.debug(f"🕐    Parsed end from string: {original_end}")
+        else:
+            original_end = attraction_event.end_time
+            logger.debug(f"🕐    Using datetime object: {original_end}")
+            
+        duration = original_end - original_start
+        logger.debug(f"🕐    Duration: {duration}")
+        
+        # Get the date and find available time slots
+        event_date = original_start.date()
+        
+        # Business hours: 9:00 AM to 6:00 PM (in the same timezone as the original event)
+        if original_start.tzinfo:
+            # Create timezone-aware business hours
+            business_start = original_start.replace(hour=9, minute=0, second=0, microsecond=0)
+            business_end = original_start.replace(hour=18, minute=0, second=0, microsecond=0)
+            logger.debug(f"🕐    Timezone-aware business hours: {business_start} - {business_end}")
+        else:
+            # Create naive business hours
+            business_start = datetime.combine(event_date, datetime.min.time().replace(hour=9))
+            business_end = datetime.combine(event_date, datetime.min.time().replace(hour=18))
+            logger.debug(f"🕐    Naive business hours: {business_start} - {business_end}")
+            
+        logger.debug(f"🕐    Business hours timezone: {business_start.tzinfo}")
+        
+        # 🚨 Handle special cases for arrival/departure days
+        same_date_flights = []
+        for e in scheduled_events:
+            if e.event_type == 'flight':
+                # Handle both datetime objects and ISO strings for flight start_time
+                if isinstance(e.start_time, str):
+                    flight_date = datetime.fromisoformat(e.start_time.replace('Z', '+00:00')).date()
+                else:
+                    flight_date = e.start_time.date()
+                
+                if flight_date == event_date:
+                    same_date_flights.append(e)
+        
+        # Get destination IATA and city name from attraction event
+        attraction_location = attraction_event.location or ''
+        
+        # Convert IATA to city name for matching
+        from app.knowledge.geographical_data import GeographicalMappings
+        attraction_city = GeographicalMappings.get_city_name(attraction_location)
+        
+        # Check for arrival flights (incoming to this destination)
+        arrival_flights = []
+        departure_flights = []
+        
+        for flight in same_date_flights:
+            flight_details = flight.details or {}
+            flight_destination = flight_details.get('destination', '')
+            flight_origin = flight_details.get('origin', '')
+            
+            # Check if this flight is arriving to the attraction's destination
+            # Match by IATA code or city name
+            if (flight_destination == attraction_location or 
+                flight_destination == attraction_city or
+                attraction_city.lower() in flight_destination.lower()):
+                arrival_flights.append(flight)
+            
+            # Check if this flight is departing from the attraction's destination
+            if (flight_origin == attraction_location or
+                flight_origin == attraction_city or
+                attraction_city.lower() in flight_origin.lower()):
+                departure_flights.append(flight)
+        
+        # Adjust business hours based on flights
+        if arrival_flights:
+            # If there's an arrival flight, attractions can only start after arrival + buffer time
+            arrival_flight = min(arrival_flights, key=lambda x: x.start_time if isinstance(x.start_time, datetime) else datetime.fromisoformat(x.start_time.replace('Z', '+00:00')))
+            # Handle both datetime objects and ISO strings for flight end_time
+            if isinstance(arrival_flight.end_time, str):
+                arrival_end = datetime.fromisoformat(arrival_flight.end_time.replace('Z', '+00:00'))
+            else:
+                arrival_end = arrival_flight.end_time
+            # Add 2-hour buffer for immigration, baggage, transport to city
+            earliest_start = arrival_end + timedelta(hours=2)
+            business_start = max(business_start, earliest_start)
+            logger.info(f"🕐 ✈️  Arrival day adjustment: earliest attraction start at {business_start.strftime('%H:%M')} due to {arrival_flight.title}")
+        
+        if departure_flights:
+            # If there's a departure flight, attractions must end before departure - buffer time
+            departure_flight = min(departure_flights, key=lambda x: x.start_time if isinstance(x.start_time, datetime) else datetime.fromisoformat(x.start_time.replace('Z', '+00:00')))
+            # Handle both datetime objects and ISO strings for flight start_time
+            if isinstance(departure_flight.start_time, str):
+                departure_start = datetime.fromisoformat(departure_flight.start_time.replace('Z', '+00:00'))
+            else:
+                departure_start = departure_flight.start_time
+            # Subtract 3-hour buffer for hotel checkout, transport to airport, check-in
+            latest_end = departure_start - timedelta(hours=3)
+            business_end = min(business_end, latest_end)
+            logger.info(f"🕐 ✈️  Departure day adjustment: latest attraction end at {business_end.strftime('%H:%M')} due to {departure_flight.title}")
+        
+        # Check if we still have enough time for the attraction
+        if business_start + duration > business_end:
+            logger.warning(f"🕐 ⚠️  Not enough time on {event_date} for {attraction_event.title} (need {duration}, have {business_end - business_start})")
+            
+            # 🚨 Try to move to next day instead of giving up
+            logger.info(f"🕐 📅 Attempting to move {attraction_event.title} to next day...")
+            
+            next_day = event_date + timedelta(days=1)
+            
+            # Create business hours for next day
+            if original_start.tzinfo:
+                next_business_start = original_start.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                next_business_end = original_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            else:
+                next_business_start = datetime.combine(next_day, datetime.min.time().replace(hour=9))
+                next_business_end = datetime.combine(next_day, datetime.min.time().replace(hour=18))
+                
+            # Check for flights or other conflicts on next day
+            next_day_conflicts = []
+            for e in scheduled_events:
+                if isinstance(e.start_time, str):
+                    check_date = datetime.fromisoformat(e.start_time.replace('Z', '+00:00')).date()
+                else:
+                    check_date = e.start_time.date()
+                    
+                if check_date == next_day:
+                    next_day_conflicts.append(e)
+            
+            # Try multiple strategies for next day
+            if len(next_day_conflicts) == 0 and next_business_start + duration <= next_business_end:
+                logger.info(f"🕐 ✅ Moving {attraction_event.title} to {next_day} at {next_business_start.strftime('%H:%M')}")
+                
+                from copy import deepcopy
+                adjusted_event = deepcopy(attraction_event)
+                adjusted_event.start_time = next_business_start
+                adjusted_event.end_time = next_business_start + duration
+                return adjusted_event
+            
+            # 🚨 Strategy 2: Try reducing duration by 60 minutes if original is too long
+            reduced_duration = duration - timedelta(minutes=60)
+            if reduced_duration >= timedelta(hours=1) and next_business_start + reduced_duration <= next_business_end and len(next_day_conflicts) <= 1:
+                logger.info(f"🕐 ⏱️  Trying reduced duration on next day: {reduced_duration}")
+                from copy import deepcopy
+                adjusted_event = deepcopy(attraction_event)
+                adjusted_event.start_time = next_business_start
+                adjusted_event.end_time = next_business_start + reduced_duration
+                return adjusted_event
+            
+            # 🚨 Strategy 3: Last resort - keep original time but log warning
+            logger.error(f"🕐 ❌ All strategies failed for {attraction_event.title} (next day conflicts: {len(next_day_conflicts)}), keeping original time")
+            return attraction_event
+        
+        # Find conflicts on the same date
+        same_date_events = []
+        for e in scheduled_events:
+            if isinstance(e.start_time, str):
+                event_date_check = datetime.fromisoformat(e.start_time.replace('Z', '+00:00')).date()
+            else:
+                event_date_check = e.start_time.date()
+            
+            if event_date_check == event_date:
+                same_date_events.append(e)
+        
+        # Try to find a conflict-free time slot
+        candidate_start = business_start
+        
+        while candidate_start + duration <= business_end:
+            candidate_end = candidate_start + duration
+            
+            # Check for conflicts with existing events
+            has_conflict = False
+            for existing_event in same_date_events:
+                # Handle both datetime objects and ISO strings
+                if isinstance(existing_event.start_time, str):
+                    existing_start = datetime.fromisoformat(existing_event.start_time.replace('Z', '+00:00'))
+                else:
+                    existing_start = existing_event.start_time
+                    
+                if isinstance(existing_event.end_time, str):
+                    existing_end = datetime.fromisoformat(existing_event.end_time.replace('Z', '+00:00'))
+                else:
+                    existing_end = existing_event.end_time
+                
+                # Add 30-minute buffer between attraction events (but not for flights/hotels)
+                buffer_time = timedelta(minutes=30) if hasattr(existing_event, 'event_type') and existing_event.event_type == 'attraction' else timedelta(0)
+                
+                # Check if times overlap (including buffer for attractions)
+                effective_existing_end = existing_end + buffer_time
+                effective_candidate_start = candidate_start
+                
+                if (effective_candidate_start < effective_existing_end and candidate_end > existing_start):
+                    has_conflict = True
+                    logger.debug(f"🕐 ⚠️  Conflict detected with {getattr(existing_event, 'title', 'Unknown')} (buffer: {buffer_time})")
+                    break
+            
+            if not has_conflict:
+                # Found a good time slot
+                break
+            
+            # Move to next 30-minute slot and try again (more granular)
+            candidate_start += timedelta(minutes=30)
+        
+        # If we couldn't find a slot, try moving to next day
+        if candidate_start + duration > business_end:
+            logger.warning(f"🕐 ⚠️  Could not find conflict-free time for {attraction_event.title} on {event_date}")
+            
+            # 🚨 Try to move to next day
+            logger.info(f"🕐 📅 Attempting to move {attraction_event.title} to next day due to conflicts...")
+            
+            next_day = event_date + timedelta(days=1)
+            
+            # Create business hours for next day
+            if original_start.tzinfo:
+                next_business_start = original_start.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                next_business_end = original_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            else:
+                next_business_start = datetime.combine(next_day, datetime.min.time().replace(hour=9))
+                next_business_end = datetime.combine(next_day, datetime.min.time().replace(hour=18))
+                
+            # Check for flights or other conflicts on next day
+            next_day_conflicts = []
+            for e in scheduled_events:
+                if isinstance(e.start_time, str):
+                    check_date = datetime.fromisoformat(e.start_time.replace('Z', '+00:00')).date()
+                else:
+                    check_date = e.start_time.date()
+                    
+                if check_date == next_day:
+                    next_day_conflicts.append(e)
+            
+            # Try multiple strategies for next day  
+            if len(next_day_conflicts) == 0 and next_business_start + duration <= next_business_end:
+                logger.info(f"🕐 ✅ Moving {attraction_event.title} to {next_day} at {next_business_start.strftime('%H:%M')}")
+                
+                from copy import deepcopy
+                adjusted_event = deepcopy(attraction_event)
+                adjusted_event.start_time = next_business_start
+                adjusted_event.end_time = next_business_start + duration
+                return adjusted_event
+            
+            # 🚨 Strategy 2: Try reducing duration by 30 minutes if original is too long
+            reduced_duration = duration - timedelta(minutes=30)
+            if reduced_duration >= timedelta(hours=1) and next_business_start + reduced_duration <= next_business_end and len(next_day_conflicts) <= 1:
+                logger.info(f"🕐 ⏱️  Trying reduced duration on next day: {reduced_duration}")
+                from copy import deepcopy
+                adjusted_event = deepcopy(attraction_event)
+                adjusted_event.start_time = next_business_start
+                adjusted_event.end_time = next_business_start + reduced_duration
+                return adjusted_event
+            
+            # 🚨 Strategy 3: Last resort - keep original time but log warning
+            logger.error(f"🕐 ❌ All strategies failed for {attraction_event.title} (next day conflicts: {len(next_day_conflicts)}), keeping original time")
+            return attraction_event
+        
+        # Create a new CalendarEvent with adjusted times
+        from copy import deepcopy
+        adjusted_event = deepcopy(attraction_event)
+        adjusted_event.start_time = candidate_start
+        adjusted_event.end_time = candidate_start + duration
+        
+        # Log the successful adjustment with timezone info
+        logger.info(f"🕐 ✅ Successfully adjusted {attraction_event.title}")
+        logger.info(f"🕐    Final time: {adjusted_event.start_time} - {adjusted_event.end_time}")
+        logger.info(f"🕐    Timezone: {adjusted_event.start_time.tzinfo}")
+        
+        return adjusted_event
     
     def _get_attractions_for_destination(self, tool_results: Dict[str, Any], destination_iata: str, city_name: str) -> List:
         """Extract attractions for a specific destination from multi-city attraction search results"""
