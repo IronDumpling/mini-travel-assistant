@@ -1056,7 +1056,7 @@ class PlanManager:
         
         while iteration < max_iterations:
             iteration += 1
-            logger.info(f"🔄 🔄 Starting iteration {iteration} of schedule resolution")
+            logger.info(f"🔄 Starting iteration {iteration} of schedule resolution")
             
             movements_occurred = False
             daily_resolved_events = []
@@ -1066,29 +1066,39 @@ class PlanManager:
                 daily_events = events_by_date[event_date]
                 logger.info(f"🔄 📅 Processing {event_date}: {len(daily_events)} events (iteration {iteration})")
                 
-                # Separate fixed vs flexible events
+                # Separate events by priority and scheduling approach
                 fixed_events = [e for e in daily_events if e.event_type == 'flight']
-                flexible_events = [e for e in daily_events if e.event_type in ['attraction', 'meal', 'transportation', 'activity']]
+                meal_events = [e for e in daily_events if e.event_type == 'meal']  # High priority, fixed times
+                flexible_events = [e for e in daily_events if e.event_type in ['attraction', 'transportation', 'activity']]  # Lower priority, flexible
                 hotel_events = [e for e in daily_events if e.event_type == 'hotel']  # All-day events
                 other_events = [e for e in daily_events if e.event_type not in ['flight', 'attraction', 'meal', 'transportation', 'activity', 'hotel']]
                 
                 attraction_count = len([e for e in flexible_events if e.event_type == 'attraction'])
-                meal_count = len([e for e in flexible_events if e.event_type == 'meal'])
                 
-                logger.debug(f"Daily breakdown for {event_date}: {len(fixed_events)} flights, {len(flexible_events)} flexible events ({attraction_count} attractions, {meal_count} meals), {len(hotel_events)} hotels")
+                logger.debug(f"Daily breakdown for {event_date}: {len(fixed_events)} flights, {len(meal_events)} meals, {len(flexible_events)} flexible events ({attraction_count} attractions), {len(hotel_events)} hotels")
                 
-                # Add fixed events as-is (flights have fixed times)
+                # Step 1: Add fixed events as-is (flights have highest priority)
                 for event in fixed_events:
                     daily_resolved_events.append(event)
                 
-                # Add other events that don't need scheduling (e.g., meeting, free_time)
+                # Step 2: Schedule meal events with fixed times, respecting flight conflicts
+                scheduled_meals = []
+                if meal_events:
+                    scheduled_meals = self._schedule_meals_with_priority(
+                        event_date, meal_events, fixed_events
+                    )
+                    daily_resolved_events.extend(scheduled_meals)
+                    logger.info(f"🔄 🍽️ Scheduled {len(scheduled_meals)}/{len(meal_events)} meals (skipped {len(meal_events) - len(scheduled_meals)} due to flight conflicts)")
+                
+                # Step 3: Add other events that don't need scheduling
                 for event in other_events:
                     daily_resolved_events.append(event)
                 
-                # Schedule flexible events with cross-day movement detection
+                # Step 4: Schedule flexible events (attractions), respecting flights and meals
                 if flexible_events:
+                    all_fixed_events = fixed_events + scheduled_meals  # Meals are now fixed for attraction scheduling
                     daily_resolved, moved_events = self._schedule_daily_attractions_with_movement_tracking(
-                        event_date, flexible_events, fixed_events
+                        event_date, flexible_events, all_fixed_events
                     )
                     daily_resolved_events.extend(daily_resolved)
                     
@@ -1132,6 +1142,51 @@ class PlanManager:
         logger.info(f"🔄 ✅ Schedule completed: {len(resolved_events)} events after {iteration} iteration(s)")
         return resolved_events
     
+    def _schedule_meals_with_priority(self, event_date, meal_events: List, fixed_events: List) -> List:
+        """
+        Schedule meal events with fixed times, respecting flight conflicts.
+        Priority: flight events > meal events
+        If flight conflicts with meal time, skip the meal.
+        """
+        from datetime import datetime, timedelta
+        
+        logger.info(f"🔄 🍽️ Scheduling {len(meal_events)} meals for {event_date.strftime('%Y-%m-%d')} with flight priority")
+        
+        scheduled_meals = []
+        
+        # Get blocked periods from flights
+        blocked_periods = []
+        for flight in fixed_events:
+            flight_start, flight_end = self._extract_naive_times(flight)
+            blocked_periods.append((flight_start, flight_end))
+            logger.info(f"🔄 ✈️ Flight blocked period: {flight_start.strftime('%H:%M')} - {flight_end.strftime('%H:%M')} ({flight.title})")
+        
+        # Process each meal with its correct fixed time
+        for meal in meal_events:
+            # Apply meal timing correction first
+            corrected_meal = self._correct_meal_timing(meal)
+            meal_start, meal_end = self._extract_naive_times(corrected_meal)
+            
+            # Check for conflicts with flights
+            conflicts_with_flight = any(
+                not (meal_end <= flight_start or meal_start >= flight_end)
+                for flight_start, flight_end in blocked_periods
+            )
+            
+            if conflicts_with_flight:
+                logger.warning(f"🔄 ⚠️ SKIPPING meal '{meal.title}' - conflicts with flight")
+                logger.warning(f"🔄     📅 Meal time: {meal_start.strftime('%H:%M')}-{meal_end.strftime('%H:%M')}")
+                continue  # Skip this meal entirely
+            else:
+                # No conflict, schedule the meal at its correct time
+                corrected_meal.start_time = meal_start
+                corrected_meal.end_time = meal_end
+                scheduled_meals.append(corrected_meal)
+                logger.info(f"🔄 ✅ Scheduled meal: {corrected_meal.title} at {meal_start.strftime('%H:%M')}-{meal_end.strftime('%H:%M')}")
+        
+        logger.info(f"🔄 🍽️ Meal scheduling complete: {len(scheduled_meals)}/{len(meal_events)} meals scheduled")
+        return scheduled_meals
+
     def _schedule_daily_attractions_with_movement_tracking(self, event_date, attractions: List, fixed_events: List):
         """
         🔥 ENHANCED SCHEDULING: Schedule attractions with cross-day movement tracking
@@ -1142,6 +1197,7 @@ class PlanManager:
         
         logger.info(f"🔄 🎯 ENHANCED DYNAMIC scheduling {len(attractions)} attractions for {event_date.strftime('%Y-%m-%d')}")
         logger.info(f"🔄 🔧 Features: Clean 30-min intervals, conflict resolution, business hours enforcement, movement tracking")
+        logger.info(f"🔄 📋 Priority: Attractions adjust around fixed events (flights + scheduled meals)")
         
         # Business hours: 9 AM to 5 PM  
         business_start = datetime.combine(event_date, datetime.min.time().replace(hour=9))
