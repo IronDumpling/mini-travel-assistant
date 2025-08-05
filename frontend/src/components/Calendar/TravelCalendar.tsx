@@ -141,7 +141,7 @@ const EventComponent = ({ event }: { event: any }) => {
   );
 };
 
-// Utility function for safe datetime parsing with timezone awareness
+// Utility function for smart datetime parsing with timezone handling
 const parseDateTime = (dateString: string): Date => {
   // Standardize datetime format handling
   let normalizedDate = dateString;
@@ -151,33 +151,40 @@ const parseDateTime = (dateString: string): Date => {
     normalizedDate = dateString.replace(' ', 'T');
   }
   
-  // For travel events, we want to preserve the original time as local time
-  // If the datetime has timezone info (Z or +/-offset), keep it as is
-  // If no timezone info, treat as local time (don't add UTC offset)
-  if (!normalizedDate.includes('+') && !normalizedDate.includes('Z') && !normalizedDate.includes('-', 10)) {
-    // For dates without timezone, treat as local time by creating a Date without timezone conversion
-    try {
-      const parts = normalizedDate.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-      if (parts) {
-        const [, year, month, day, hour, minute, second] = parts;
-        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+  // Smart timezone handling for travel planning
+  try {
+    // If the datetime has explicit timezone info (+/-offset or Z), use it directly
+    if (normalizedDate.includes('+') || normalizedDate.includes('Z') || normalizedDate.includes('-', 10)) {
+      const date = new Date(normalizedDate);
+      if (!isNaN(date.getTime())) {
+        // Log timezone info for debugging
+        console.debug('📅 Parsing with timezone:', normalizedDate, '→', date.toLocaleString());
+        return date;
       }
-    } catch (e) {
-      console.warn('Failed to parse as local time, falling back to UTC:', e);
     }
-    // Fallback: add UTC timezone
-    normalizedDate += '+00:00';
+    
+    // For dates without explicit timezone, parse as local time
+    const parts = normalizedDate.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+    if (parts) {
+      const [, year, month, day, hour, minute, second] = parts;
+      const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+      console.debug('📅 Parsing as local time:', normalizedDate, '→', localDate.toLocaleString());
+      return localDate;
+    }
+    
+    // Fallback: try adding UTC timezone and parsing
+    const utcDate = new Date(normalizedDate + '+00:00');
+    if (!isNaN(utcDate.getTime())) {
+      console.debug('📅 Fallback UTC parsing:', normalizedDate, '→', utcDate.toLocaleString());
+      return utcDate;
+    }
+  } catch (e) {
+    console.warn('❌ DateTime parsing error:', e, 'for string:', dateString);
   }
   
-  const date = new Date(normalizedDate);
-  
-  // Validate date validity
-  if (isNaN(date.getTime())) {
-    console.error('Invalid date format:', dateString, 'using current time as fallback');
-    return new Date(); // Return current time as fallback
-  }
-  
-  return date;
+  // Last resort fallback
+  console.error('❌ Invalid date format:', dateString, 'using current time as fallback');
+  return new Date();
 };
 
 export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => {
