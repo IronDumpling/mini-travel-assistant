@@ -43,9 +43,8 @@ class Attraction(BaseModel):
     individual_reviews: List[Dict[str, Any]] = []  # Individual user reviews
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    # Additional cost and review fields
-    cost_range: Optional[str] = None  # Cost range (e.g., "$10-20")
-    accessibility_info: Optional[str] = None  # Accessibility information
+    cost_range: Optional[str] = None
+    accessibility_info: Optional[str] = None
 
 
 class AttractionSearchInput(ToolInput):
@@ -105,10 +104,7 @@ class AttractionSearchTool(BaseTool):
         )
         super().__init__(metadata)
 
-        # API key will be checked when the tool is actually used
         self.api_key = None
-
-        # Google Places API (New) endpoints
         self.base_url = "https://places.googleapis.com/v1"
         self.places_search_url = f"{self.base_url}/places:searchText"
         self.nearby_search_url = f"{self.base_url}/places:searchNearby"
@@ -126,15 +122,15 @@ class AttractionSearchTool(BaseTool):
 
     def _convert_iata_to_city(self, location: str) -> str:
         """Convert IATA code to city name for geocoding using centralized mappings"""
-        # Check if location looks like an IATA code (3 uppercase letters)
+
         if len(location) == 3 and location.isupper() and location.isalpha():
-            # Use centralized geographical mappings
+    
             city_name = GeographicalMappings.get_city_name(location)
-            if city_name != location:  # get_city_name returns the original if not found
-                logger.info(f"🌍 Converted IATA code '{location}' to city '{city_name}'")
+            if city_name != location:
+                logger.info(f" Converted IATA code '{location}' to city '{city_name}'")
                 return city_name
             else:
-                logger.warning(f"⚠️ Unknown IATA code '{location}', using as-is")
+                logger.warning(f" Unknown IATA code '{location}', using as-is")
                 return location
         return location
 
@@ -254,7 +250,7 @@ class AttractionSearchTool(BaseTool):
                 search_location="empty_list"
             )
         
-        logger.info(f"🌍 Executing multi-location attraction search for {len(locations)} locations: {locations}")
+        logger.info(f" Executing multi-location attraction search for {len(locations)} locations: {locations}")
         
         all_attractions = []
         successful_locations = []
@@ -293,7 +289,7 @@ class AttractionSearchTool(BaseTool):
                     logger.info(f"✅ Found {len(result.attractions)} attractions in {location}")
                 else:
                     failed_locations.append(location)
-                    logger.warning(f"⚠️ No attractions found in {location}: {result.error}")
+                    logger.warning(f" No attractions found in {location}: {result.error}")
                     
             except Exception as e:
                 failed_locations.append(location)
@@ -496,7 +492,7 @@ class AttractionSearchTool(BaseTool):
         # ✅ FIXED: Convert IATA codes to city names first
         location = self._convert_iata_to_city(location)
         
-        logger.info(f"🌍 Geocoding location: '{location}' (original: '{original_location}')")
+        logger.info(f" Geocoding location: '{location}' (original: '{original_location}')")
         
         async with aiohttp.ClientSession() as session:
             params = {"address": location, "key": self.api_key}
@@ -511,7 +507,7 @@ class AttractionSearchTool(BaseTool):
                         logger.info(f"✅ Successfully geocoded '{location}' to {coords}")
                         return coords
                     else:
-                        logger.warning(f"⚠️ No geocoding results for '{location}', using fallback coordinates")
+                        logger.warning(f" No geocoding results for '{location}', using fallback coordinates")
                         return self._get_fallback_coordinates(location, original_location)
                 else:
                     logger.error(f"❌ Geocoding API error: {response.status}")

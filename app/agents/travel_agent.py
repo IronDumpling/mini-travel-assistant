@@ -333,7 +333,7 @@ class TravelAgent(BaseAgent):
                 if not has_strong_plan:
                     return False
         
-        # ✅ Strong plan generation indicators (commands/requests)
+        #  Strong plan generation indicators (commands/requests)
         strong_plan_keywords = [
             "plan my trip", "plan a trip", "create plan", "create itinerary",
             "make plan", "build itinerary", "generate itinerary", "plan for",
@@ -347,7 +347,7 @@ class TravelAgent(BaseAgent):
             if keyword in message_lower:
                 return True
                 
-        # ✅ Duration-based planning (specific time periods)
+        #  Duration-based planning (specific time periods)
         duration_patterns = [
             r'\d+[\s-]day', r'\d+[\s-]week', r'\d+[\s-]night',
             "weekend trip", "week trip", "month trip", "vacation"
@@ -361,7 +361,7 @@ class TravelAgent(BaseAgent):
                 if any(action in message_lower for action in action_words):
                     return True
         
-        # ✅ Plan modification keywords (for existing plans)
+        #  Plan modification keywords (for existing plans)
         modification_keywords = [
             "change my plan", "modify my itinerary", "update my plan", 
             "edit my schedule", "revise my trip", "adjust my itinerary",
@@ -372,7 +372,7 @@ class TravelAgent(BaseAgent):
             if keyword in message_lower:
                 return True
         
-        # ✅ Context-specific planning phrases
+        #  Context-specific planning phrases
         planning_phrases = [
             "i'm planning", "i am planning", "help me plan", 
             "planning a trip", "organizing a trip"
@@ -507,7 +507,7 @@ class TravelAgent(BaseAgent):
                 "personalization" in suggestion.lower()
                 or "preferences" in suggestion.lower()
             ):
-                improved_content += "\n\n🎯 **Personalized for You**: This recommendation takes into account your specific travel preferences and requirements mentioned."
+                improved_content += "\n\n **Personalized for You**: This recommendation takes into account your specific travel preferences and requirements mentioned."
 
             elif (
                 "feasibility" in suggestion.lower() or "practical" in suggestion.lower()
@@ -737,8 +737,7 @@ class TravelAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Enhanced intent analysis with information fusion strategy and conversation context"""
 
-        logger.info(f"🎯 === INTENT ANALYSIS MAIN START ===")
-        logger.info(f"🎯 User message: '{user_message}'")
+        logger.debug(f"Starting intent analysis for: '{user_message[:100]}{'...' if len(user_message) > 100 else ''}'")
 
         # Step 0: Prepare conversation context for intent analysis
         conversation_context = ""
@@ -756,45 +755,45 @@ class TravelAgent(BaseAgent):
             )
 
         # Step 1: Get LLM intent analysis using enhanced prompt (with conversation context)
-        logger.info(f"🎯 Step 1: Getting LLM intent analysis...")
+
         llm_analysis = await self._get_enhanced_llm_intent_analysis(
             user_message, conversation_context
         )
-        logger.info(f"🎯 LLM analysis completed: {llm_analysis}")
+
 
         # Step 2: Use structured response for deep analysis
-        logger.info(f"🎯 Step 2: Parsing structured intent...")
+
         structured_intent = await self._parse_structured_intent(
             llm_analysis, user_message
         )
-        logger.info(f"🎯 Structured intent: {structured_intent}")
+
 
         # Step 2.5: 🚨 CRITICAL FIX - Override destination detection with multi-city support
-        logger.info(f"🎯 Step 2.5: Multi-destination detection override...")
+
         extracted_destinations = self._extract_destination_from_message(user_message)
         
         if isinstance(extracted_destinations, list) and len(extracted_destinations) > 1:
             # Multi-destination detected - override LLM analysis
-            logger.info(f"🎯 🎉 MULTI-DESTINATION OVERRIDE: {extracted_destinations}")
+            logger.info(f"  MULTI-DESTINATION OVERRIDE: {extracted_destinations}")
             structured_intent["destination"] = {
                 "primary": extracted_destinations[0],
                 "all": extracted_destinations
             }
             structured_intent["multi_destinations"] = extracted_destinations
             structured_intent["is_multi_destination"] = True
-            logger.info(f"🎯 Intent updated with multi-destinations: {structured_intent['multi_destinations']}")
+            logger.info(f" Intent updated with multi-destinations: {structured_intent['multi_destinations']}")
         elif extracted_destinations and extracted_destinations != "Unknown":
             # Single destination override if our extraction is better
             if structured_intent.get("destination", {}).get("primary", "Unknown") in ["Unknown", ""]:
-                logger.info(f"🎯 Single destination override: {extracted_destinations}")
+                logger.info(f" Single destination override: {extracted_destinations}")
                 structured_intent["destination"] = {"primary": extracted_destinations}
                 structured_intent["multi_destinations"] = None
                 structured_intent["is_multi_destination"] = False
         else:
-            logger.info(f"🎯 No destination override needed, using LLM result")
+            logger.info(f" No destination override needed, using LLM result")
 
         # Step 3: Add information fusion strategy
-        logger.info(f"🎯 Step 3: Adding information fusion strategy...")
+        logger.info(f" Step 3: Adding information fusion strategy...")
         enhanced_intent = await self._add_information_fusion_strategy(
             structured_intent, user_message
         )
@@ -809,11 +808,11 @@ class TravelAgent(BaseAgent):
             )
 
         # Final log summary
-        logger.info(f"🎯 === INTENT ANALYSIS MAIN END ===")
-        logger.info(f"🎯 Final intent type: {enhanced_intent.get('intent_type', 'unknown')}")
-        logger.info(f"🎯 Final destination: {enhanced_intent.get('destination', 'unknown')}")
-        logger.info(f"🎯 Final multi_destinations: {enhanced_intent.get('multi_destinations', None)}")
-        logger.info(f"🎯 Is multi-destination: {enhanced_intent.get('is_multi_destination', False)}")
+        logger.info(f" === INTENT ANALYSIS MAIN END ===")
+        logger.info(f" Final intent type: {enhanced_intent.get('intent_type', 'unknown')}")
+        logger.info(f" Final destination: {enhanced_intent.get('destination', 'unknown')}")
+        logger.info(f" Final multi_destinations: {enhanced_intent.get('multi_destinations', None)}")
+        logger.info(f" Is multi-destination: {enhanced_intent.get('is_multi_destination', False)}")
 
         return enhanced_intent
 
@@ -888,7 +887,7 @@ Please analyze the current message considering the conversation history for bett
                 return await self._enhanced_fallback_intent_analysis(user_message)
 
         # Convert to legacy format for backward compatibility
-        # ✅ Fix: Ensure destination is always a string, not a list
+        #  Fix: Ensure destination is always a string, not a list
         destination_primary = llm_analysis["destination"]["primary"]
         if isinstance(destination_primary, list):
             # If it's a list, take the first item or default to "unknown"
@@ -1022,7 +1021,7 @@ Please analyze the current message considering the conversation history for bett
 
         user_message_lower = user_message.lower()
 
-        # ✅ Enhanced intent type detection (more precise)
+        #  Enhanced intent type detection (more precise)
         intent_type = "query"  # default
         
         # Use the improved _is_plan_request method for planning detection
@@ -1066,7 +1065,7 @@ Please analyze the current message considering the conversation history for bett
         destination = "Unknown"
         destinations = geo_mappings.get_intent_analysis_destinations()
         
-        # 🎯 Use the improved destination extraction method
+        #  Use the improved destination extraction method
         logger.info(f"🧠 Calling improved destination extraction method for intent analysis...")
         extracted_destination = self._extract_destination_from_message(user_message)
         
@@ -1074,20 +1073,20 @@ Please analyze the current message considering the conversation history for bett
             # Multi-destination case
             destination = extracted_destination[0].lower()  # Primary destination for intent analysis
             multi_destinations_found = extracted_destination
-            logger.info(f"🧠 ✅ MULTI-DESTINATION FOUND in intent analysis: {multi_destinations_found}")
+            logger.info(f"🧠  MULTI-DESTINATION FOUND in intent analysis: {multi_destinations_found}")
             logger.info(f"🧠 Using primary destination for intent: '{destination}'")
         elif extracted_destination and extracted_destination != "Unknown":
             # Single destination case
             destination = extracted_destination.lower()
             multi_destinations_found = None
-            logger.info(f"🧠 ✅ SINGLE DESTINATION FOUND in intent analysis: '{destination}'")
+            logger.info(f"🧠  SINGLE DESTINATION FOUND in intent analysis: '{destination}'")
         else:
             # Fallback to old method if extraction failed
             logger.info(f"🧠 ⚠️ Destination extraction failed, using fallback method...")
             for dest in destinations:
                 if dest in user_message_lower:
                     destination = dest.lower()  # Keep lowercase to match IATA mapping
-                    logger.info(f"🧠 ✅ FALLBACK DESTINATION FOUND: '{dest}' -> '{destination}'")
+                    logger.info(f"🧠  FALLBACK DESTINATION FOUND: '{dest}' -> '{destination}'")
                     break
             multi_destinations_found = None
 
@@ -2613,7 +2612,7 @@ Please analyze the current message considering the conversation history for bett
                         
                         destination = tool_params.get("destination", "unknown")
                         
-                        # ✅ Fix: Check if destination is already converted to list of IATA codes
+                        #  Fix: Check if destination is already converted to list of IATA codes
                         if isinstance(destination, list):
                             # Already converted to IATA codes, use directly
                             destination_result = destination
@@ -2623,12 +2622,12 @@ Please analyze the current message considering the conversation history for bett
                             destination_result = self._convert_city_to_iata_code(destination)
                             logger.info(f"✈️ Travel agent - Converted '{destination}' to IATA: {destination_result}")
                         
-                        # ✅ NEW: Enable flight_chain for multi-destination searches
+                        #  NEW: Enable flight_chain for multi-destination searches
                         is_multi_destination = isinstance(destination_result, list) and len(destination_result) > 1
                         flight_chain_enabled = is_multi_destination
                         
                         if flight_chain_enabled:
-                            logger.info(f"🔗 Enabling flight chain search for {len(destination_result)} destinations")
+                            logger.info(f" Enabling flight chain search for {len(destination_result)} destinations")
                         
                         flight_params = {
                             "origin": tool_params.get("origin", "PAR"),
@@ -2771,7 +2770,7 @@ Please analyze the current message considering the conversation history for bett
                         )
 
                         if fusion_response and fusion_response.content:
-                            logger.info(f"✅ LLM information fusion completed")
+                            logger.info(f" LLM information fusion completed")
                             logger.info(
                                 f"Response length: {len(fusion_response.content)}"
                             )
@@ -2816,7 +2815,7 @@ Please analyze the current message considering the conversation history for bett
                         )
 
                         if enhanced_response and enhanced_response.content:
-                            logger.info(f"✅ Enhanced template response completed")
+                            logger.info(f" Enhanced template response completed")
                             logger.info(
                                 f"=== INTELLIGENT RESPONSE GENERATION END (Enhanced Template) ==="
                             )
@@ -2834,7 +2833,7 @@ Please analyze the current message considering the conversation history for bett
                 # Handle error cases
                 error_msg = execution_result.get("error", "Unknown error")
                 
-                # ✅ Fix: Ensure error message is never None
+                #  Fix: Ensure error message is never None
                 if error_msg is None:
                     error_msg = "Unexpected processing error"
                     logger.warning("Error message was None, using default")
@@ -2936,12 +2935,12 @@ Please analyze the current message considering the conversation history for bett
                 logger.info(f"Tool {tool_name} success: {result.success}")
                 if result.success:
                     if tool_name == "flight_search" and hasattr(result, 'flights'):
-                        # ✅ Check if this is a flight chain search
+                        #  Check if this is a flight chain search
                         is_flight_chain = (hasattr(result, 'data') and result.data and 
                                          result.data.get("search_type") == "flight_chain")
                         
                         if is_flight_chain:
-                            # ✅ For flight chain, show representative flights from each route
+                            #  For flight chain, show representative flights from each route
                             flight_chain_routes = result.data.get("successful_routes", [])
                             route_flights = {}
                             
@@ -2965,7 +2964,7 @@ Please analyze the current message considering the conversation history for bett
                             else:
                                 tool_parts.append("**Flight Chain**: No valid flight routes found.")
                         else:
-                            # ✅ For regular flight search, use top 5
+                            #  For regular flight search, use top 5
                             flights = result.flights[:5]  # Top 5
                             logger.info(f"Found {len(flights)} flights for {tool_name}")
                             if flights:
@@ -3143,7 +3142,7 @@ Please analyze the current message considering the conversation history for bett
         response_focus = fusion_strategy.get("response_focus", "helpful_information")
 
         if response_focus == "comprehensive_plan":
-            response_parts.append("🎯 **Comprehensive Travel Planning**")
+            response_parts.append(" **Comprehensive Travel Planning**")
         elif response_focus == "detailed_information":
             response_parts.append("📍 **Detailed Travel Information**")
         elif response_focus == "curated_options":
@@ -3221,7 +3220,7 @@ Please analyze the current message considering the conversation history for bett
                     response_parts.append(formatted_tools)
 
         # Smart next steps based on intent and fusion strategy
-        response_parts.append("\n\n🎯 **Next Steps**:")
+        response_parts.append("\n\n **Next Steps**:")
         if response_focus == "comprehensive_plan":
             response_parts.append(
                 "• Review the recommendations and let me know your preferences"
@@ -3583,12 +3582,12 @@ This will help me provide you with the most relevant travel guidance possible.""
             # Multi-destination case
             destination = extracted_destination[0]  # Primary destination for compatibility
             multi_destinations = extracted_destination
-            logger.info(f"🌍 Multi-destination detected: {multi_destinations}, using primary: {destination}")
+            logger.info(f" Multi-destination detected: {multi_destinations}, using primary: {destination}")
         else:
             # Single destination case
             destination = extracted_destination
             multi_destinations = None
-            logger.info(f"🌍 Single destination: {destination}")
+            logger.info(f" Single destination: {destination}")
 
         # Extract attractions from tool results
         attractions = []
@@ -3675,12 +3674,12 @@ This will help me provide you with the most relevant travel guidance possible.""
 
     def _convert_city_to_iata_code(self, city_input: Union[str, List[str]]) -> Union[str, List[str]]:
         """Convert city/region name(s) to IATA code(s), handling both single cities and lists"""
-        logger.info(f"🌍 === IATA CONVERSION START ===")
-        logger.info(f"🌍 Input: {city_input} (type: {type(city_input)})")
+        logger.info(f" === IATA CONVERSION START ===")
+        logger.info(f" Input: {city_input} (type: {type(city_input)})")
         
         # Handle list input (multi-destination case)
         if isinstance(city_input, list):
-            logger.info(f"🌍 Processing list of {len(city_input)} cities")
+            logger.info(f" Processing list of {len(city_input)} cities")
             iata_codes = []
             for city in city_input:
                 result = self._convert_city_to_iata_code(city)  # Recursive call for single city
@@ -3689,26 +3688,26 @@ This will help me provide you with the most relevant travel guidance possible.""
                 elif result and result != '':
                     iata_codes.append(result)
                 else:
-                    logger.warning(f"🌍 Could not convert city '{city}' to IATA code")
-            logger.info(f"🌍 === IATA CONVERSION END === Result: {iata_codes} (from list)")
+                    logger.warning(f" Could not convert city '{city}' to IATA code")
+            logger.info(f" === IATA CONVERSION END === Result: {iata_codes} (from list)")
             return iata_codes
         
         # Handle single city input
         city_name = city_input
-        logger.info(f"🌍 Processing single city: '{city_name}'")
+        logger.info(f" Processing single city: '{city_name}'")
 
         # Handle unknown/empty destination case - return empty string to indicate invalid destination
         if not city_name or city_name.lower() in ['unknown', '']:
             logger.error(f"❌ Invalid destination '{city_name}' - cannot convert to IATA code")
             return ''  # Return empty string to indicate invalid destination
         
-        # ✅ Check if input is already an IATA code (3 uppercase letters)
+        #  Check if input is already an IATA code (3 uppercase letters)
         if len(city_name) == 3 and city_name.isupper() and city_name.isalpha():
-            logger.info(f"✅ Input '{city_name}' is already an IATA code, returning as-is")
-            logger.info(f"🌍 === IATA CONVERSION END === Result: '{city_name}' (already IATA)")
+            logger.info(f" Input '{city_name}' is already an IATA code, returning as-is")
+            logger.info(f" === IATA CONVERSION END === Result: '{city_name}' (already IATA)")
             return city_name
         
-        # ✅ Use centralized geographical mappings from config
+        #  Use centralized geographical mappings from config
         region_to_cities = GeographicalMappings.REGION_TO_CITIES
         
         # Normalize input and check for region mapping first
@@ -3727,18 +3726,18 @@ This will help me provide you with the most relevant travel guidance possible.""
                 if iata_code:
                     clean_iata = iata_code.strip().upper()
                     iata_codes.append(clean_iata)
-                    logger.info(f"✅ Converted '{city}' to IATA '{clean_iata}'")
+                    logger.info(f" Converted '{city}' to IATA '{clean_iata}'")
                 else:
                     logger.warning(f"⚠️ Could not convert '{city}' to IATA code")
             
             if iata_codes:
-                logger.info(f"🌍 Successfully converted region '{city_name}' to {len(iata_codes)} IATA codes: {iata_codes}")
+                logger.info(f" Successfully converted region '{city_name}' to {len(iata_codes)} IATA codes: {iata_codes}")
                 return iata_codes
             else:
                 logger.error(f"❌ No valid IATA codes found for region '{city_name}'")
                 return ''
         
-        # ✅ Use centralized city to IATA mapping from config
+        #  Use centralized city to IATA mapping from config
         city_to_iata = GeographicalMappings.CITY_TO_IATA
         
         # Normalize city name
@@ -3752,67 +3751,67 @@ This will help me provide you with the most relevant travel guidance possible.""
         iata_code = city_to_iata.get(normalized_city)
 
         # Add debugging information
-        logger.info(f"🌍 Normalized city: '{normalized_city}'")
-        logger.info(f"🌍 Found IATA code: '{iata_code}'")
+        logger.info(f" Normalized city: '{normalized_city}'")
+        logger.info(f" Found IATA code: '{iata_code}'")
 
         if iata_code:
             logger.info(
-                f"✅ Successfully converted '{city_name}' to IATA code '{iata_code}'"
+                f" Successfully converted '{city_name}' to IATA code '{iata_code}'"
             )
             # Ensure the IATA code is clean
             clean_iata = iata_code.strip().upper()
-            logger.info(f"✅ Clean IATA code: '{clean_iata}'")
-            logger.info(f"🌍 === IATA CONVERSION END === Result: '{clean_iata}' (direct lookup)")
+            logger.info(f" Clean IATA code: '{clean_iata}'")
+            logger.info(f" === IATA CONVERSION END === Result: '{clean_iata}' (direct lookup)")
             return clean_iata
         else:
-            # ✅ Smart fallback: try region/country mapping with multiple cities support
+            #  Smart fallback: try region/country mapping with multiple cities support
             logger.warning(f"⚠️ No direct IATA code found for '{city_name}', trying region fallback")
             
             for region, cities in region_to_cities.items():
                 if region in normalized_city:
-                    # ✅ Handle both single city and multiple cities
+                    #  Handle both single city and multiple cities
                     if isinstance(cities, list):
                         # For multiple cities, return IATA of the first available city
                         for city in cities:
                             fallback_iata = city_to_iata.get(city)
                             if fallback_iata:
-                                logger.info(f"✅ Using multi-destination fallback: '{city_name}' -> '{city}' ({fallback_iata})")
-                                # ✅ Store multiple destinations for plan generation
+                                logger.info(f" Using multi-destination fallback: '{city_name}' -> '{city}' ({fallback_iata})")
+                                #  Store multiple destinations for plan generation
                                 setattr(self, '_multi_destinations', cities)
                                 clean_iata = fallback_iata.strip().upper()
-                                logger.info(f"🌍 === IATA CONVERSION END === Result: '{clean_iata}' (multi-destination fallback)")
+                                logger.info(f" === IATA CONVERSION END === Result: '{clean_iata}' (multi-destination fallback)")
                                 return clean_iata
                     else:
                         # Single city (legacy format)
                         fallback_iata = city_to_iata.get(cities)
                         if fallback_iata:
-                            logger.info(f"✅ Using fallback: '{city_name}' -> '{cities}' ({fallback_iata})")
+                            logger.info(f" Using fallback: '{city_name}' -> '{cities}' ({fallback_iata})")
                             clean_iata = fallback_iata.strip().upper()
-                            logger.info(f"🌍 === IATA CONVERSION END === Result: '{clean_iata}' (fallback)")
+                            logger.info(f" === IATA CONVERSION END === Result: '{clean_iata}' (fallback)")
                             return clean_iata
             
-            # ✅ Last resort: for any unknown location, use a sensible default based on context
+            #  Last resort: for any unknown location, use a sensible default based on context
             # This prevents tool failures and allows plan generation to continue
             logger.warning(f"⚠️ No IATA code found for '{city_name}', using default fallback: LON")
-            logger.info(f"🌍 === IATA CONVERSION END === Result: 'LON' (default fallback)")
+            logger.info(f" === IATA CONVERSION END === Result: 'LON' (default fallback)")
             return 'LON'  # London as universal fallback
 
     def _extract_destination_from_message(self, message: str) -> Union[str, List[str]]:
         """Extract destination(s) from user message - supports both single and multi-destination detection"""
-        logger.info(f"🌍 === DESTINATION EXTRACTION START ===")
-        logger.info(f"🌍 Input message: '{message}'")
+        logger.info(f" === DESTINATION EXTRACTION START ===")
+        logger.info(f" Input message: '{message}'")
 
         message_lower = message.lower()
-        logger.info(f"🌍 Lowercase message: '{message_lower}'")
+        logger.info(f" Lowercase message: '{message_lower}'")
 
         # Common destinations with more comprehensive list
         destinations = geo_mappings.get_comprehensive_destinations()
-        logger.info(f"🌍 Available destinations count: {len(destinations)}")
+        logger.info(f" Available destinations count: {len(destinations)}")
 
         import re
         
-        # 🎯 STEP 1: Check for multi-destination patterns first
-        logger.info(f"🌍 === CHECKING FOR MULTI-DESTINATION PATTERNS ===")
+        #  STEP 1: Check for multi-destination patterns first
+        logger.info(f" === CHECKING FOR MULTI-DESTINATION PATTERNS ===")
         
         multi_destination_patterns = [
             r"visiting\s+([^.!?]+?)(?:\s*\.|$|\s+for\s|\s+budget|\s+in\s+\w+\s*$)",  # "visiting Paris, Amsterdam, Berlin"
@@ -3826,33 +3825,33 @@ This will help me provide you with the most relevant travel guidance possible.""
             match = re.search(pattern, message_lower)
             if match:
                 destinations_text = match.group(1).strip()
-                logger.info(f"🌍 Multi-destination pattern matched: '{pattern}' -> '{destinations_text}'")
+                logger.info(f" Multi-destination pattern matched: '{pattern}' -> '{destinations_text}'")
                 
                 # Parse the destinations text for multiple cities
                 if destinations_text:
                     parsed_destinations = self._parse_multiple_destinations(destinations_text, destinations)
                     if len(parsed_destinations) > 1:
-                        logger.info(f"🌍 ✅ MULTI-DESTINATION FOUND: {parsed_destinations}")
-                        logger.info(f"🌍 === DESTINATION EXTRACTION END === Result: {parsed_destinations} (multi-destination)")
+                        logger.info(f"  MULTI-DESTINATION FOUND: {parsed_destinations}")
+                        logger.info(f" === DESTINATION EXTRACTION END === Result: {parsed_destinations} (multi-destination)")
                         return parsed_destinations
                     elif len(parsed_destinations) == 1:
-                        logger.info(f"🌍 ✅ SINGLE DESTINATION from pattern: {parsed_destinations[0]}")
-                        logger.info(f"🌍 === DESTINATION EXTRACTION END === Result: '{parsed_destinations[0]}' (single from pattern)")
+                        logger.info(f"  SINGLE DESTINATION from pattern: {parsed_destinations[0]}")
+                        logger.info(f" === DESTINATION EXTRACTION END === Result: '{parsed_destinations[0]}' (single from pattern)")
                         return parsed_destinations[0]
 
-        # 🎯 STEP 2: If no multi-destination patterns, try exact destination matching
-        logger.info(f"🌍 === CHECKING FOR SINGLE DESTINATION MATCHES ===")
+        #  STEP 2: If no multi-destination patterns, try exact destination matching
+        logger.info(f" === CHECKING FOR SINGLE DESTINATION MATCHES ===")
         for dest in destinations:
             if dest in message_lower:
                 logger.info(
-                    f"🌍 ✅ EXACT MATCH FOUND: '{dest}' in message"
+                    f"  EXACT MATCH FOUND: '{dest}' in message"
                 )
                 result = dest.title()
-                logger.info(f"🌍 === DESTINATION EXTRACTION END === Result: '{result}' (exact match)")
+                logger.info(f" === DESTINATION EXTRACTION END === Result: '{result}' (exact match)")
                 return result  # Return title case for consistency
 
-        # 🎯 STEP 3: Try single destination patterns
-        logger.info(f"🌍 === CHECKING FOR SINGLE DESTINATION PATTERNS ===")
+        #  STEP 3: Try single destination patterns
+        logger.info(f" === CHECKING FOR SINGLE DESTINATION PATTERNS ===")
         
         single_patterns = [
             r"to\s+([a-zA-Z\s]+?)(?:\s|$|\.|,|;|!|\?)",  # "to Beijing" - improved to stop at word boundaries
@@ -3878,31 +3877,31 @@ This will help me provide you with the most relevant travel guidance possible.""
                     len(location) < 30 and len(location) > 0
                 ):  # Reasonable destination name
                     logger.info(
-                        f"🌍 ✅ PATTERN MATCH FOUND: '{location}' using pattern '{pattern}'"
+                        f"  PATTERN MATCH FOUND: '{location}' using pattern '{pattern}'"
                     )
                     result = location.title()
-                    logger.info(f"🌍 === DESTINATION EXTRACTION END === Result: '{result}' (pattern match)")
+                    logger.info(f" === DESTINATION EXTRACTION END === Result: '{result}' (pattern match)")
                     return result  # Return title case for consistency
 
-        # 🎯 STEP 4: Final fallback search for any known destination
-        logger.info(f"🌍 === FALLBACK SEARCH ===")
+        #  STEP 4: Final fallback search for any known destination
+        logger.info(f" === FALLBACK SEARCH ===")
         for dest in destinations:
             if dest in message_lower:
                 logger.info(
-                    f"🌍 ✅ FALLBACK MATCH FOUND: '{dest}' in message"
+                    f"  FALLBACK MATCH FOUND: '{dest}' in message"
                 )
                 result = dest.title()
-                logger.info(f"🌍 === DESTINATION EXTRACTION END === Result: '{result}' (fallback)")
+                logger.info(f" === DESTINATION EXTRACTION END === Result: '{result}' (fallback)")
                 return result
 
-        logger.warning(f"🌍 ❌ NO DESTINATION FOUND in message")
-        logger.info(f"🌍 === DESTINATION EXTRACTION END === Result: 'Unknown'")
+        logger.warning(f" ❌ NO DESTINATION FOUND in message")
+        logger.info(f" === DESTINATION EXTRACTION END === Result: 'Unknown'")
         return "Unknown"
     
     def _parse_multiple_destinations(self, destinations_text: str, known_destinations: List[str]) -> List[str]:
         """Parse a string containing multiple destinations separated by commas, 'and', etc."""
-        logger.info(f"🌍 === PARSING MULTIPLE DESTINATIONS ===")
-        logger.info(f"🌍 Input text: '{destinations_text}'")
+        logger.info(f" === PARSING MULTIPLE DESTINATIONS ===")
+        logger.info(f" Input text: '{destinations_text}'")
         
         import re
         
@@ -3913,7 +3912,7 @@ This will help me provide you with the most relevant travel guidance possible.""
         # Handle patterns like "Paris, Amsterdam, Berlin, Prague, and Vienna"
         potential_destinations = re.split(r'[,;]\s*(?:and\s+)?|\s+and\s+', cleaned_text)
         
-        logger.info(f"🌍 Raw split results: {potential_destinations}")
+        logger.info(f" Raw split results: {potential_destinations}")
         
         found_destinations = []
         for dest_candidate in potential_destinations:
@@ -3928,7 +3927,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                     formatted_dest = known_dest.title()
                     if formatted_dest not in found_destinations:
                         found_destinations.append(formatted_dest)
-                        logger.info(f"🌍 ✅ Matched '{dest_candidate}' -> '{formatted_dest}'")
+                        logger.info(f"  Matched '{dest_candidate}' -> '{formatted_dest}'")
                     break
             else:
                 # If no exact match, check if it's a recognizable city name
@@ -3937,9 +3936,9 @@ This will help me provide you with the most relevant travel guidance possible.""
                     formatted_dest = dest_candidate.title()
                     if formatted_dest not in found_destinations:
                         found_destinations.append(formatted_dest)
-                        logger.info(f"🌍 ⚠️ Added unrecognized destination: '{formatted_dest}'")
+                        logger.info(f" ⚠️ Added unrecognized destination: '{formatted_dest}'")
         
-        logger.info(f"🌍 === PARSING COMPLETE === Found {len(found_destinations)} destinations: {found_destinations}")
+        logger.info(f" === PARSING COMPLETE === Found {len(found_destinations)} destinations: {found_destinations}")
         return found_destinations
 
     def configure_refinement(
@@ -4119,42 +4118,42 @@ This will help me provide you with the most relevant travel guidance possible.""
         destination_raw = intent.get("destination", "unknown")
         multi_destinations_raw = intent.get("multi_destinations", None)
         
-        logger.info(f"🛠️ === TOOL PARAMETER EXTRACTION START ===")
-        logger.info(f"🛠️ Raw destination from intent: {destination_raw}")
-        logger.info(f"🛠️ Raw multi_destinations from intent: {multi_destinations_raw}")
+        logger.info(f" === TOOL PARAMETER EXTRACTION START ===")
+        logger.info(f" Raw destination from intent: {destination_raw}")
+        logger.info(f" Raw multi_destinations from intent: {multi_destinations_raw}")
         
         # Handle new structured destination format: {"primary": "Paris", "all": ["Paris", ...]}
         if isinstance(destination_raw, dict):
-            logger.info(f"🛠️ Structured destination format detected: {destination_raw}")
+            logger.info(f" Structured destination format detected: {destination_raw}")
             destination = destination_raw.get("primary", "unknown")
             destination_all = destination_raw.get("all", None)
             
             # Check if we have multiple destinations in the "all" field
             if destination_all and isinstance(destination_all, list) and len(destination_all) > 1:
                 multi_destinations = destination_all
-                logger.info(f"🛠️ ✅ MULTI-DESTINATION from structured format: {multi_destinations}")
+                logger.info(f"  MULTI-DESTINATION from structured format: {multi_destinations}")
             else:
                 multi_destinations = multi_destinations_raw
-                logger.info(f"🛠️ Single destination from structured format: {destination}")
+                logger.info(f" Single destination from structured format: {destination}")
         # Handle multi-destination case from direct field
         elif multi_destinations_raw and isinstance(multi_destinations_raw, list) and len(multi_destinations_raw) > 1:
             destination = multi_destinations_raw[0]  # Primary destination
             multi_destinations = multi_destinations_raw
-            logger.info(f"🛠️ ✅ MULTI-DESTINATION DETECTED: {multi_destinations}")
-            logger.info(f"🛠️ Using primary destination: {destination}")
+            logger.info(f"  MULTI-DESTINATION DETECTED: {multi_destinations}")
+            logger.info(f" Using primary destination: {destination}")
         # Handle legacy list format
         elif isinstance(destination_raw, list):
             destination = destination_raw[0] if destination_raw else "unknown"
             multi_destinations = destination_raw if len(destination_raw) > 1 else None
-            logger.warning(f"🛠️ Intent contained destination as list {destination_raw}, using first item: {destination}")
+            logger.warning(f" Intent contained destination as list {destination_raw}, using first item: {destination}")
         # Handle simple string format
         else:
             destination = destination_raw if destination_raw else "unknown"
             multi_destinations = multi_destinations_raw
-            logger.info(f"🛠️ Simple destination format: {destination}")
+            logger.info(f" Simple destination format: {destination}")
         
-        logger.info(f"🛠️ Final destination for tools: {destination}")
-        logger.info(f"🛠️ Final multi_destinations: {multi_destinations}")
+        logger.info(f" Final destination for tools: {destination}")
+        logger.info(f" Final multi_destinations: {multi_destinations}")
         
         # Generate safe default dates (30 days from now)
         default_check_in = (
@@ -4179,11 +4178,11 @@ This will help me provide you with the most relevant travel guidance possible.""
                     # Convert multi-destinations to IATA codes for attraction search
                     multi_dest_iata = self._convert_city_to_iata_code(multi_destinations)
                     attraction_location = multi_dest_iata
-                    logger.info(f"🎯 ✅ MULTI-DESTINATION ATTRACTION SEARCH: {attraction_location}")
+                    logger.info(f"  MULTI-DESTINATION ATTRACTION SEARCH: {attraction_location}")
                 else:
                     # Single destination - convert to IATA code
                     attraction_location = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
-                    logger.info(f"🎯 Single destination attraction search: {attraction_location}")
+                    logger.info(f" Single destination attraction search: {attraction_location}")
                 
                 tool_parameters[tool_name] = {
                     "location": attraction_location,  # Can be single IATA code or list for multi-location
@@ -4243,7 +4242,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                 # Convert destination to IATA code(s) for consistent multi-location support
                 destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
                 
-                # ✅ NEW: Enable flight_chain for multi-destination searches
+                #  NEW: Enable flight_chain for multi-destination searches
                 # Check for multi-destination from intent first, then from IATA conversion result
                 is_multi_destination = (multi_destinations and len(multi_destinations) > 1) or \
                                      (isinstance(destination_result, list) and len(destination_result) > 1)
@@ -4251,20 +4250,20 @@ This will help me provide you with the most relevant travel guidance possible.""
                 
                 if flight_chain_enabled:
                     dest_count = len(multi_destinations) if multi_destinations else len(destination_result)
-                    logger.info(f"🔗 ✅ MULTI-DESTINATION FLIGHT CHAIN ENABLED: {dest_count} destinations")
-                    logger.info(f"🔗 Multi-destinations: {multi_destinations or destination_result}")
+                    logger.info(f"  MULTI-DESTINATION FLIGHT CHAIN ENABLED: {dest_count} destinations")
+                    logger.info(f" Multi-destinations: {multi_destinations or destination_result}")
                 else:
-                    logger.info(f"🔗 Single destination flight: {destination}")
+                    logger.info(f" Single destination flight: {destination}")
                 
                 # If we have multi-destinations from intent, use those for flight search
                 if flight_chain_enabled and multi_destinations:
                     # Convert multi-destinations to IATA codes
                     multi_dest_iata = self._convert_city_to_iata_code(multi_destinations)
                     flight_destination = multi_dest_iata
-                    logger.info(f"🔗 Using multi-destinations for flight chain: {flight_destination}")
+                    logger.info(f" Using multi-destinations for flight chain: {flight_destination}")
                 else:
                     flight_destination = destination_result
-                    logger.info(f"🔗 Using single destination for flight: {flight_destination}")
+                    logger.info(f" Using single destination for flight: {flight_destination}")
                 
                 tool_parameters[tool_name] = {
                     "origin": origin_iata,  # Use extracted origin converted to IATA code
@@ -4276,12 +4275,12 @@ This will help me provide you with the most relevant travel guidance possible.""
                     "flight_chain": flight_chain_enabled,  # Enable flight chain for multi-city trips
                 }
                 
-                logger.info(f"🔗 Flight search parameters: {tool_parameters[tool_name]}")
+                logger.info(f" Flight search parameters: {tool_parameters[tool_name]}")
 
-        logger.info(f"🛠️ === TOOL PARAMETER EXTRACTION END ===")
-        logger.info(f"🛠️ Generated parameters for {len(tool_parameters)} tools")
+        logger.info(f" === TOOL PARAMETER EXTRACTION END ===")
+        logger.info(f" Generated parameters for {len(tool_parameters)} tools")
         for tool_name, params in tool_parameters.items():
-            logger.info(f"🛠️ {tool_name}: {params}")
+            logger.info(f" {tool_name}: {params}")
         
         return tool_parameters
 
@@ -4427,9 +4426,9 @@ This will help me provide you with the most relevant travel guidance possible.""
                     "response_method": "fast_template",
                     "destination": destination,
                     "intent_type": intent_type,
-                    "is_plan_request": is_plan_request,  # ✅ 标记需要后台计划生成
+                    "is_plan_request": is_plan_request,  #  标记需要后台计划生成
                     "plan_generation_status": "pending" if is_plan_request else "not_required",
-                    # ✅ 传递execution_result给后台plan generation使用
+                    #  传递execution_result给后台plan generation使用
                     "execution_result_for_plan": execution_result if is_plan_request else None,
                     "tool_execution_success": execution_success,
                     "partial_tool_success": bool(tool_results),
@@ -4511,7 +4510,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                         attractions_count = 0
                     
                     if attractions_count > 0:
-                        content += f"🎯 Found {attractions_count} attractions\n"
+                        content += f" Found {attractions_count} attractions\n"
                         total_found += attractions_count
                 except Exception as e:
                     logger.debug(f"Error processing attraction results: {e}")
@@ -4536,9 +4535,9 @@ This will help me provide you with the most relevant travel guidance possible.""
             destination = intent.get("destination", {})
             multi_destinations = intent.get("multi_destinations", None)  # Check direct field first
             
-            logger.info(f"🎯 === PLAN GENERATION EXTRACTION ===")
-            logger.info(f"🎯 Intent destination: {destination}")
-            logger.info(f"🎯 Intent multi_destinations: {multi_destinations}")
+            logger.info(f" === PLAN GENERATION EXTRACTION ===")
+            logger.info(f" Intent destination: {destination}")
+            logger.info(f" Intent multi_destinations: {multi_destinations}")
             
             if isinstance(destination, dict):
                 destination_name = destination.get("primary", "unknown")
@@ -4549,19 +4548,19 @@ This will help me provide you with the most relevant travel guidance possible.""
                     if all_destinations and len(all_destinations) > 1:
                         destination_name = all_destinations[0]
                         multi_destinations = all_destinations
-                        logger.info(f"🎯 ✅ Multi-destinations from destination.all: {multi_destinations}")
+                        logger.info(f"  Multi-destinations from destination.all: {multi_destinations}")
                     else:
                         secondary_destinations = destination.get("secondary", [])
                         if secondary_destinations:
                             multi_destinations = secondary_destinations
-                            logger.info(f"🎯 ✅ Multi-destinations from destination.secondary: {multi_destinations}")
+                            logger.info(f"  Multi-destinations from destination.secondary: {multi_destinations}")
             else:
                 destination_name = str(destination)
                 if not multi_destinations:
                     multi_destinations = None
             
-            logger.info(f"🎯 Final destination_name: {destination_name}")
-            logger.info(f"🎯 Final multi_destinations: {multi_destinations}")
+            logger.info(f" Final destination_name: {destination_name}")
+            logger.info(f" Final multi_destinations: {multi_destinations}")
             
             tool_results = execution_result.get("results", {})
             
@@ -4577,13 +4576,13 @@ This will help me provide you with the most relevant travel guidance possible.""
                         
                         if len(flight_chain) > 3:  # Start + destinations + end
                             multi_destinations = flight_chain[1:-1]  # Remove start and end
-                            logger.info(f"🔗 Flight chain detected: {len(multi_destinations)} destinations")
+                            logger.info(f" Flight chain detected: {len(multi_destinations)} destinations")
             
-            logger.info(f"🎯 Generating plan-aware response for destination: {destination_name}")
+            logger.info(f" Generating plan-aware response for destination: {destination_name}")
             if multi_destinations:
-                logger.info(f"🎯 🎉 Multi-destination trip confirmed: {len(multi_destinations)} destinations: {multi_destinations}")
+                logger.info(f"  Multi-destination trip confirmed: {len(multi_destinations)} destinations: {multi_destinations}")
             else:
-                logger.info(f"🎯 Single destination trip: {destination_name}")
+                logger.info(f" Single destination trip: {destination_name}")
             
             # Use plan_manager for centralized plan generation
             from app.core.plan_manager import get_plan_manager
@@ -4593,11 +4592,11 @@ This will help me provide you with the most relevant travel guidance possible.""
             session_id = execution_result.get("session_id", "unknown")
             
             # Generate plan using plan_manager
-            logger.info(f"🎯 === CALLING PLAN MANAGER ===")
-            logger.info(f"🎯 Session ID: {session_id}")
-            logger.info(f"🎯 Destination: {destination_name}")
-            logger.info(f"🎯 Multi-destinations: {multi_destinations}")
-            logger.info(f"🎯 Tool results keys: {list(tool_results.keys())}")
+            logger.info(f" === CALLING PLAN MANAGER ===")
+            logger.info(f" Session ID: {session_id}")
+            logger.info(f" Destination: {destination_name}")
+            logger.info(f" Multi-destinations: {multi_destinations}")
+            logger.info(f" Tool results keys: {list(tool_results.keys())}")
             
             plan_result = await plan_manager.generate_plan_from_tool_results(
                 session_id=session_id,
@@ -4608,7 +4607,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                 multi_destinations=multi_destinations
             )
             
-            logger.info(f"🎯 Plan manager returned: {plan_result}")
+            logger.info(f" Plan manager returned: {plan_result}")
             
             events_count = plan_result.get("events_added", 0)
             duration = plan_result.get("duration", 5)
@@ -4689,7 +4688,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                             }
                         })
             
-            # ✅ Hotel events are now handled by plan_manager.py for consistency
+            #  Hotel events are now handled by plan_manager.py for consistency
             # Removed duplicate hotel creation logic to avoid conflicts
             
             # Add attraction events (spread across days 2-4)
@@ -4786,7 +4785,7 @@ This will help me provide you with the most relevant travel guidance possible.""
         if "attraction_search" in tool_results:
             attraction_result = tool_results["attraction_search"]
             if hasattr(attraction_result, 'attractions') and len(attraction_result.attractions) > 0:
-                response += f"🎯 **Attractions**: Found {len(attraction_result.attractions)} local attractions\n"
+                response += f" **Attractions**: Found {len(attraction_result.attractions)} local attractions\n"
         
         response += f"\n📅 **Check your calendar** to see the complete {duration}-day schedule with times, locations, and details!\n"
         response += f"💡 You can chat with me to modify any part of your itinerary."
@@ -4842,7 +4841,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                     })
                     event_id_counter += 1
             
-            # ✅ Hotel events are now handled by plan_manager.py for consistency
+            #  Hotel events are now handled by plan_manager.py for consistency
             # Removed duplicate hotel creation logic to avoid conflicts
             
             # Add attraction events if available
@@ -5009,7 +5008,7 @@ This will help me provide you with the most relevant travel guidance possible.""
     def _format_attraction_results(self, result: Any, destination: str) -> str:
         """Format attraction search results"""
 
-        content = f"🎯 **Top Attractions in {destination}**\n"
+        content = f" **Top Attractions in {destination}**\n"
 
         # Handle both ToolOutput objects and dictionaries
         if hasattr(result, "attractions"):
@@ -5533,7 +5532,7 @@ This will help me provide you with the most relevant travel guidance possible.""
             score += min(len(tools_used) * 0.1, 0.3)
 
         # Structured content indicators
-        structure_indicators = ["**", "•", "1.", "2.", "3.", "🎯", "🏨", "✈️", "💡"]
+        structure_indicators = ["**", "•", "1.", "2.", "3.", "", "🏨", "✈️", "💡"]
         structure_count = sum(
             1 for indicator in structure_indicators if indicator in response_content
         )
@@ -5762,7 +5761,7 @@ def get_travel_agent() -> TravelAgent:
     global _travel_agent
     if _travel_agent is None:
         _travel_agent = TravelAgent()
-        logger.info("✅ Created singleton Travel Agent instance")
+        logger.info(" Created singleton Travel Agent instance")
 
         # Register with agent manager
         from app.agents.base_agent import agent_manager

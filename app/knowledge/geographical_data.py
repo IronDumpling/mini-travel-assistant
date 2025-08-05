@@ -14,7 +14,7 @@ from typing import Dict, List, Union
 class GeographicalMappings:
     """Centralized geographical mapping data"""
     
-    # ✅ Region/Continent to multiple cities mapping (based on available documents)
+    # Region/Continent to multiple cities mapping
     REGION_TO_CITIES = {
         # European destinations with multiple cities
         'europe': ['london', 'paris', 'berlin', 'rome', 'barcelona', 'amsterdam', 'vienna', 'prague'],
@@ -42,7 +42,7 @@ class GeographicalMappings:
         'middle east': ['dubai'],
         'middle eastern': ['dubai'],
         
-        # ✅ Special area mappings to available cities
+        # Special area mappings to available cities
         'swiss alps': ['munich', 'vienna'],     # Nearby European cities
         'alps': ['munich', 'vienna'],           # Nearby European cities
         'himalaya': ['beijing'],                # Closest available city
