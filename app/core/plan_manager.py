@@ -820,15 +820,25 @@ class PlanManager:
                         if day_offset >= destination_days:
                             logger.warning(f"🎯 ⚠️  Skipping attraction {attr_idx+1} - exceeds {destination_days} days for {city_name}")
                             continue
-                            
+                        
+                        # 🔥 CRITICAL FIX: Ensure different days get different dates
                         activity_date = current_date + timedelta(days=day_offset)
+                        logger.info(f"🎯 📅 Day calculation: attr_idx={attr_idx}, day_offset={day_offset}, attraction_of_day={attraction_of_day}")
+                        logger.info(f"🎯 📅 Date calculation: current_date={current_date.strftime('%Y-%m-%d')}, activity_date={activity_date.strftime('%Y-%m-%d')}")
                         
                         # 🔥 NEW APPROACH: Don't set fixed times - let scheduler assign them dynamically
                         # Just set clean placeholder times that will be overridden by the scheduler
                         activity_date_start = activity_date.replace(hour=9, minute=0, second=0, microsecond=0)  # Clean placeholder
                         
+                        # 🔥 VALIDATION: Ensure activity_date_start uses the correct date
+                        if activity_date_start.date() != activity_date.date():
+                            logger.error(f"🎯 ❌ DATE MISMATCH: activity_date={activity_date.date()}, activity_date_start={activity_date_start.date()}")
+                        else:
+                            logger.info(f"🎯 ✅ Date validation passed: {activity_date_start.date()}")
+                        
                         activity_title = f"Visit {getattr(attraction, 'name', f'Attraction in {city_name}')}"
-                        logger.info(f"🎯 📅 Creating {activity_title} for {activity_date.strftime('%Y-%m-%d')} (day {day_offset+1}/{destination_days}) - time will be assigned by scheduler")
+                        logger.info(f"🎯 📅 Creating {activity_title} for {activity_date.strftime('%Y-%m-%d')} (day {day_offset+1}/{destination_days})")
+                        logger.info(f"🎯 🕐 Using start_time: {activity_date_start.isoformat()}")
                         
                         activity_event = self._create_calendar_event_from_data({
                             "id": f"attraction_{destination}_{attr_idx+1}_{str(uuid.uuid4())[:8]}",
@@ -987,13 +997,13 @@ class PlanManager:
         return final_events
     
     def _build_conflict_free_schedule(self, events: List):
-        """Build a completely conflict-free schedule using a simple day-by-day approach"""
+        """Build a completely conflict-free schedule using iterative day-by-day approach with cross-day conflict resolution"""
         from datetime import datetime, timedelta, date
         from collections import defaultdict
         
         logger.info(f"🔄 === BUILDING CONFLICT-FREE SCHEDULE ===")
         
-        # Group events by date
+        # Initial grouping by date
         events_by_date = defaultdict(list)
         for event in events:
             if isinstance(event.start_time, str):
@@ -1005,35 +1015,183 @@ class PlanManager:
         
         resolved_events = []
         
-        # Process each day separately
-        for event_date in sorted(events_by_date.keys()):
-            daily_events = events_by_date[event_date]
-            logger.info(f"🔄 📅 Processing {event_date}: {len(daily_events)} events")
-            
-            # Separate fixed vs flexible events
-            fixed_events = [e for e in daily_events if e.event_type == 'flight']
-            flexible_events = [e for e in daily_events if e.event_type == 'attraction']
-            
-            logger.info(f"🔄 📊 Daily breakdown for {event_date}:")
-            logger.info(f"🔄   - Fixed events (flights): {len(fixed_events)}")
-            for fe in fixed_events:
-                logger.info(f"🔄     * {fe.title}")
-            logger.info(f"🔄   - Flexible events (attractions): {len(flexible_events)}")
-            for fe in flexible_events:
-                logger.info(f"🔄     * {fe.title}")
-            
-            # Add fixed events as-is (flights have fixed times)
-            for event in fixed_events:
-                resolved_events.append(event)
-                logger.info(f"🔄 ✈️  Fixed: {event.title} at {event.start_time}")
-            
-            # Create daily time schedule for flexible events
-            if flexible_events:
-                daily_resolved = self._schedule_daily_attractions(event_date, flexible_events, fixed_events)
-                resolved_events.extend(daily_resolved)
+        # 🔥 NEW APPROACH: Iterative scheduling with cross-day movement tracking
+        max_iterations = 3  # Prevent infinite loops
+        iteration = 0
         
-        logger.info(f"🔄 ✅ Schedule completed: {len(resolved_events)} events")
+        while iteration < max_iterations:
+            iteration += 1
+            logger.info(f"🔄 🔄 Starting iteration {iteration} of schedule resolution")
+            
+            movements_occurred = False
+            daily_resolved_events = []
+            
+            # Process each day separately
+            for event_date in sorted(events_by_date.keys()):
+                daily_events = events_by_date[event_date]
+                logger.info(f"🔄 📅 Processing {event_date}: {len(daily_events)} events (iteration {iteration})")
+                
+                # Separate fixed vs flexible events
+                fixed_events = [e for e in daily_events if e.event_type == 'flight']
+                flexible_events = [e for e in daily_events if e.event_type == 'attraction']
+                
+                logger.info(f"🔄 📊 Daily breakdown for {event_date}:")
+                logger.info(f"🔄   - Fixed events (flights): {len(fixed_events)}")
+                for fe in fixed_events:
+                    logger.info(f"🔄     * {fe.title}")
+                logger.info(f"🔄   - Flexible events (attractions): {len(flexible_events)}")
+                for fe in flexible_events:
+                    logger.info(f"🔄     * {fe.title}")
+                
+                # Add fixed events as-is (flights have fixed times)
+                for event in fixed_events:
+                    daily_resolved_events.append(event)
+                    logger.info(f"🔄 ✈️  Fixed: {event.title} at {event.start_time}")
+                
+                # Schedule flexible events with cross-day movement detection
+                if flexible_events:
+                    daily_resolved, moved_events = self._schedule_daily_attractions_with_movement_tracking(
+                        event_date, flexible_events, fixed_events
+                    )
+                    daily_resolved_events.extend(daily_resolved)
+                    
+                    # Track movements to next iteration
+                    if moved_events:
+                        movements_occurred = True
+                        logger.info(f"🔄 📤 {len(moved_events)} attractions moved to future days")
+                        
+                        # Update events_by_date with moved events
+                        for moved_event, target_date in moved_events:
+                            logger.info(f"🔄 📤 Moving {moved_event.title} to {target_date}")
+                            # Update event's actual date
+                            moved_event.start_time = moved_event.start_time.replace(
+                                year=target_date.year, month=target_date.month, day=target_date.day
+                            )
+                            moved_event.end_time = moved_event.end_time.replace(
+                                year=target_date.year, month=target_date.month, day=target_date.day  
+                            )
+                            events_by_date[target_date].append(moved_event)
+            
+            resolved_events = daily_resolved_events
+            
+            # If no movements occurred, we're done
+            if not movements_occurred:
+                logger.info(f"🔄 ✅ No cross-day movements in iteration {iteration}. Schedule stabilized.")
+                break
+            
+            # Rebuild events_by_date for next iteration (remove moved events from original dates)
+            if movements_occurred:
+                logger.info(f"🔄 🔄 Movements detected. Starting iteration {iteration + 1}...")
+                # Clear and rebuild to ensure moved events are properly grouped
+                new_events_by_date = defaultdict(list)
+                for event in resolved_events:
+                    if isinstance(event.start_time, str):
+                        event_date = datetime.fromisoformat(event.start_time.replace('Z', '+00:00')).date()
+                    else:
+                        event_date = event.start_time.date()
+                    new_events_by_date[event_date].append(event)
+                events_by_date = new_events_by_date
+        
+        logger.info(f"🔄 ✅ Schedule completed: {len(resolved_events)} events after {iteration} iteration(s)")
         return resolved_events
+    
+    def _schedule_daily_attractions_with_movement_tracking(self, event_date, attractions: List, fixed_events: List):
+        """
+        🔥 ENHANCED SCHEDULING: Schedule attractions with cross-day movement tracking
+        Returns: (scheduled_attractions, moved_attractions_with_dates)
+        """
+        from datetime import datetime, timedelta
+        import random
+        
+        logger.info(f"🔄 🎯 ENHANCED DYNAMIC scheduling {len(attractions)} attractions for {event_date.strftime('%Y-%m-%d')}")
+        logger.info(f"🔄 🔧 Features: Clean 30-min intervals, conflict resolution, business hours enforcement, movement tracking")
+        
+        # Business hours: 9 AM to 5 PM  
+        business_start = datetime.combine(event_date, datetime.min.time().replace(hour=9))
+        business_end = datetime.combine(event_date, datetime.min.time().replace(hour=17))
+        
+        logger.info(f"🔄 📊 Business hours: {business_start.strftime('%H:%M')} - {business_end.strftime('%H:%M')}")
+        
+        # Track blocked periods from fixed events (flights)
+        blocked_periods = []
+        for flight in fixed_events:
+            flight_start, flight_end = self._extract_naive_times(flight)
+            blocked_periods.append((flight_start, flight_end))
+            logger.info(f"🔄 🚫 Fixed blocked period: {flight_start.strftime('%H:%M')} - {flight_end.strftime('%H:%M')} ({flight.title})")
+        
+        # Track all scheduled periods (fixed + scheduled attractions)
+        scheduled_periods = blocked_periods.copy()
+        scheduled_attractions = []
+        moved_attractions = []  # (attraction, target_date) tuples
+        
+        # Start scheduling attractions from business hours start
+        current_time = business_start
+        
+        for i, attraction in enumerate(attractions):
+            # Use clean 30-minute intervals
+            # Duration: 2.0h, 2.5h, 3.0h, 3.5h, or 4.0h (30-min multiples)
+            duration_options = [2.0, 2.5, 3.0, 3.5, 4]
+            duration_hours = random.choice(duration_options)
+            duration = timedelta(hours=duration_hours)
+            
+            # Gap: 30min, 60min, or 90min (clean intervals)
+            gap_minutes = random.choice([30, 60, 90])
+            gap = timedelta(minutes=gap_minutes)
+            
+            # Round current_time to nearest 30-minute mark
+            current_time = self._round_to_30min(current_time)
+            
+            required_end_time = current_time + duration
+            next_start_time = required_end_time + gap
+            
+            # Check conflicts with ALL scheduled periods (fixed + attractions)
+            conflicts_with_any = any(
+                not (required_end_time <= period_start or current_time >= period_end)
+                for period_start, period_end in scheduled_periods
+            )
+            
+            if conflicts_with_any:
+                # Find the latest end time among conflicting periods
+                latest_end = max(
+                    period_end for period_start, period_end in scheduled_periods
+                    if not (required_end_time <= period_start or current_time >= period_end)
+                )
+                adjusted_start = self._round_to_30min(latest_end + timedelta(minutes=30))
+                required_end_time = adjusted_start + duration
+                current_time = adjusted_start
+                next_start_time = required_end_time + gap
+                logger.info(f"🔄 ⚠️  Conflict detected! Adjusted start time to {adjusted_start.strftime('%H:%M')}")
+            
+            # Check if fits within business hours
+            if required_end_time <= business_end:
+                # Success! Schedule the attraction
+                attraction.start_time = current_time
+                attraction.end_time = required_end_time
+                
+                scheduled_attractions.append(attraction)
+                logger.info(f"🔄 ✅ Scheduled: {attraction.title}")
+                logger.info(f"🔄     📅 Time: {current_time.strftime('%H:%M')} - {required_end_time.strftime('%H:%M')} ({duration_hours}h)")
+                logger.info(f"🔄     ⏰ Gap after: {gap_minutes} minutes")
+                
+                # Add this attraction to scheduled periods to prevent future conflicts
+                scheduled_periods.append((current_time, required_end_time))
+                
+                # Move to next start time for next attraction
+                current_time = next_start_time
+                
+            else:
+                # Can't fit in today - mark for movement to next day
+                target_date = event_date + timedelta(days=1)
+                logger.info(f"🔄 📅 Marking for next day: {attraction.title} (would end at {required_end_time.strftime('%H:%M')}, past business hours)")
+                moved_attractions.append((attraction, target_date))
+        
+        # Final conflict verification and resolution for scheduled attractions
+        if len(scheduled_attractions) > 1:
+            scheduled_attractions = self._verify_and_resolve_conflicts(scheduled_attractions, event_date)
+        
+        logger.info(f"🔄 ✅ Completed ENHANCED scheduling for {event_date.strftime('%Y-%m-%d')}: {len(scheduled_attractions)} scheduled, {len(moved_attractions)} moved")
+        
+        return scheduled_attractions, moved_attractions
     
     def _schedule_daily_attractions(self, event_date, attractions: List, fixed_events: List):
         """
@@ -1222,22 +1380,37 @@ class PlanManager:
                         logger.info(f"🔄 ⚠️  CONFLICT DETECTED (iter {iteration}): {attr1.title} vs {attr2.title}")
                         logger.info(f"🔄     📅 {start1.strftime('%H:%M')}-{end1.strftime('%H:%M')} vs {start2.strftime('%H:%M')}-{end2.strftime('%H:%M')}")
                         
-                        # Resolve by moving the later one
+                        # 🔥 CRITICAL FIX: Always move the LATER event forward, never backward
+                        # This prevents events from being moved to already-occupied earlier times
                         if start2 >= start1:
-                            # Move attr2 after attr1
+                            # Move attr2 after attr1 (correct direction)
                             new_start = self._round_to_30min(end1 + timedelta(minutes=30))
                             duration = end2 - start2
                             new_end = new_start + duration
+                            
+                            # 🔥 CHECK: Ensure we don't move past business hours (5 PM)
+                            business_end = datetime.combine(event_date, datetime.min.time().replace(hour=17))
+                            if new_end > business_end:
+                                logger.warning(f"🔄 ⚠️  Cannot reschedule {attr2.title} - would exceed business hours")
+                                # Move to next day instead of forcing into same day
+                                continue
                             
                             attr2.start_time = new_start
                             attr2.end_time = new_end
                             
                             logger.info(f"🔄 ✅ Resolved: Moved {attr2.title} to {new_start.strftime('%H:%M')}-{new_end.strftime('%H:%M')}")
                         else:
-                            # Move attr1 after attr2
+                            # Move attr1 after attr2 (correct direction)  
                             new_start = self._round_to_30min(end2 + timedelta(minutes=30))
                             duration = end1 - start1
                             new_end = new_start + duration
+                            
+                            # 🔥 CHECK: Ensure we don't move past business hours (5 PM)
+                            business_end = datetime.combine(event_date, datetime.min.time().replace(hour=17))
+                            if new_end > business_end:
+                                logger.warning(f"🔄 ⚠️  Cannot reschedule {attr1.title} - would exceed business hours")
+                                # Move to next day instead of forcing into same day
+                                continue
                             
                             attr1.start_time = new_start
                             attr1.end_time = new_end
