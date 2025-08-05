@@ -1244,16 +1244,85 @@ class PlanManager:
             )
             
             if conflicts_with_any:
-                # Find the latest end time among conflicting periods
-                latest_end = max(
-                    period_end for period_start, period_end in scheduled_periods
+                # Try duration shortening first before moving the event
+                shortened_success = False
+                
+                # Find conflicting periods to understand what we're working around
+                conflicting_periods = [
+                    (period_start, period_end) for period_start, period_end in scheduled_periods
                     if not (required_end_time <= period_start or current_time >= period_end)
-                )
-                adjusted_start = self._round_to_30min(latest_end + timedelta(minutes=30))
-                required_end_time = adjusted_start + duration
-                current_time = adjusted_start
-                next_start_time = required_end_time + gap
-                logger.info(f"🔄 ⚠️  Conflict detected! Adjusted start time to {adjusted_start.strftime('%H:%M')}")
+                ]
+                
+                # Check if conflicts are with fixed events (meal, transport, flight)
+                # Only trigger shortening for conflicts with fixed events, not other attractions
+                conflicting_with_fixed_events = False
+                for period_start, period_end in conflicting_periods:
+                    # Check if this period belongs to a fixed event
+                    for fixed_event in fixed_events:  # fixed_events contains flights and scheduled meals
+                        if hasattr(fixed_event, 'start_time') and hasattr(fixed_event, 'end_time'):
+                            f_start, f_end = self._extract_naive_times(fixed_event)
+                            if f_start == period_start and f_end == period_end:
+                                conflicting_with_fixed_events = True
+                                break
+                    if conflicting_with_fixed_events:
+                        break
+                
+                # Try to fit by shortening duration (minimum 2 hours) - only for fixed event conflicts
+                min_duration = timedelta(hours=2.0)
+                if duration > min_duration and conflicting_periods and conflicting_with_fixed_events:
+                    # Calculate available space before next conflict
+                    next_conflict_start = min(period_start for period_start, period_end in conflicting_periods)
+                    
+                    # Ensure 1-hour buffer from flight events
+                    flight_periods = []
+                    for s, e in scheduled_periods:
+                        for f in fixed_events:
+                            if hasattr(f, 'event_type') and f.event_type == 'flight':
+                                f_start, f_end = self._extract_naive_times(f)
+                                if f_start == s and f_end == e:
+                                    flight_periods.append((s, e))
+                                    break
+                    
+                    available_space = next_conflict_start - current_time
+                    if flight_periods:
+                        # Need 1-hour buffer from flights
+                        flight_buffer = timedelta(hours=1)
+                        future_flights = [flight_start - current_time - flight_buffer 
+                                        for flight_start, _ in flight_periods 
+                                        if flight_start > current_time]
+                        if future_flights:
+                            available_space = min(available_space, min(future_flights))
+                    
+                    # Try shortened duration if it's at least 2 hours
+                    if available_space >= min_duration:
+                        shortened_duration = max(min_duration, available_space - timedelta(minutes=30))  # Small buffer
+                        # Round duration by creating a dummy datetime and using the existing function
+                        dummy_start = datetime.combine(event_date, datetime.min.time())
+                        dummy_end = dummy_start + shortened_duration
+                        rounded_end = self._round_to_30min(dummy_end)
+                        shortened_duration = rounded_end - dummy_start
+                        
+                        if shortened_duration >= min_duration:
+                            duration = shortened_duration
+                            required_end_time = current_time + duration
+                            next_start_time = required_end_time + gap
+                            shortened_success = True
+                            logger.info(f"🔄 ✂️  Shortened duration to {duration.total_seconds()/3600:.1f}h to avoid conflict with fixed events")
+                
+                # If shortening didn't work or wasn't attempted, use original logic (move start time)
+                if not shortened_success:
+                    if not conflicting_with_fixed_events:
+                        logger.info(f"🔄 ⏩ Skipping duration shortening - conflict is with other attractions, not fixed events")
+                    else:
+                        logger.info(f"🔄 ⏩ Duration shortening failed - proceeding with time adjustment")
+                    latest_end = max(
+                        period_end for period_start, period_end in conflicting_periods
+                    )
+                    adjusted_start = self._round_to_30min(latest_end + timedelta(minutes=30))
+                    required_end_time = adjusted_start + duration
+                    current_time = adjusted_start
+                    next_start_time = required_end_time + gap
+                    logger.info(f"🔄 ⚠️  Conflict detected! Adjusted start time to {adjusted_start.strftime('%H:%M')}")
             
             # Check if fits within business hours
             if required_end_time <= business_end:
