@@ -141,42 +141,36 @@ const EventComponent = ({ event }: { event: any }) => {
   );
 };
 
-// Utility function for smart datetime parsing with timezone handling
+// Simplified datetime parsing - assume all dates are local time
 const parseDateTime = (dateString: string): Date => {
-  // Standardize datetime format handling
-  let normalizedDate = dateString;
-  
-  // If space-separated format, convert to standard ISO format
-  if (dateString.includes(' ') && !dateString.includes('T')) {
-    normalizedDate = dateString.replace(' ', 'T');
-  }
-  
-  // Smart timezone handling for travel planning
   try {
-    // If the datetime has explicit timezone info (+/-offset or Z), use it directly
-    if (normalizedDate.includes('+') || normalizedDate.includes('Z') || normalizedDate.includes('-', 10)) {
-      const date = new Date(normalizedDate);
-      if (!isNaN(date.getTime())) {
-        // Log timezone info for debugging
-        console.debug('📅 Parsing with timezone:', normalizedDate, '→', date.toLocaleString());
-        return date;
-      }
+    // Standardize datetime format handling
+    let normalizedDate = dateString;
+    
+    // If space-separated format, convert to standard ISO format
+    if (dateString.includes(' ') && !dateString.includes('T')) {
+      normalizedDate = dateString.replace(' ', 'T');
     }
     
-    // For dates without explicit timezone, parse as local time
+    // Remove timezone info and parse as local time
+    if (normalizedDate.includes('+') || normalizedDate.endsWith('Z')) {
+      // Strip timezone info: "2025-08-06T08:00:00+00:00" → "2025-08-06T08:00:00"
+      normalizedDate = normalizedDate.split('+')[0].replace('Z', '');
+    }
+    
+    // Parse as local time using simple Date constructor
     const parts = normalizedDate.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
     if (parts) {
       const [, year, month, day, hour, minute, second] = parts;
       const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
-      console.debug('📅 Parsing as local time:', normalizedDate, '→', localDate.toLocaleString());
+      console.debug('📅 Parsed as local time:', dateString, '→', localDate.toLocaleString());
       return localDate;
     }
     
-    // Fallback: try adding UTC timezone and parsing
-    const utcDate = new Date(normalizedDate + '+00:00');
-    if (!isNaN(utcDate.getTime())) {
-      console.debug('📅 Fallback UTC parsing:', normalizedDate, '→', utcDate.toLocaleString());
-      return utcDate;
+    // Fallback: direct parsing
+    const date = new Date(normalizedDate);
+    if (!isNaN(date.getTime())) {
+      return date;
     }
   } catch (e) {
     console.warn('❌ DateTime parsing error:', e, 'for string:', dateString);

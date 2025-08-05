@@ -4677,8 +4677,8 @@ This will help me provide you with the most relevant travel guidance possible.""
         from datetime import datetime, timedelta
         import uuid
         
-        # Start from tomorrow
-        start_date = datetime.now() + timedelta(days=1)
+        # Start from tomorrow - use timezone-naive datetime
+        start_date = datetime.now().replace(tzinfo=None) + timedelta(days=1)
         current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)  # Start at 8 AM
         
         try:

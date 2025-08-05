@@ -1088,7 +1088,9 @@ Return ONLY a valid JSON response with this exact structure:
     }}
 }}
 
-If no changes are needed, return empty arrays for each section."""
+If no changes are needed, return empty arrays for each section.
+
+IMPORTANT: Keep your response concise. If adding multiple meal events, limit to 3-5 events total to avoid token limits. Focus on the most important additions requested by the user."""
 
     def _get_event_extraction_template(self) -> str:
         """Event extraction prompt template for extracting calendar events from conversations"""

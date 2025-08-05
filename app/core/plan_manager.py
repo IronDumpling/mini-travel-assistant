@@ -995,8 +995,23 @@ class PlanManager:
         logger.info(f"Events breakdown: {len(flight_events)} flights, {len(hotel_events)} hotels, {len(attraction_events)} attractions, {len(meal_events)} meals, {len(transport_events)} transport, {len(activity_events)} activities, {len(other_events)} others")
         
         # Sort by start time for conflict detection (include all non-hotel events)
+        # Convert all times to timezone-naive for consistent comparison
+        def safe_start_time(event):
+            start_time = event.start_time
+            if isinstance(start_time, str):
+                # Parse ISO string and convert to naive datetime
+                if '+' in start_time or 'Z' in start_time:
+                    parsed = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                    return parsed.replace(tzinfo=None)
+                else:
+                    return datetime.fromisoformat(start_time)
+            elif hasattr(start_time, 'tzinfo') and start_time.tzinfo is not None:
+                # Convert timezone-aware to naive
+                return start_time.replace(tzinfo=None)
+            return start_time
+        
         scheduled_events = sorted(flight_events + attraction_events + meal_events + transport_events + activity_events + other_events, 
-                                 key=lambda x: x.start_time)
+                                 key=safe_start_time)
         
         # Detect and resolve conflicts
         resolved_events = []
@@ -2165,9 +2180,22 @@ class PlanManager:
             end_time = event_data.get("end_time")
             
             if isinstance(start_time, str):
-                start_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                # Parse and convert to timezone-naive local time
+                if start_time.endswith('+00:00') or start_time.endswith('Z'):
+                    start_time = datetime.fromisoformat(start_time.replace("Z", "+00:00")).replace(tzinfo=None)
+                else:
+                    start_time = datetime.fromisoformat(start_time)
+            elif hasattr(start_time, 'tzinfo') and start_time.tzinfo is not None:
+                start_time = start_time.replace(tzinfo=None)
+                
             if isinstance(end_time, str):
-                end_time = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+                # Parse and convert to timezone-naive local time
+                if end_time.endswith('+00:00') or end_time.endswith('Z'):
+                    end_time = datetime.fromisoformat(end_time.replace("Z", "+00:00")).replace(tzinfo=None)
+                else:
+                    end_time = datetime.fromisoformat(end_time)
+            elif hasattr(end_time, 'tzinfo') and end_time.tzinfo is not None:
+                end_time = end_time.replace(tzinfo=None)
             
             # Validate and map event type
             raw_event_type = event_data.get("event_type", "activity")
@@ -2325,7 +2353,7 @@ class PlanManager:
             response = await llm_service.chat_completion(
                 [{"role": "user", "content": prompt}],
                 temperature=0.2,
-                max_tokens=1000
+                max_tokens=3000  # Increased for multiple meal events
             )
             
             try:
@@ -2792,8 +2820,8 @@ class PlanManager:
         """Extract events using simple heuristics with intelligent date placement"""
         events = []
         
-        # Get trip parameters
-        start_date = self._extract_start_date(user_message) or datetime.now(timezone.utc)
+        # Get trip parameters - use local time without timezone
+        start_date = self._extract_start_date(user_message) or datetime.now().replace(tzinfo=None)
         duration_days = self._extract_duration_from_message(user_message) or 3
         destination = metadata.get("destination", "")
         
@@ -2895,6 +2923,63 @@ class PlanManager:
                     source="heuristic_extraction"
                 ))
         
+        # Look for meal/food mentions - create meal events throughout the trip
+        if any(word in response_lower for word in ["meal", "food", "restaurant", "dining", "eat", "breakfast", "lunch", "dinner", "cuisine", "specialties"]):
+            logger.info(f"Creating meal events for {duration_days} days")
+            
+            for day in range(duration_days):
+                meal_date = start_date + timedelta(days=day)
+                
+                # Create breakfast
+                breakfast_start = meal_date.replace(hour=8, minute=0, second=0, microsecond=0)
+                breakfast_end = breakfast_start + timedelta(hours=1)
+                
+                events.append(CalendarEvent(
+                    id=f"event_{uuid.uuid4().hex[:8]}",
+                    title=f"Breakfast in {destination}",
+                    description="Local breakfast experience",
+                    event_type=CalendarEventType.MEAL,
+                    start_time=breakfast_start,
+                    end_time=breakfast_end,
+                    location=destination,
+                    confidence=0.7,
+                    source="heuristic_extraction"
+                ))
+                
+                # Create lunch
+                lunch_start = meal_date.replace(hour=12, minute=30, second=0, microsecond=0)
+                lunch_end = lunch_start + timedelta(hours=1, minutes=30)
+                
+                events.append(CalendarEvent(
+                    id=f"event_{uuid.uuid4().hex[:8]}",
+                    title=f"Lunch in {destination}",
+                    description="Local lunch specialties",
+                    event_type=CalendarEventType.MEAL,
+                    start_time=lunch_start,
+                    end_time=lunch_end,
+                    location=destination,
+                    confidence=0.7,
+                    source="heuristic_extraction"
+                ))
+                
+                # Create dinner
+                dinner_start = meal_date.replace(hour=19, minute=0, second=0, microsecond=0)
+                dinner_end = dinner_start + timedelta(hours=2)
+                
+                events.append(CalendarEvent(
+                    id=f"event_{uuid.uuid4().hex[:8]}",
+                    title=f"Dinner in {destination}",
+                    description="Local dinner cuisine",
+                    event_type=CalendarEventType.MEAL,
+                    start_time=dinner_start,
+                    end_time=dinner_end,
+                    location=destination,
+                    confidence=0.7,
+                    source="heuristic_extraction"
+                ))
+                
+            logger.info(f"Created {duration_days * 3} meal events for the trip")
+        
         return events
     
     def _extract_duration_from_message(self, user_message: str) -> Optional[int]:
@@ -2972,8 +3057,8 @@ class PlanManager:
             elif any(word in agent_response.lower() for word in ["partial", "more information", "additional"]):
                 updates["completion_status"] = "partial"
         
-        # Always update timestamp
-        updates["last_updated"] = datetime.now(timezone.utc)
+        # Always update timestamp - use timezone-naive
+        updates["last_updated"] = datetime.now().replace(tzinfo=None)
         
         return updates
     
@@ -2997,19 +3082,19 @@ class PlanManager:
             matches = re.findall(pattern, user_message, re.IGNORECASE)
             for match in matches:
                 try:
-                    # Handle relative dates
+                    # Handle relative dates - use timezone-naive datetime
                     if 'tomorrow' in match.lower():
-                        return datetime.now(timezone.utc) + timedelta(days=1)
+                        return datetime.now().replace(tzinfo=None) + timedelta(days=1)
                     elif 'today' in match.lower():
-                        return datetime.now(timezone.utc)
+                        return datetime.now().replace(tzinfo=None)
                     elif 'next week' in match.lower():
-                        return datetime.now(timezone.utc) + timedelta(weeks=1)
+                        return datetime.now().replace(tzinfo=None) + timedelta(weeks=1)
                     elif 'next month' in match.lower():
-                        return datetime.now(timezone.utc) + timedelta(days=30)
+                        return datetime.now().replace(tzinfo=None) + timedelta(days=30)
                     else:
                         # Try to parse absolute dates
                         parsed_date = parser.parse(match, fuzzy=True)
-                        return parsed_date.replace(tzinfo=timezone.utc)
+                        return parsed_date.replace(tzinfo=None)
                 except Exception:
                     continue
         
@@ -3100,12 +3185,12 @@ class PlanManager:
             logger.error(f"Error saving plan {plan.plan_id}: {e}")
     
     def _datetime_serializer(self, obj):
-        """Custom serializer for datetime objects to ensure ISO format"""
+        """Custom serializer for datetime objects to ensure simple ISO format without timezone"""
         if isinstance(obj, datetime):
-            # Ensure timezone info and return standard ISO format
-            if obj.tzinfo is None:
-                obj = obj.replace(tzinfo=timezone.utc)
-            return obj.isoformat()  # Produces "2025-03-10T10:00:00+00:00" format
+            # Always return timezone-naive ISO format
+            if obj.tzinfo is not None:
+                obj = obj.replace(tzinfo=None)
+            return obj.isoformat()  # Produces "2025-03-10T10:00:00" format
         return str(obj)
 
 
