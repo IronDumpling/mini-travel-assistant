@@ -1290,8 +1290,10 @@ class PlanManager:
                         future_flights = [flight_start - current_time - flight_buffer 
                                         for flight_start, _ in flight_periods 
                                         if flight_start > current_time]
+                        # Check if future_flights is not empty before calling min()
                         if future_flights:
-                            available_space = min(available_space, min(future_flights))
+                            min_flight_space = min(future_flights)
+                            available_space = min(available_space, min_flight_space)
                     
                     # Try shortened duration if it's at least 2 hours
                     if available_space >= min_duration:

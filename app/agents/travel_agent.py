@@ -768,9 +768,9 @@ class TravelAgent(BaseAgent):
         )
 
 
-        # Step 2.5: 🚨 CRITICAL FIX - Override destination detection with multi-city support
+        # Step 2.5: 🚨 ENHANCED FIX - Smart destination detection with LLM + regex fallback
 
-        extracted_destinations = self._extract_destination_from_message(user_message)
+        extracted_destinations = self._extract_destination_from_message(user_message, structured_intent)
         
         if isinstance(extracted_destinations, list) and len(extracted_destinations) > 1:
             # Multi-destination detected - override LLM analysis
@@ -895,17 +895,30 @@ Please analyze the current message considering the conversation history for bett
                 logger.warning(f"Missing required field {field} in LLM analysis")
                 return await self._enhanced_fallback_intent_analysis(user_message)
 
-        # Convert to legacy format for backward compatibility
-        # Ensure destination is always a string, not a list
-        # SAFETY CHECK: Handle cases where destination might be a string instead of dict
+        # Enhanced destination handling - preserve LLM's multi-destination analysis
         destination_data = llm_analysis["destination"]
-        if isinstance(destination_data, str):
-            # If destination is a string, convert to expected dict format
-            destination_primary = destination_data
-        elif isinstance(destination_data, dict):
+        
+        # For backward compatibility, we need both the original data and a primary string
+        if isinstance(destination_data, dict):
+            # LLM returned new format with multi-destination support
             destination_primary = destination_data.get("primary", "unknown")
+            # Keep the full destination data for multi-destination extraction
+            full_destination_data = destination_data
+            logger.info(f"LLM returned structured destination: {destination_data}")
+        elif isinstance(destination_data, str):
+            # LLM returned legacy string format
+            destination_primary = destination_data
+            # Create a minimal dict structure for compatibility
+            full_destination_data = {
+                "primary": destination_data,
+                "is_multi_destination": False,
+                "all_destinations": [destination_data] if destination_data != "unknown" else []
+            }
+            logger.info(f"LLM returned string destination, converted to: {full_destination_data}")
         else:
             destination_primary = "unknown"
+            full_destination_data = {"primary": "unknown", "is_multi_destination": False, "all_destinations": []}
+            
         if isinstance(destination_primary, list):
             # If it's a list, take the first item or default to "unknown"
             destination_str = destination_primary[0] if destination_primary else "unknown"
@@ -915,7 +928,8 @@ Please analyze the current message considering the conversation history for bett
         
         legacy_format = {
             "type": llm_analysis["intent_type"],
-            "destination": destination_str,
+            "destination": destination_str,  # Legacy string format for backward compatibility
+            "destination_data": full_destination_data,  # New: Full destination analysis for multi-destination support
             "time_info": {
                 "duration_days": llm_analysis["travel_details"].get("duration", 0)
             },
@@ -2031,7 +2045,15 @@ Please analyze the current message considering the conversation history for bett
                 for word in ["flight", "fly", "airline", "airport", "ticket"]
             ):
                 necessity_score += 0.8
-            if requirements.get("destination", "").lower() not in ["unknown", "local"]:
+            # Safely handle destination (might be string or dict)
+            destination_req = requirements.get("destination", "")
+            destination_str = destination_req
+            if isinstance(destination_req, dict):
+                destination_str = destination_req.get("primary", "")
+            elif not isinstance(destination_req, str):
+                destination_str = str(destination_req) if destination_req else ""
+            
+            if destination_str.lower() not in ["unknown", "local"]:
                 necessity_score += 0.3
             if "international" in user_message:
                 necessity_score += 0.4
@@ -2809,8 +2831,10 @@ Please analyze the current message considering the conversation history for bett
 
                 # Try enhanced response generation template
                 try:
+                    # Use safe knowledge context from execution result
+                    safe_knowledge_context = execution_result.get("knowledge_context", {})
                     formatted_knowledge = self._format_knowledge_for_fusion(
-                        knowledge_context.get("relevant_docs", [])
+                        safe_knowledge_context.get("relevant_docs", [])
                     )
                     formatted_tools = self._format_tools_for_fusion(tool_results)
                     formatted_intent = self._format_intent_for_fusion(intent)
@@ -3813,11 +3837,52 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.info(f" === IATA CONVERSION END === Result: 'LON' (default fallback)")
             return 'LON'  # London as universal fallback
 
-    def _extract_destination_from_message(self, message: str) -> Union[str, List[str]]:
-        """Extract destination(s) from user message - supports both single and multi-destination detection"""
+    def _extract_destination_from_message(self, message: str, intent_analysis: Dict[str, Any] = None) -> Union[str, List[str]]:
+        """
+        Extract destination(s) from user message - uses LLM intent analysis as primary method with regex fallback
+        
+        Args:
+            message: User message
+            intent_analysis: LLM-generated intent analysis containing destination information
+            
+        Returns:
+            String for single destination, List[str] for multi-destination
+        """
         logger.info(f" === DESTINATION EXTRACTION START ===")
         logger.info(f" Input message: '{message}'")
 
+        # STRATEGY 1: Use LLM intent analysis if available (primary method)
+        if intent_analysis and isinstance(intent_analysis, dict):
+            # First try to get the new structured destination_data
+            destination_data = intent_analysis.get("destination_data", {})
+            if destination_data and isinstance(destination_data, dict):
+                logger.info(f" LLM structured destination analysis available: {destination_data}")
+                
+                # Check if LLM detected multi-destination
+                is_multi = destination_data.get("is_multi_destination", False)
+                all_destinations = destination_data.get("all_destinations", [])
+                primary = destination_data.get("primary", "")
+                
+                if is_multi and all_destinations and len(all_destinations) > 1:
+                    logger.info(f" LLM DETECTED MULTI-DESTINATION: {all_destinations}")
+                    logger.info(f" === DESTINATION EXTRACTION END === Result: {all_destinations} (LLM multi-destination)")
+                    return all_destinations
+                elif primary:
+                    logger.info(f" LLM DETECTED SINGLE DESTINATION: {primary}")
+                    logger.info(f" === DESTINATION EXTRACTION END === Result: '{primary}' (LLM single destination)")
+                    return primary
+            
+            # Fallback to legacy destination field
+            destination_info = intent_analysis.get("destination", "")
+            if isinstance(destination_info, str) and destination_info:
+                logger.info(f" LLM legacy destination available: {destination_info}")
+                logger.info(f" === DESTINATION EXTRACTION END === Result: '{destination_info}' (LLM legacy)")
+                return destination_info
+            
+            logger.info(f" LLM analysis incomplete or empty, falling back to regex patterns")
+
+        # STRATEGY 2: Fallback to regex patterns (legacy method)
+        logger.info(f" Using regex pattern fallback method")
         message_lower = message.lower()
         logger.info(f" Lowercase message: '{message_lower}'")
 
@@ -3835,6 +3900,8 @@ This will help me provide you with the most relevant travel guidance possible.""
             r"trip\s+to\s+([^.!?]+?)(?:\s*\.|$|\s+for\s|\s+budget|\s+in\s+\w+\s*$)",  # "trip to Paris, Amsterdam, Berlin"
             r"traveling\s+to\s+([^.!?]+?)(?:\s*\.|$|\s+for\s|\s+budget|\s+in\s+\w+\s*$)",  # "traveling to ..."
             r"plan\s+.*?trip.*?to\s+([^.!?]+?)(?:\s*\.|$|\s+for\s|\s+budget|\s+in\s+\w+\s*$)",  # "plan a trip to ..."
+            r"plan\s+.*?travel\s+to\s+([^.!?]+?)(?:\s*\.|$|\s+for\s|\s+budget|\s+in\s+\w+\s*$)",  # "plan business travel to ..."
+            r"travel\s+to\s+([^.!?]+?)(?:\s*\.|$|\s+for\s|\s+budget|\s+in\s+\w+\s*$)",  # "travel to New York, Chicago..."
             r"going\s+to\s+([^.!?]+?)(?:\s*\.|$|\s+for\s|\s+budget|\s+in\s+\w+\s*$)",  # "going to ..."
         ]
         
@@ -5422,8 +5489,17 @@ This will help me provide you with the most relevant travel guidance possible.""
         No LLM calls - uses rule-based scoring
         """
         try:
-            user_message = original_message.content.lower()
-            response_content = response.content.lower()
+            # Handle case where content might be a dict instead of string
+            user_content = original_message.content
+            if isinstance(user_content, dict):
+                user_content = str(user_content)
+            user_message = user_content.lower()
+            
+            response_content_raw = response.content
+            if isinstance(response_content_raw, dict):
+                response_content_raw = str(response_content_raw)
+            response_content = response_content_raw.lower()
+            
             metadata = response.metadata
 
             # Initialize score
@@ -5511,7 +5587,18 @@ This will help me provide you with the most relevant travel guidance possible.""
 
         # Destination mention check
         destination = metadata.get("destination", "unknown")
-        if destination != "unknown" and destination.lower() in response_content:
+        destination_str = "unknown"
+        
+        # Handle both string and dict formats for destination
+        if isinstance(destination, dict):
+            # Extract primary destination from dict format: {"primary": "Paris", ...}
+            destination_str = destination.get("primary", "unknown")
+        elif isinstance(destination, str):
+            destination_str = destination
+        else:
+            destination_str = str(destination) if destination else "unknown"
+        
+        if destination_str != "unknown" and destination_str.lower() in response_content:
             score += 0.2
 
         # Intent alignment check

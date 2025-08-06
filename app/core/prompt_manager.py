@@ -72,6 +72,8 @@ class PromptManager:
                         "properties": {
                             "primary": {"type": "string"},
                             "secondary": {"type": "array", "items": {"type": "string"}},
+                            "is_multi_destination": {"type": "boolean"},
+                            "all_destinations": {"type": "array", "items": {"type": "string"}},
                             "region": {"type": "string"},
                             "confidence": {
                                 "type": "number",
@@ -422,10 +424,18 @@ class PromptManager:
            - complaint: Complaint or issue feedback
 
         2. Destination Analysis:
-           - Primary destination (explicitly mentioned)
-           - Secondary destinations (implied or related)
+           - Primary destination (main destination mentioned)
+           - Secondary destinations (additional cities/countries mentioned)
+           - Multi-destination detection (identify if multiple cities are mentioned for one trip)
            - Regional classification (Asia, Europe, etc.)
            - Confidence assessment
+           
+           IMPORTANT: Look for multiple destinations in phrases like:
+           - "travel to X, Y, and Z"
+           - "visiting A, B, C"
+           - "trip to Paris, London, Rome"
+           - "business travel to New York, Chicago, Los Angeles"
+           - If multiple cities are mentioned in one trip context, list ALL in secondary destinations
 
         3. Travel Details Extraction:
            - Trip duration
@@ -463,6 +473,8 @@ class PromptManager:
             "destination": {{
                 "primary": "...",
                 "secondary": [...],
+                "is_multi_destination": true/false,
+                "all_destinations": [...],
                 "region": "...",
                 "confidence": 0.0-1.0
             }},
