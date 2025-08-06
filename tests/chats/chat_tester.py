@@ -84,7 +84,7 @@ class ChatAPITester:
         
         # Create timestamped results directory
         self.test_run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.results_dir = Path(f"tests/chats/results/{self.test_run_id}")
+        self.results_dir = Path(f"results/{self.test_run_id}")
         self.results_dir.mkdir(parents=True, exist_ok=True)
         
         print(f"Test run ID: {self.test_run_id}")

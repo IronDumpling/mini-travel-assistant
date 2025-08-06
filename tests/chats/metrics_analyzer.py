@@ -526,7 +526,7 @@ class MetricsAnalyzer:
 
 def analyze_latest_results():
     """Analyze the most recent test results"""
-    results_base = Path("tests/chats/results")
+    results_base = Path("results")
     
     if not results_base.exists():
         print("No results directory found")
