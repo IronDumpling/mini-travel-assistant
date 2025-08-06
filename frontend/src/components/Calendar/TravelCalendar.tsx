@@ -141,30 +141,44 @@ const EventComponent = ({ event }: { event: any }) => {
   );
 };
 
-// Utility function for safe datetime parsing
+// Simplified datetime parsing - assume all dates are local time
 const parseDateTime = (dateString: string): Date => {
-  // Standardize datetime format handling
-  let normalizedDate = dateString;
-  
-  // If space-separated format, convert to standard ISO format
-  if (dateString.includes(' ') && !dateString.includes('T')) {
-    normalizedDate = dateString.replace(' ', 'T');
+  try {
+    // Standardize datetime format handling
+    let normalizedDate = dateString;
+    
+    // If space-separated format, convert to standard ISO format
+    if (dateString.includes(' ') && !dateString.includes('T')) {
+      normalizedDate = dateString.replace(' ', 'T');
+    }
+    
+    // Remove timezone info and parse as local time
+    if (normalizedDate.includes('+') || normalizedDate.endsWith('Z')) {
+      // Strip timezone info: "2025-08-06T08:00:00+00:00" → "2025-08-06T08:00:00"
+      normalizedDate = normalizedDate.split('+')[0].replace('Z', '');
+    }
+    
+    // Parse as local time using simple Date constructor
+    const parts = normalizedDate.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+    if (parts) {
+      const [, year, month, day, hour, minute, second] = parts;
+      const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+      console.debug('📅 Parsed as local time:', dateString, '→', localDate.toLocaleString());
+      return localDate;
+    }
+    
+    // Fallback: direct parsing
+    const date = new Date(normalizedDate);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  } catch (e) {
+    console.warn('❌ DateTime parsing error:', e, 'for string:', dateString);
   }
   
-  // Ensure timezone information is present
-  if (!normalizedDate.includes('+') && !normalizedDate.includes('Z')) {
-    normalizedDate += '+00:00';
-  }
-  
-  const date = new Date(normalizedDate);
-  
-  // Validate date validity
-  if (isNaN(date.getTime())) {
-    console.error('Invalid date format:', dateString, 'using current time as fallback');
-    return new Date(); // Return current time as fallback
-  }
-  
-  return date;
+  // Last resort fallback
+  console.error('❌ Invalid date format:', dateString, 'using current time as fallback');
+  return new Date();
 };
 
 export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => {
@@ -345,8 +359,8 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             const startField = (event as any).start_time || (event as any).start;
             const endField = (event as any).end_time || (event as any).end;
             
-            const startDate = parseDateTime(startField);
-            const endDate = parseDateTime(endField);
+            let startDate = parseDateTime(startField);
+            let endDate = parseDateTime(endField);
             
             // Validate that dates are valid
             if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
@@ -359,8 +373,51 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               return null;
             }
             
-            // Determine if this should be an all-day event
+            // Smart correction for meal events with unreasonable timing
             const eventType = (event as any).event_type || (event as any).type;
+            if (eventType === 'meal') {
+              const duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60); // hours
+              const startHour = startDate.getHours();
+              
+              // If meal duration is unreasonable (>3 hours) or timing is wrong, apply smart correction
+              if (duration > 3 || (event.title && event.title.toLowerCase().includes('breakfast') && startHour > 10) ||
+                  (event.title && event.title.toLowerCase().includes('dinner') && startHour < 17)) {
+                
+                console.log(`🍽️ Correcting meal timing for: ${event.title}`);
+                
+                // Determine meal type and correct timing
+                const title = event.title.toLowerCase();
+                let correctedHour = startHour;
+                let correctedDuration = 1.5; // default 1.5 hours
+                
+                if (title.includes('breakfast')) {
+                  correctedHour = 8;
+                  correctedDuration = 1;
+                } else if (title.includes('lunch')) {
+                  correctedHour = 12;
+                  correctedDuration = 1.5;
+                } else if (title.includes('dinner')) {
+                  correctedHour = 19;
+                  correctedDuration = 2;
+                } else if (title.includes('brunch')) {
+                  correctedHour = 10;
+                  correctedDuration = 2;
+                }
+                
+                // Apply corrections while preserving the date
+                const correctedStart = new Date(startDate);
+                correctedStart.setHours(correctedHour, 0, 0, 0);
+                
+                const correctedEnd = new Date(correctedStart);
+                correctedEnd.setHours(correctedHour + Math.floor(correctedDuration), 
+                                    (correctedDuration % 1) * 60, 0, 0);
+                
+                startDate = correctedStart;
+                endDate = correctedEnd;
+                
+                console.log(`🍽️ Corrected ${event.title}: ${correctedStart.toLocaleTimeString()} - ${correctedEnd.toLocaleTimeString()}`);
+              }
+            }
             
             // Check multiple conditions for all-day events
             const isAllDayEvent = 
@@ -369,16 +426,18 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               eventType === 'accommodation' ||
               (event.title && event.title.toLowerCase().includes('hotel')) ||
               
-              // Meal/food budget events (typically all-day)
-              eventType === 'meal' ||
-              eventType === 'food' ||
-              eventType === 'budget' ||
-              (event.title && (
-                event.title.toLowerCase().includes('budget') ||
-                event.title.toLowerCase().includes('food') ||
-                event.title.toLowerCase().includes('meal') ||
-                event.title.toLowerCase().includes('dining')
+              // Only mark meal events as all-day if they are budget-related or span multiple hours unreasonably
+              (eventType === 'meal' && (
+                event.title && (
+                  event.title.toLowerCase().includes('budget') ||
+                  event.title.toLowerCase().includes('daily food') ||
+                  event.title.toLowerCase().includes('food budget')
+                )
               )) ||
+              
+              // Non-meal food events that are budget-related
+              (eventType === 'food' && event.title && event.title.toLowerCase().includes('budget')) ||
+              (eventType === 'budget') ||
               
               // Transportation (some may be all-day like train passes)
               (eventType === 'transportation' && 
@@ -405,7 +464,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               location: event.location,
               description: event.description,
               resource: event,
-              allDay: isAllDayEvent // ✅ Mark hotel events as all-day
+              allDay: isAllDayEvent // Mark hotel events as all-day
             };
           } catch (error) {
             console.warn('Error processing event dates:', event, error);
@@ -451,7 +510,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
             type: 'hotel',
             location: hotel.location,
             description: `$${hotel.price_per_night}/night`,
-            allDay: true // ✅ Mark as all-day event
+            allDay: true // Mark as all-day event
           });
         });
 
@@ -469,7 +528,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
               type: 'meal',
               location: meal.location || planWithMeals.destination || 'Unknown',
               description: meal.description || `Daily food budget`,
-              allDay: true // ✅ Mark meal budgets as all-day events
+              allDay: true // Mark meal budgets as all-day events
             });
           });
         }
@@ -584,7 +643,7 @@ export const TravelCalendar: React.FC<TravelCalendarProps> = ({ sessionId }) => 
 
   if (!sessionId) {
     return (
-      <div className="w-[1000px] bg-gray-50 border-l border-gray-200 flex items-center justify-center">
+      <div className="w-[800px] bg-gray-50 border-l border-gray-200 flex items-center justify-center">
         <div className="text-center text-gray-500 p-6">
           <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <h3 className="font-medium mb-2">Travel Calendar</h3>

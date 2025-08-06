@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from app.api.schemas import SessionTravelPlan, CalendarEvent, TravelPlanMetadata, CalendarEventType
 from app.core.logging_config import get_logger
+from app.core.prompt_manager import prompt_manager, PromptType
 
 logger = get_logger(__name__)
 
@@ -116,11 +117,14 @@ class PlanManager:
             logger.info(f"  - Modification reason: {modifications.get('plan_modifications', {}).get('reason', 'Unknown')}")
             
             # Apply modifications
+            modifications_applied = False
+            
             if modifications.get("new_events"):
                 existing_plan.events.extend(modifications["new_events"])
                 update_summary["events_added"] = len(modifications["new_events"])
                 update_summary["changes_made"].append(f"Added {len(modifications['new_events'])} new events")
                 logger.info(f"Added {len(modifications['new_events'])} new events to plan {existing_plan.plan_id}")
+                modifications_applied = True
 
             if modifications.get("updated_events"):
                 for updated_event in modifications["updated_events"]:
@@ -128,6 +132,7 @@ class PlanManager:
                 update_summary["events_updated"] = len(modifications["updated_events"])
                 update_summary["changes_made"].append(f"Updated {len(modifications['updated_events'])} events")
                 logger.info(f"Updated {len(modifications['updated_events'])} events in plan {existing_plan.plan_id}")
+                modifications_applied = True
 
             if modifications.get("deleted_event_ids"):
                 for event_id in modifications["deleted_event_ids"]:
@@ -135,6 +140,18 @@ class PlanManager:
                 update_summary["events_deleted"] = len(modifications["deleted_event_ids"])
                 update_summary["changes_made"].append(f"Deleted {len(modifications['deleted_event_ids'])} events")
                 logger.info(f"Deleted {len(modifications['deleted_event_ids'])} events from plan {existing_plan.plan_id}")
+                modifications_applied = True
+            
+            # 🔥 CRITICAL FIX: Apply time conflict resolution after any modifications
+            if modifications_applied:
+                logger.info(f"Applying time conflict resolution to updated plan with {len(existing_plan.events)} events...")
+                try:
+                    existing_plan.events = self._resolve_time_conflicts(existing_plan.events)
+                    update_summary["changes_made"].append("Applied time conflict resolution")
+                    logger.info(f"Time conflict resolution completed: {len(existing_plan.events)} events final")
+                except Exception as e:
+                    logger.error(f"Time conflict resolution failed: {e}")
+                    update_summary["changes_made"].append(f"Time conflict resolution failed: {str(e)}")
 
             # Update metadata
             metadata_updates = self._extract_metadata_updates(user_message, agent_response, response_metadata)
@@ -175,10 +192,10 @@ class PlanManager:
         self, 
         session_id: str, 
         tool_results: Dict[str, Any], 
-        destination: str, 
+        destinations: List[str],  # Always use list format 
         user_message: str,
         intent: Dict[str, Any] = None,
-        multi_destinations: List[str] = None
+        is_multi_destination: bool = False  # Explicit flag
     ) -> Dict[str, Any]:
         """
         Generate travel plan events directly from tool results (Fast non-LLM approach)
@@ -188,9 +205,13 @@ class PlanManager:
         import uuid
         
         try:
-            logger.info(f"Generating plan from tool results for destination: {destination}")
-            if multi_destinations and len(multi_destinations) > 1:
-                logger.info(f"🌍 Planning multi-destination trip with {len(multi_destinations)} destinations")
+            # Use unified destination handling - always work with destination lists
+            primary_destination = destinations[0] if destinations else "unknown"
+            logger.info(f"Generating plan from tool results for destinations: {destinations}")
+            if is_multi_destination and len(destinations) > 1:
+                logger.info(f"🌍 Planning multi-destination trip with {len(destinations)} destinations")
+            else:
+                logger.info(f"🏙️ Planning single destination trip to: {primary_destination}")
             
             # Get existing plan
             plan = self.get_plan_by_session(session_id)
@@ -206,21 +227,21 @@ class PlanManager:
             # ✅ Extract dates from user message or use smart defaults
             start_date = self._extract_trip_start_date(user_message, intent)
             
-            logger.info(f"Plan parameters: destination={destination}, duration={duration}, travelers={travelers}, start_date={start_date}")
+            logger.info(f"Plan parameters: destinations={destinations}, duration={duration}, travelers={travelers}, start_date={start_date}")
             
-            # Generate events from tool results
+            # Generate events from tool results using unified destination handling
             events = self._create_events_from_tools(
                 tool_results, 
-                destination, 
+                destinations, 
                 start_date, 
                 duration, 
                 travelers, 
                 user_message,
-                multi_destinations
+                is_multi_destination
             )
             
             # Update plan metadata (TravelPlanMetadata is a Pydantic model, not a dict)
-            plan.metadata.destination = destination
+            plan.metadata.destination = primary_destination  # Use primary destination for metadata
             plan.metadata.duration_days = duration
             plan.metadata.travelers = travelers
             plan.metadata.budget = self._estimate_budget(duration, travelers)
@@ -239,7 +260,7 @@ class PlanManager:
             # Save plan
             self._save_plan(plan)
             
-            logger.info(f"Generated {events_added} events for {duration}-day trip to {destination}")
+            logger.info(f"Generated {events_added} events for {duration}-day trip to {destinations}")
             
             return {
                 "success": True,
@@ -404,12 +425,12 @@ class PlanManager:
     def _create_events_from_tools(
         self, 
         tool_results: Dict[str, Any], 
-        destination: str, 
+        destinations: List[str],  # Always use list format
         start_date: datetime, 
         duration: int, 
         travelers: int,
         user_message: str,
-        multi_destinations: List[str] = None
+        is_multi_destination: bool = False
     ) -> List:
         """Create calendar events from tool results with accurate timing"""
         events = []
@@ -417,165 +438,20 @@ class PlanManager:
         import uuid
         
         current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)
+        primary_destination = destinations[0] if destinations else "unknown"
         
-
-        
-        # ✅ Handle multi-destination trips (passed as parameter)
-        if multi_destinations and len(multi_destinations) > 1:
-            logger.info(f"🌍 Planning multi-destination trip: {multi_destinations}")
+        # Use unified approach: always treat as multi-destination, single destination is just multi with 1 item
+        if is_multi_destination and len(destinations) > 1:
+            logger.info(f"🌍 Planning multi-destination trip: {destinations}")
             return self._create_multi_destination_events(
-                tool_results, multi_destinations, start_date, duration, travelers, user_message
+                tool_results, destinations, start_date, duration, travelers, user_message
             )
         else:
-            if multi_destinations:
-                logger.warning(f"⚠️ Multi-destinations provided but too short: {multi_destinations}")
-            else:
-                logger.info(f"🏙️ No multi-destinations provided, creating single destination events")
-        
-        try:
-            # Add flight events (outbound and return)
-            if "flight_search" in tool_results:
-                flight_result = tool_results["flight_search"]
-                if hasattr(flight_result, 'flights') and len(flight_result.flights) > 0:
-                    # Outbound flight
-                    outbound_flight = flight_result.flights[0]
-                    outbound_time = current_time.replace(hour=10, minute=0)  # 10 AM departure
-                    
-                    event = self._create_calendar_event_from_data({
-                        "id": f"flight_outbound_{str(uuid.uuid4())[:8]}",
-                        "title": f"Flight to {destination}",
-                        "description": f"Flight details: {getattr(outbound_flight, 'airline', 'TBA')} - Duration: {getattr(outbound_flight, 'duration', 'TBA')} minutes",
-                        "event_type": "flight",
-                        "start_time": outbound_time.isoformat(),
-                        "end_time": (outbound_time + timedelta(hours=int(getattr(outbound_flight, 'duration', 360) / 60))).isoformat(),
-                        "location": f"Airport → {destination}",
-                        "details": {
-                            "source": "flight_search",
-                            "airline": getattr(outbound_flight, 'airline', 'TBA'),
-                            "price": {"amount": getattr(outbound_flight, 'price', 500), "currency": "USD"},
-                            "flight_number": getattr(outbound_flight, 'flight_number', 'TBA'),
-                            "duration_minutes": getattr(outbound_flight, 'duration', 360)
-                        }
-                    })
-                    if event:
-                        events.append(event)
-                    
-                    # Return flight (on last day)
-                    return_time = (start_date + timedelta(days=duration-1)).replace(hour=18, minute=0)
-                    if len(flight_result.flights) > 1:
-                        return_flight = flight_result.flights[1]
-                    else:
-                        return_flight = outbound_flight  # Use same flight as template
-                    
-                    event = self._create_calendar_event_from_data({
-                        "id": f"flight_return_{str(uuid.uuid4())[:8]}",
-                        "title": f"Return Flight",
-                        "description": f"Return flight: {getattr(return_flight, 'airline', 'TBA')}",
-                        "event_type": "flight",
-                        "start_time": return_time.isoformat(),
-                        "end_time": (return_time + timedelta(hours=int(getattr(return_flight, 'duration', 360) / 60))).isoformat(),
-                        "location": f"{destination} → Home",
-                        "details": {
-                            "source": "flight_search",
-                            "airline": getattr(return_flight, 'airline', 'TBA'),
-                            "price": {"amount": getattr(return_flight, 'price', 500), "currency": "USD"},
-                            "flight_number": getattr(return_flight, 'flight_number', 'TBA'),
-                            "duration_minutes": getattr(return_flight, 'duration', 360)
-                        }
-                    })
-                    if event:
-                        events.append(event)
-            
-            # Add hotel events (full duration - 1 day to account for departure)
-            if "hotel_search" in tool_results:
-                hotel_result = tool_results["hotel_search"]
-                if hasattr(hotel_result, 'hotels') and len(hotel_result.hotels) > 0:
-                    hotel = hotel_result.hotels[0]
-                    checkin_time = current_time.replace(hour=15, minute=0)  # 3 PM check-in
-                    checkout_time = (start_date + timedelta(days=duration-1)).replace(hour=11, minute=0)  # 11 AM checkout
-                    
-                    event = self._create_calendar_event_from_data({
-                        "id": f"hotel_stay_{str(uuid.uuid4())[:8]}",
-                        "title": f"Hotel: {getattr(hotel, 'name', 'Hotel in ' + destination)}",
-                        "description": f"Accommodation in {destination} for {duration-1} nights",
-                        "event_type": "hotel",
-                        "start_time": checkin_time.isoformat(),
-                        "end_time": checkout_time.isoformat(),
-                        "location": getattr(hotel, 'location', destination),
-                        "details": {
-                            "source": "hotel_search",
-                            "rating": getattr(hotel, 'rating', 4.0),
-                            "price_per_night": {"amount": getattr(hotel, 'price_per_night', 150), "currency": "USD"},
-                            "nights": duration - 1
-                        }
-                    })
-                    if event:
-                        events.append(event)
-            
-            # Add attraction events (spread across middle days)
-            if "attraction_search" in tool_results:
-                attraction_result = tool_results["attraction_search"]
-                if hasattr(attraction_result, 'attractions') and len(attraction_result.attractions) > 0:
-                    attractions = attraction_result.attractions[:min(3, duration-2)]  # Limit based on duration
-                    for i, attraction in enumerate(attractions):
-                        visit_day = start_date + timedelta(days=i+1)  # Start from day 2
-                        visit_time = visit_day.replace(hour=10 + i*2, minute=0)  # 10 AM, 12 PM, 2 PM
-                        
-                        event = self._create_calendar_event_from_data({
-                            "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
-                            "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
-                            "description": getattr(attraction, 'category', 'Sightseeing activity'),
-                            "event_type": "attraction",
-                            "start_time": visit_time.isoformat(),
-                            "end_time": (visit_time + timedelta(hours=2)).isoformat(),
-                            "location": getattr(attraction, 'location', destination),
-                            "details": {
-                                "source": "attraction_search",
-                                "rating": getattr(attraction, 'rating', 4.5),
-                                "category": getattr(attraction, 'category', 'Tourism')
-                            }
-                        })
-                        if event:
-                            events.append(event)
-            
-            # Add default activities if no specific events were created
-            if len(events) <= 2:  # Only flights
-                for i in range(min(3, duration-1)):
-                    day = start_date + timedelta(days=i+1)
-                    event_time = day.replace(hour=10 + i*3, minute=0)
-                    event = self._create_calendar_event_from_data({
-                        "id": f"activity_{i+1}_{str(uuid.uuid4())[:8]}",
-                        "title": f"Explore {destination} - Day {i+1}",
-                        "description": f"Discover the best of {destination}",
-                        "event_type": "activity",
-                        "start_time": event_time.isoformat(),
-                        "end_time": (event_time + timedelta(hours=3)).isoformat(),
-                        "location": destination,
-                        "details": {
-                            "source": "default_generation",
-                            "recommendations": ["Bring camera", "Wear comfortable shoes"]
-                        }
-                    })
-                    if event:
-                        events.append(event)
-            
-            logger.info(f"Created {len(events)} events for {duration}-day trip")
-            return events
-            
-        except Exception as e:
-            logger.error(f"Error creating events from tool results: {e}")
-            # Return basic fallback event
-            fallback_event = self._create_calendar_event_from_data({
-                "id": f"basic_trip_{str(uuid.uuid4())[:8]}",
-                "title": f"Trip to {destination}",
-                "description": f"{duration}-day travel to {destination}",
-                "event_type": "activity",
-                "start_time": current_time.isoformat(),
-                "end_time": (current_time + timedelta(hours=4)).isoformat(),
-                "location": destination,
-                "details": {"source": "fallback_generation"}
-            })
-            return [fallback_event] if fallback_event else []
+            logger.info(f"🏙️ Planning single destination trip to: {primary_destination}")
+            # For single destination, use the multi-destination logic with single item
+            return self._create_multi_destination_events(
+                tool_results, destinations, start_date, duration, travelers, user_message
+            )
     
     def _create_multi_destination_events(
         self, 
@@ -591,14 +467,19 @@ class PlanManager:
         from datetime import timedelta
         import uuid
         
+        logger.info(f"🗺️ === MULTI-DESTINATION EVENT CREATION START ===")
+        logger.info(f"🗺️ Destinations: {destinations}")
+        logger.info(f"🗺️ Duration: {duration} days")
+        logger.info(f"🗺️ Travelers: {travelers}")
+        logger.info(f"🗺️ Start date: {start_date}")
+        logger.info(f"🗺️ Tool results keys: {list(tool_results.keys())}")
+        
         try:
             logger.info(f"🗺️ Creating multi-destination itinerary for {len(destinations)} cities: {destinations}")
             
-            # ✅ Extract origin from user message, flight search data, or use default
-            origin = self._extract_origin_from_message(user_message)
-            
-            # ✅ If no origin found in message, try to get it from flight search data
-            if not origin and "flight_search" in tool_results:
+            # ✅ PRIORITY 1: Extract origin from flight search data (most reliable)
+            origin = None
+            if "flight_search" in tool_results:
                 flight_result = tool_results["flight_search"]
                 if hasattr(flight_result, 'data') and flight_result.data:
                     flight_data = flight_result.data
@@ -607,15 +488,24 @@ class PlanManager:
                         if len(flight_chain) > 0:
                             origin = flight_chain[0]  # First city in chain is origin
                             logger.info(f"🛫 Extracted origin from flight chain: {origin}")
+                    elif flight_data.get("origin"):
+                        origin = flight_data.get("origin")
+                        logger.info(f"🛫 Extracted origin from flight data: {origin}")
             
-            # ✅ Final fallback
+            # ✅ PRIORITY 2: If no origin found in flight data, try user message
+            if not origin:
+                origin = self._extract_origin_from_message(user_message)
+                if origin:
+                    logger.info(f"🛫 Extracted origin from user message: {origin}")
+            
+            # ✅ PRIORITY 3: Final fallback
             if not origin:
                 origin = "YYZ"  # Default to Toronto
                 logger.warning(f"🛫 No origin found, using default: {origin}")
             else:
                 logger.info(f"🛫 Multi-city trip starting from: {origin}")
             
-            # ✅ Calculate days per destination with proper distribution
+            # Calculate days per destination with proper distribution
             # Ensure total days equals requested duration, not compressed by destination count
             base_days_per_destination = max(1, duration // len(destinations))
             extra_days = duration % len(destinations)  # Distribute remaining days
@@ -639,19 +529,20 @@ class PlanManager:
             
             current_date = start_date
             
-            # ✅ Create complete flight chain: Start → A → B → C → ... → N → Start
+            # Create complete flight chain: Start → A → B → C → ... → N → Start
             flight_chain = [origin] + destinations + [origin]
             logger.info(f"✈️ Flight chain: {' → '.join(flight_chain)}")
             
-            for i, destination in enumerate(destinations):  # ✅ Process ALL destinations, no limit
-                # ✅ Get the specific number of days for this destination
+            for i, destination in enumerate(destinations):  
+                
                 destination_days = days_allocation[i]
                 logger.info(f"🏙️ Planning destination {i+1}/{len(destinations)}: {destination} ({destination_days} days)")
                 
-                # ✅ Create flight to this destination
-                # ✅ Get proper city names from IATA codes
+                # Create flight to this destination
+                # Get proper city names from IATA codes
                 from app.knowledge.geographical_data import GeographicalMappings
                 destination_city_name = GeographicalMappings.get_city_name(destination)
+                logger.info(f"🌍 Converting IATA '{destination}' to city name: '{destination_city_name}'")
                 
                 if i == 0:
                     # First flight: Origin → First Destination
@@ -675,7 +566,8 @@ class PlanManager:
                     tool_results, departure_city, destination, flight_sequence
                 )
                 
-                flight_event = self._create_calendar_event_from_data({
+                logger.info(f"✈️ Creating flight event: {flight_title}")
+                flight_event_data = {
                     "id": f"flight_{departure_city}_to_{destination}_{str(uuid.uuid4())[:8]}",
                     "title": flight_title,
                     "description": flight_description,
@@ -694,9 +586,14 @@ class PlanManager:
                         "flight_number": flight_details.get("flight_number", "TBA"),
                         "duration_minutes": flight_details.get("duration_hours", 3) * 60
                     }
-                })
+                }
+                
+                flight_event = self._create_calendar_event_from_data(flight_event_data)
                 if flight_event:
                     events.append(flight_event)
+                    logger.info(f"✅ Flight event created and added")
+                else:
+                    logger.error(f"❌ Failed to create flight event")
                 
                 # ✅ Hotel for each destination
                 checkin_time = current_date.replace(hour=15, minute=0)
@@ -723,9 +620,12 @@ class PlanManager:
                         matching_hotel = None
                         for hotel in hotel_result.hotels:
                             # Check if hotel is for this destination
-                            hotel_search_location = getattr(hotel, 'search_location', '')
+                            hotel_search_location = getattr(hotel, 'search_location', '') or ''
+                            hotel_location_upper = hotel_search_location.upper() if hotel_search_location else ''
+                            destination_upper = destination.upper() if destination else ''
+                            
                             if (hotel_search_location == destination or 
-                                hotel_search_location.upper() == destination.upper()):
+                                hotel_location_upper == destination_upper):
                                 matching_hotel = hotel
                                 break
                         
@@ -745,6 +645,7 @@ class PlanManager:
                                 }
                             })
                 
+                logger.info(f"🏨 Creating hotel event: {hotel_name}")
                 hotel_event = self._create_calendar_event_from_data({
                     "id": f"hotel_{destination}_{str(uuid.uuid4())[:8]}",
                     "title": hotel_name,
@@ -757,35 +658,109 @@ class PlanManager:
                 })
                 if hotel_event:
                     events.append(hotel_event)
+                    logger.info(f"✅ Hotel event created and added")
+                else:
+                    logger.error(f"❌ Failed to create hotel event")
                 
-                # ✅ Attractions for each destination
-                for day in range(destination_days):
-                    activity_date = current_date + timedelta(days=day)
-                    activity_time = activity_date.replace(hour=10, minute=0)
+                # Create attraction events for this destination using actual search results
+                city_attractions = self._get_attractions_for_destination(tool_results, destination, city_name)
+                
+                if city_attractions:
+                    logger.info(f"🎯 Creating {len(city_attractions)} specific attraction events for {city_name}")
                     
-                    activity_event = self._create_calendar_event_from_data({
-                        "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
-                        "title": f"Explore {city_name} - Day {day+1}",
-                        "description": f"Discover attractions and culture in {city_name}",
-                        "event_type": "attraction",
-                        "start_time": activity_time.isoformat(),
-                        "end_time": (activity_time + timedelta(hours=4)).isoformat(),
-                        "location": city_name,
-                        "details": {
-                            "source": "multi_destination_planning",
-                            "day_in_destination": day + 1,
-                            "destination_sequence": i + 1,
-                            "total_days_in_destination": destination_days,  # ✅ Add this for better tracking
-                            "recommendations": ["Visit main attractions", "Try local cuisine", "Explore cultural sites"]
-                        }
-                    })
-                    if activity_event:
-                        events.append(activity_event)
+                    # Create events for available attractions, distributed across days
+                    max_attractions_per_day = 2  # Allow multiple attractions per day
+                    attractions_to_use = city_attractions[:destination_days * max_attractions_per_day]
+                    
+                    for attr_idx, attraction in enumerate(attractions_to_use):
+                        # 🔥 FIX: Properly distribute attractions to avoid same-day overlaps
+                        # Distribute attractions across destination days
+                        day_offset = attr_idx // max_attractions_per_day
+                        attraction_of_day = attr_idx % max_attractions_per_day
+                        
+                        # Ensure we don't exceed destination days
+                        if day_offset >= destination_days:
+                            logger.warning(f"🎯 ⚠️  Skipping attraction {attr_idx+1} - exceeds {destination_days} days for {city_name}")
+                            continue
+                        
+                        # 🔥 CRITICAL FIX: Ensure different days get different dates
+                        activity_date = current_date + timedelta(days=day_offset)
+                        logger.info(f"🎯 📅 Day calculation: attr_idx={attr_idx}, day_offset={day_offset}, attraction_of_day={attraction_of_day}")
+                        logger.info(f"🎯 📅 Date calculation: current_date={current_date.strftime('%Y-%m-%d')}, activity_date={activity_date.strftime('%Y-%m-%d')}")
+                        
+                        # 🔥 NEW APPROACH: Don't set fixed times - let scheduler assign them dynamically
+                        # Just set clean placeholder times that will be overridden by the scheduler
+                        activity_date_start = activity_date.replace(hour=9, minute=0, second=0, microsecond=0)  # Clean placeholder
+                        
+                        # 🔥 VALIDATION: Ensure activity_date_start uses the correct date
+                        if activity_date_start.date() != activity_date.date():
+                            logger.error(f"🎯 ❌ DATE MISMATCH: activity_date={activity_date.date()}, activity_date_start={activity_date_start.date()}")
+                        else:
+                            logger.info(f"🎯 ✅ Date validation passed: {activity_date_start.date()}")
+                        
+                        activity_title = f"Visit {getattr(attraction, 'name', f'Attraction in {city_name}')}"
+                        logger.info(f"🎯 📅 Creating {activity_title} for {activity_date.strftime('%Y-%m-%d')} (day {day_offset+1}/{destination_days})")
+                        logger.info(f"🎯 🕐 Using start_time: {activity_date_start.isoformat()}")
+                        
+                        activity_event = self._create_calendar_event_from_data({
+                            "id": f"attraction_{destination}_{attr_idx+1}_{str(uuid.uuid4())[:8]}",
+                            "title": activity_title,
+                            "description": getattr(attraction, 'description', f'Visit {getattr(attraction, "category", "attraction")} in {city_name}'),
+                            "event_type": "attraction",
+                            "start_time": activity_date_start.isoformat(),  # Placeholder - will be rescheduled
+                            "end_time": (activity_date_start + timedelta(hours=2)).isoformat(),  # Minimum 2h placeholder
+                            "location": getattr(attraction, 'location', city_name),
+                            "details": {
+                                "source": "attraction_search",
+                                "destination_sequence": i + 1,
+                                "day_in_destination": day_offset + 1,
+                                "attraction_of_day": attraction_of_day + 1,
+                                "rating": getattr(attraction, 'rating', None),
+                                "category": getattr(attraction, 'category', 'Tourism'),
+                                "place_id": getattr(attraction, 'place_id', None)
+                            }
+                        })
+                        if activity_event:
+                            events.append(activity_event)
+                            logger.info(f"✅ Specific attraction event created and added")
+                        else:
+                            logger.error(f"❌ Failed to create attraction event")
+                else:
+                    # Fallback to generic events if no specific attractions found
+                    logger.info(f"🎯 No specific attractions found for {city_name}, creating generic activity events")
+                    for day in range(destination_days):
+                        activity_date = current_date + timedelta(days=day)
+                        activity_time = activity_date.replace(hour=10, minute=0)
+                        
+                        activity_title = f"Explore {city_name} - Day {day+1}"
+                        logger.info(f"🎯 Creating fallback activity event: {activity_title}")
+                        
+                        activity_event = self._create_calendar_event_from_data({
+                            "id": f"activity_{destination}_day{day+1}_{str(uuid.uuid4())[:8]}",
+                            "title": activity_title,
+                            "description": f"Discover attractions and culture in {city_name}",
+                            "event_type": "attraction",
+                            "start_time": activity_time.isoformat(),
+                            "end_time": (activity_time + timedelta(hours=4)).isoformat(),
+                            "location": city_name,
+                            "details": {
+                                "source": "multi_destination_planning_fallback",
+                                "day_in_destination": day + 1,
+                                "destination_sequence": i + 1,
+                                "total_days_in_destination": destination_days,
+                                "recommendations": ["Visit main attractions", "Try local cuisine", "Explore cultural sites"]
+                            }
+                        })
+                        if activity_event:
+                            events.append(activity_event)
+                            logger.info(f"✅ Fallback activity event created and added")
+                        else:
+                            logger.error(f"❌ Failed to create fallback activity event")
                 
                 # Move to next destination period
                 current_date += timedelta(days=destination_days)
             
-            # ✅ Final return flight: Last Destination → Origin
+            # Final return flight: Last Destination → Origin
             final_destination = destinations[-1]
             final_destination_city_name = GeographicalMappings.get_city_name(final_destination)
             origin_city_name = GeographicalMappings.get_city_name(origin)
@@ -797,9 +772,12 @@ class PlanManager:
                 tool_results, final_destination, origin, return_flight_sequence
             )
             
+            return_flight_title = f"Return Flight: {final_destination_city_name} → {origin_city_name}"
+            logger.info(f"✈️ Creating return flight event: {return_flight_title}")
+            
             return_flight_event = self._create_calendar_event_from_data({
                 "id": f"flight_{final_destination}_to_{origin}_{str(uuid.uuid4())[:8]}",
-                "title": f"Return Flight: {final_destination_city_name} → {origin_city_name}",
+                "title": return_flight_title,
                 "description": f"Return journey from {final_destination_city_name} to {origin_city_name} - End of multi-city trip",
                 "event_type": "flight",
                 "start_time": return_flight_time.isoformat(),
@@ -821,6 +799,9 @@ class PlanManager:
             })
             if return_flight_event:
                 events.append(return_flight_event)
+                logger.info(f"✅ Return flight event created and added")
+            else:
+                logger.error(f"❌ Failed to create return flight event")
             
             logger.info(f"✅ Created {len(events)} events for multi-destination trip:")
             logger.info(f"   📍 {len(destinations)} destinations: {', '.join(destinations)}")
@@ -829,12 +810,1021 @@ class PlanManager:
             logger.info(f"   🎯 {sum(days_allocation)} total activity days ({total_allocated_days} days total)")
             logger.info(f"   Days distribution: {dict(zip(destinations, days_allocation))}")
             
+            # Apply intelligent time conflict resolution
+            try:
+                logger.info(f"🕐 === STARTING TIME CONFLICT RESOLUTION ===")
+                events = self._resolve_time_conflicts(events)
+                logger.info(f"🕐 Time conflict resolution completed: {len(events)} final events")
+            except Exception as e:
+                logger.error(f"❌ Error in time conflict resolution: {e}")
+            
             return events
             
         except Exception as e:
             logger.error(f"❌ Error creating multi-destination events: {e}")
             # Fallback to single destination
             return self._create_single_destination_fallback(destinations[0], start_date, duration)
+    
+    def _resolve_time_conflicts(self, events: List) -> List:
+        """Resolve time conflicts between events, prioritizing flights and respecting business hours"""
+        
+        # Separate events by type and priority
+        flight_events = [e for e in events if e.event_type == 'flight']
+        hotel_events = [e for e in events if e.event_type == 'hotel']  # All-day, no conflicts
+        attraction_events = [e for e in events if e.event_type == 'attraction']
+        meal_events = [e for e in events if e.event_type == 'meal']
+        transport_events = [e for e in events if e.event_type == 'transportation']
+        activity_events = [e for e in events if e.event_type == 'activity']
+        other_events = [e for e in events if e.event_type not in ['flight', 'hotel', 'attraction', 'meal', 'transportation', 'activity']]
+        
+        logger.info(f"Events breakdown: {len(flight_events)} flights, {len(hotel_events)} hotels, {len(attraction_events)} attractions, {len(meal_events)} meals, {len(transport_events)} transport, {len(activity_events)} activities, {len(other_events)} others")
+        
+        # Sort by start time for conflict detection (include all non-hotel events)
+        # Convert all times to timezone-naive for consistent comparison
+        def safe_start_time(event):
+            start_time = event.start_time
+            if isinstance(start_time, str):
+                # Parse ISO string and convert to naive datetime
+                if '+' in start_time or 'Z' in start_time:
+                    parsed = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                    return parsed.replace(tzinfo=None)
+                else:
+                    return datetime.fromisoformat(start_time)
+            elif hasattr(start_time, 'tzinfo') and start_time.tzinfo is not None:
+                # Convert timezone-aware to naive
+                return start_time.replace(tzinfo=None)
+            return start_time
+        
+        scheduled_events = sorted(flight_events + attraction_events + meal_events + transport_events + activity_events + other_events, 
+                                 key=safe_start_time)
+        
+        # Detect and resolve conflicts
+        resolved_events = []
+        
+        # 🔄 SIMPLE & EFFECTIVE: Build a clean time schedule day by day
+        logger.info(f"🔄 🎯 Starting conflict resolution for {len(scheduled_events)} events")
+        for i, event in enumerate(scheduled_events):
+            logger.info(f"🔄 📋 Event {i+1}: {event.title} ({event.event_type}) - {event.start_time}")
+        
+        resolved_events = self._build_conflict_free_schedule(scheduled_events)
+        
+        # Combine all events (resolved scheduled events + all-day hotel events)
+        final_events = resolved_events + hotel_events
+        
+        logger.info(f"Final events composition: {len(resolved_events)} scheduled events + {len(hotel_events)} hotel events = {len(final_events)} total events")
+        
+        logger.info(f"🔄 ✅ Final schedule: {len(final_events)} total events (NO timezone conversion)")
+        return final_events
+    
+    def _build_conflict_free_schedule(self, events: List):
+        """Build a completely conflict-free schedule using iterative day-by-day approach with cross-day conflict resolution"""
+        from datetime import datetime, timedelta, date
+        from collections import defaultdict
+        
+        logger.info(f"🔄 === BUILDING CONFLICT-FREE SCHEDULE ===")
+        
+        # Initial grouping by date
+        events_by_date = defaultdict(list)
+        for event in events:
+            if isinstance(event.start_time, str):
+                event_date = datetime.fromisoformat(event.start_time.replace('Z', '+00:00')).date()
+            else:
+                event_date = event.start_time.date()
+            events_by_date[event_date].append(event)
+            logger.debug(f"🔄 📅 Grouped event: {event.title} -> {event_date}")
+        
+        resolved_events = []
+        
+        # 🔥 NEW APPROACH: Iterative scheduling with cross-day movement tracking
+        max_iterations = 3  # Prevent infinite loops
+        iteration = 0
+        
+        while iteration < max_iterations:
+            iteration += 1
+            logger.info(f"🔄 Starting iteration {iteration} of schedule resolution")
+            
+            movements_occurred = False
+            daily_resolved_events = []
+            
+            # Process each day separately
+            for event_date in sorted(events_by_date.keys()):
+                daily_events = events_by_date[event_date]
+                logger.info(f"🔄 📅 Processing {event_date}: {len(daily_events)} events (iteration {iteration})")
+                
+                # Separate events by priority and scheduling approach
+                fixed_events = [e for e in daily_events if e.event_type == 'flight']
+                meal_events = [e for e in daily_events if e.event_type == 'meal']  # High priority, fixed times
+                flexible_events = [e for e in daily_events if e.event_type in ['attraction', 'transportation', 'activity']]  # Lower priority, flexible
+                hotel_events = [e for e in daily_events if e.event_type == 'hotel']  # All-day events
+                other_events = [e for e in daily_events if e.event_type not in ['flight', 'attraction', 'meal', 'transportation', 'activity', 'hotel']]
+                
+                attraction_count = len([e for e in flexible_events if e.event_type == 'attraction'])
+                
+                logger.debug(f"Daily breakdown for {event_date}: {len(fixed_events)} flights, {len(meal_events)} meals, {len(flexible_events)} flexible events ({attraction_count} attractions), {len(hotel_events)} hotels")
+                
+                # Step 1: Add fixed events as-is (flights have highest priority)
+                for event in fixed_events:
+                    daily_resolved_events.append(event)
+                
+                # Step 2: Schedule meal events with fixed times, respecting flight conflicts
+                scheduled_meals = []
+                if meal_events:
+                    scheduled_meals = self._schedule_meals_with_priority(
+                        event_date, meal_events, fixed_events
+                    )
+                    daily_resolved_events.extend(scheduled_meals)
+                    logger.info(f"🔄 🍽️ Scheduled {len(scheduled_meals)}/{len(meal_events)} meals (skipped {len(meal_events) - len(scheduled_meals)} due to flight conflicts)")
+                
+                # Step 3: Add other events that don't need scheduling
+                for event in other_events:
+                    daily_resolved_events.append(event)
+                
+                # Step 4: Schedule flexible events (attractions), respecting flights and meals
+                if flexible_events:
+                    all_fixed_events = fixed_events + scheduled_meals  # Meals are now fixed for attraction scheduling
+                    daily_resolved, moved_events = self._schedule_daily_attractions_with_movement_tracking(
+                        event_date, flexible_events, all_fixed_events
+                    )
+                    daily_resolved_events.extend(daily_resolved)
+                    
+                    # Track movements to next iteration
+                    if moved_events:
+                        movements_occurred = True
+                        logger.info(f"🔄 📤 {len(moved_events)} attractions moved to future days")
+                        
+                        # Update events_by_date with moved events
+                        for moved_event, target_date in moved_events:
+                            logger.info(f"🔄 📤 Moving {moved_event.title} to {target_date}")
+                            # Update event's actual date
+                            moved_event.start_time = moved_event.start_time.replace(
+                                year=target_date.year, month=target_date.month, day=target_date.day
+                            )
+                            moved_event.end_time = moved_event.end_time.replace(
+                                year=target_date.year, month=target_date.month, day=target_date.day  
+                            )
+                            events_by_date[target_date].append(moved_event)
+            
+            resolved_events = daily_resolved_events
+            
+            # If no movements occurred, we're done
+            if not movements_occurred:
+                logger.info(f"🔄 ✅ No cross-day movements in iteration {iteration}. Schedule stabilized.")
+                break
+            
+            # Rebuild events_by_date for next iteration (remove moved events from original dates)
+            if movements_occurred:
+                logger.info(f"🔄 🔄 Movements detected. Starting iteration {iteration + 1}...")
+                # Clear and rebuild to ensure moved events are properly grouped
+                new_events_by_date = defaultdict(list)
+                for event in resolved_events:
+                    if isinstance(event.start_time, str):
+                        event_date = datetime.fromisoformat(event.start_time.replace('Z', '+00:00')).date()
+                    else:
+                        event_date = event.start_time.date()
+                    new_events_by_date[event_date].append(event)
+                events_by_date = new_events_by_date
+        
+        logger.info(f"🔄 ✅ Schedule completed: {len(resolved_events)} events after {iteration} iteration(s)")
+        return resolved_events
+    
+    def _schedule_meals_with_priority(self, event_date, meal_events: List, fixed_events: List) -> List:
+        """
+        Schedule meal events with fixed times, respecting flight conflicts.
+        Priority: flight events > meal events
+        If flight conflicts with meal time, skip the meal.
+        """
+        from datetime import datetime, timedelta
+        
+        logger.info(f"🔄 🍽️ Scheduling {len(meal_events)} meals for {event_date.strftime('%Y-%m-%d')} with flight priority")
+        
+        scheduled_meals = []
+        
+        # Get blocked periods from flights
+        blocked_periods = []
+        for flight in fixed_events:
+            flight_start, flight_end = self._extract_naive_times(flight)
+            blocked_periods.append((flight_start, flight_end))
+            logger.info(f"🔄 ✈️ Flight blocked period: {flight_start.strftime('%H:%M')} - {flight_end.strftime('%H:%M')} ({flight.title})")
+        
+        # Process each meal with its correct fixed time
+        for meal in meal_events:
+            # Apply meal timing correction first
+            corrected_meal = self._correct_meal_timing(meal)
+            meal_start, meal_end = self._extract_naive_times(corrected_meal)
+            
+            # Check for conflicts with flights
+            conflicts_with_flight = any(
+                not (meal_end <= flight_start or meal_start >= flight_end)
+                for flight_start, flight_end in blocked_periods
+            )
+            
+            if conflicts_with_flight:
+                logger.warning(f"🔄 ⚠️ SKIPPING meal '{meal.title}' - conflicts with flight")
+                logger.warning(f"🔄     📅 Meal time: {meal_start.strftime('%H:%M')}-{meal_end.strftime('%H:%M')}")
+                continue  # Skip this meal entirely
+            else:
+                # No conflict, schedule the meal at its correct time
+                corrected_meal.start_time = meal_start
+                corrected_meal.end_time = meal_end
+                scheduled_meals.append(corrected_meal)
+                logger.info(f"🔄 ✅ Scheduled meal: {corrected_meal.title} at {meal_start.strftime('%H:%M')}-{meal_end.strftime('%H:%M')}")
+        
+        logger.info(f"🔄 🍽️ Meal scheduling complete: {len(scheduled_meals)}/{len(meal_events)} meals scheduled")
+        return scheduled_meals
+
+    def _schedule_daily_attractions_with_movement_tracking(self, event_date, attractions: List, fixed_events: List):
+        """
+        🔥 ENHANCED SCHEDULING: Schedule attractions with cross-day movement tracking
+        Returns: (scheduled_attractions, moved_attractions_with_dates)
+        """
+        from datetime import datetime, timedelta
+        import random
+        
+        logger.info(f"🔄 🎯 ENHANCED DYNAMIC scheduling {len(attractions)} attractions for {event_date.strftime('%Y-%m-%d')}")
+        logger.info(f"🔄 🔧 Features: Clean 30-min intervals, conflict resolution, business hours enforcement, movement tracking")
+        logger.info(f"🔄 📋 Priority: Attractions adjust around fixed events (flights + scheduled meals)")
+        
+        # Business hours: 9 AM to 5 PM  
+        business_start = datetime.combine(event_date, datetime.min.time().replace(hour=9))
+        business_end = datetime.combine(event_date, datetime.min.time().replace(hour=17))
+        
+        logger.info(f"🔄 📊 Business hours: {business_start.strftime('%H:%M')} - {business_end.strftime('%H:%M')}")
+        
+        # Track blocked periods from fixed events (flights)
+        blocked_periods = []
+        for flight in fixed_events:
+            flight_start, flight_end = self._extract_naive_times(flight)
+            blocked_periods.append((flight_start, flight_end))
+            logger.info(f"🔄 🚫 Fixed blocked period: {flight_start.strftime('%H:%M')} - {flight_end.strftime('%H:%M')} ({flight.title})")
+        
+        # Track all scheduled periods (fixed + scheduled attractions)
+        scheduled_periods = blocked_periods.copy()
+        scheduled_attractions = []
+        moved_attractions = []  # (attraction, target_date) tuples
+        
+        # Start scheduling attractions from business hours start
+        current_time = business_start
+        
+        for i, attraction in enumerate(attractions):
+            # Use clean 30-minute intervals
+            # Duration: 2.0h, 2.5h, 3.0h, 3.5h, or 4.0h (30-min multiples)
+            duration_options = [2.0, 2.5, 3.0, 3.5, 4]
+            duration_hours = random.choice(duration_options)
+            duration = timedelta(hours=duration_hours)
+            
+            # Gap: 30min, 60min, or 90min (clean intervals)
+            gap_minutes = random.choice([30, 60, 90])
+            gap = timedelta(minutes=gap_minutes)
+            
+            # Round current_time to nearest 30-minute mark
+            current_time = self._round_to_30min(current_time)
+            
+            required_end_time = current_time + duration
+            next_start_time = required_end_time + gap
+            
+            # Check conflicts with ALL scheduled periods (fixed + attractions)
+            conflicts_with_any = any(
+                not (required_end_time <= period_start or current_time >= period_end)
+                for period_start, period_end in scheduled_periods
+            )
+            
+            if conflicts_with_any:
+                # Try duration shortening first before moving the event
+                shortened_success = False
+                
+                # Find conflicting periods to understand what we're working around
+                conflicting_periods = [
+                    (period_start, period_end) for period_start, period_end in scheduled_periods
+                    if not (required_end_time <= period_start or current_time >= period_end)
+                ]
+                
+                # Check if conflicts are with fixed events (meal, transport, flight)
+                # Only trigger shortening for conflicts with fixed events, not other attractions
+                conflicting_with_fixed_events = False
+                for period_start, period_end in conflicting_periods:
+                    # Check if this period belongs to a fixed event
+                    for fixed_event in fixed_events:  # fixed_events contains flights and scheduled meals
+                        if hasattr(fixed_event, 'start_time') and hasattr(fixed_event, 'end_time'):
+                            f_start, f_end = self._extract_naive_times(fixed_event)
+                            if f_start == period_start and f_end == period_end:
+                                conflicting_with_fixed_events = True
+                                break
+                    if conflicting_with_fixed_events:
+                        break
+                
+                # Try to fit by shortening duration (minimum 2 hours) - only for fixed event conflicts
+                min_duration = timedelta(hours=2.0)
+                if duration > min_duration and conflicting_periods and conflicting_with_fixed_events:
+                    # Calculate available space before next conflict
+                    next_conflict_start = min(period_start for period_start, period_end in conflicting_periods)
+                    
+                    # Ensure 1-hour buffer from flight events
+                    flight_periods = []
+                    for s, e in scheduled_periods:
+                        for f in fixed_events:
+                            if hasattr(f, 'event_type') and f.event_type == 'flight':
+                                f_start, f_end = self._extract_naive_times(f)
+                                if f_start == s and f_end == e:
+                                    flight_periods.append((s, e))
+                                    break
+                    
+                    available_space = next_conflict_start - current_time
+                    if flight_periods:
+                        # Need 1-hour buffer from flights
+                        flight_buffer = timedelta(hours=1)
+                        future_flights = [flight_start - current_time - flight_buffer 
+                                        for flight_start, _ in flight_periods 
+                                        if flight_start > current_time]
+                        # Check if future_flights is not empty before calling min()
+                        if future_flights:
+                            min_flight_space = min(future_flights)
+                            available_space = min(available_space, min_flight_space)
+                    
+                    # Try shortened duration if it's at least 2 hours
+                    if available_space >= min_duration:
+                        shortened_duration = max(min_duration, available_space - timedelta(minutes=30))  # Small buffer
+                        # Round duration by creating a dummy datetime and using the existing function
+                        dummy_start = datetime.combine(event_date, datetime.min.time())
+                        dummy_end = dummy_start + shortened_duration
+                        rounded_end = self._round_to_30min(dummy_end)
+                        shortened_duration = rounded_end - dummy_start
+                        
+                        if shortened_duration >= min_duration:
+                            duration = shortened_duration
+                            required_end_time = current_time + duration
+                            next_start_time = required_end_time + gap
+                            shortened_success = True
+                            logger.info(f"🔄 ✂️  Shortened duration to {duration.total_seconds()/3600:.1f}h to avoid conflict with fixed events")
+                
+                # If shortening didn't work or wasn't attempted, use original logic (move start time)
+                if not shortened_success:
+                    if not conflicting_with_fixed_events:
+                        logger.info(f"🔄 ⏩ Skipping duration shortening - conflict is with other attractions, not fixed events")
+                    else:
+                        logger.info(f"🔄 ⏩ Duration shortening failed - proceeding with time adjustment")
+                    latest_end = max(
+                        period_end for period_start, period_end in conflicting_periods
+                    )
+                    adjusted_start = self._round_to_30min(latest_end + timedelta(minutes=30))
+                    required_end_time = adjusted_start + duration
+                    current_time = adjusted_start
+                    next_start_time = required_end_time + gap
+                    logger.info(f"🔄 ⚠️  Conflict detected! Adjusted start time to {adjusted_start.strftime('%H:%M')}")
+            
+            # Check if fits within business hours
+            if required_end_time <= business_end:
+                # Success! Schedule the attraction
+                attraction.start_time = current_time
+                attraction.end_time = required_end_time
+                
+                scheduled_attractions.append(attraction)
+                logger.info(f"🔄 ✅ Scheduled: {attraction.title}")
+                logger.info(f"🔄     📅 Time: {current_time.strftime('%H:%M')} - {required_end_time.strftime('%H:%M')} ({duration_hours}h)")
+                logger.info(f"🔄     ⏰ Gap after: {gap_minutes} minutes")
+                
+                # Add this attraction to scheduled periods to prevent future conflicts
+                scheduled_periods.append((current_time, required_end_time))
+                
+                # Move to next start time for next attraction
+                current_time = next_start_time
+                
+            else:
+                # Can't fit in today - mark for movement to next day
+                target_date = event_date + timedelta(days=1)
+                logger.info(f"🔄 📅 Marking for next day: {attraction.title} (would end at {required_end_time.strftime('%H:%M')}, past business hours)")
+                moved_attractions.append((attraction, target_date))
+        
+        # Final conflict verification and resolution for scheduled attractions
+        if len(scheduled_attractions) > 1:
+            scheduled_attractions = self._verify_and_resolve_conflicts(scheduled_attractions, event_date)
+        
+        logger.info(f"🔄 ✅ Completed ENHANCED scheduling for {event_date.strftime('%Y-%m-%d')}: {len(scheduled_attractions)} scheduled, {len(moved_attractions)} moved")
+        
+        return scheduled_attractions, moved_attractions
+    
+    def _schedule_daily_attractions(self, event_date, attractions: List, fixed_events: List):
+        """
+        🔥 NEW DYNAMIC SCHEDULING: Schedule attractions with flexible timing
+        - Each attraction: minimum 2 hours, flexible duration
+        - Between attractions: 30-60 minute gaps
+        - Business hours: 9:00-17:00
+        - No overlaps, intelligent spacing
+        """
+        from datetime import datetime, timedelta
+        from copy import deepcopy
+        import random
+        
+        logger.info(f"🔄 🎯 ENHANCED DYNAMIC scheduling {len(attractions)} attractions for {event_date}")
+        logger.info(f"🔄 🔧 Features: Clean 30-min intervals, conflict resolution, business hours enforcement")
+        
+        # Business hours: 9 AM - 5 PM (8 hours total)
+        business_start = datetime.combine(event_date, datetime.min.time().replace(hour=9))
+        business_end = datetime.combine(event_date, datetime.min.time().replace(hour=17))
+        
+        logger.info(f"🔄 📊 Business hours: {business_start.strftime('%H:%M')} - {business_end.strftime('%H:%M')}")
+        
+        # Collect blocked periods from fixed events (flights)
+        blocked_periods = []
+        for fixed_event in fixed_events:
+            start, end = self._extract_naive_times(fixed_event)
+            blocked_periods.append((start, end))
+            logger.info(f"🔄 🚫 Fixed blocked period: {start.strftime('%H:%M')} - {end.strftime('%H:%M')} ({fixed_event.title})")
+        
+        # Start scheduling attractions dynamically
+        scheduled_attractions = []
+        next_day_attractions = []
+        current_time = business_start
+        
+        # 🔥 TRACK ALL SCHEDULED PERIODS to prevent overlaps
+        scheduled_periods = list(blocked_periods)  # Start with fixed events
+        
+        for i, attraction in enumerate(attractions):
+            # Use clean 30-minute intervals
+            # Duration: 2.0h, 2.5h, 3.0h, or 3.5h (30-min multiples)
+            duration_options = [2.0, 2.5, 3.0, 3.5, 4]
+            duration_hours = random.choice(duration_options)
+            duration = timedelta(hours=duration_hours)
+            
+            # Gap: 30min or 60min (clean intervals)
+            gap_minutes = random.choice([30, 60, 90])
+            gap = timedelta(minutes=gap_minutes)
+            
+            # Round current_time to nearest 30-minute mark
+            current_time = self._round_to_30min(current_time)
+            
+            # Check if we can fit this attraction in the current slot
+            required_end_time = current_time + duration
+            next_start_time = required_end_time + gap
+            
+            # Check conflicts with ALL scheduled periods (fixed + attractions)
+            conflicts_with_any = any(
+                not (required_end_time <= period_start or current_time >= period_end)
+                for period_start, period_end in scheduled_periods
+            )
+            
+            # If there's a conflict, find the next available slot
+            if conflicts_with_any:
+                # Find the next available time after ALL conflicts
+                latest_conflict_end = max(
+                    period_end for period_start, period_end in scheduled_periods
+                    if not (required_end_time <= period_start or current_time >= period_end)
+                )
+                current_time = self._round_to_30min(latest_conflict_end + timedelta(minutes=15))
+                required_end_time = current_time + duration
+                next_start_time = required_end_time + gap
+                logger.info(f"🔄 ⚠️  Conflict detected! Adjusted start time to {current_time.strftime('%H:%M')}")
+            
+            # Check if it fits within business hours
+            if required_end_time <= business_end:
+                # Schedule this attraction
+                new_attraction = deepcopy(attraction)
+                new_attraction.start_time = current_time
+                new_attraction.end_time = required_end_time
+                
+                scheduled_attractions.append(new_attraction)
+                
+                # Add this attraction to scheduled periods to prevent future conflicts
+                scheduled_periods.append((current_time, required_end_time))
+                
+                logger.info(f"🔄 ✅ Scheduled: {attraction.title}")
+                logger.info(f"🔄     📅 Time: {current_time.strftime('%H:%M')} - {required_end_time.strftime('%H:%M')} ({duration_hours:.1f}h)")
+                logger.info(f"🔄     ⏰ Gap after: {gap_minutes} minutes")
+                
+                # Update current time for next attraction
+                current_time = self._round_to_30min(next_start_time)
+                
+            else:
+                # Can't fit in today - move to next day
+                logger.info(f"🔄 📅 Moving to next day: {attraction.title} (would end at {required_end_time.strftime('%H:%M')}, past business hours)")
+                next_day_attractions.append(attraction)
+        
+        # Schedule remaining attractions on next day
+        if next_day_attractions:
+            logger.info(f"🔄 📅 Scheduling {len(next_day_attractions)} attractions on next day")
+            next_day_scheduled = self._schedule_daily_attractions(
+                event_date + timedelta(days=1),
+                next_day_attractions,
+                []  # No fixed events on moved day
+            )
+            scheduled_attractions.extend(next_day_scheduled)
+        
+        # 🔥 FIX 1: Final conflict verification and resolution
+        if len(scheduled_attractions) > 1:
+            scheduled_attractions = self._verify_and_resolve_conflicts(scheduled_attractions, event_date)
+        
+        logger.info(f"🔄 ✅ Completed DYNAMIC scheduling for {event_date.strftime('%Y-%m-%d')}: {len(scheduled_attractions)} total attractions")
+        return scheduled_attractions
+    
+    def _extract_naive_times(self, event):
+        """Extract naive datetime objects from event start/end times"""
+        from datetime import datetime
+        
+        # Handle start time
+        if isinstance(event.start_time, str):
+            start = datetime.fromisoformat(event.start_time.replace('Z', '+00:00'))
+        else:
+            start = event.start_time
+        
+        # Handle end time
+        if isinstance(event.end_time, str):
+            end = datetime.fromisoformat(event.end_time.replace('Z', '+00:00'))
+        else:
+            end = event.end_time
+        
+        # Convert to naive datetime for consistent scheduling
+        if hasattr(start, 'tzinfo') and start.tzinfo is not None:
+            start = start.replace(tzinfo=None)
+        if hasattr(end, 'tzinfo') and end.tzinfo is not None:
+            end = end.replace(tzinfo=None)
+        
+        return start, end
+    
+    def _round_to_30min(self, dt):
+        """Round datetime to nearest 30-minute mark for clean scheduling"""
+        from datetime import datetime, timedelta
+        
+        # Get current minutes
+        current_minutes = dt.minute
+        
+        # Round to nearest 30-minute mark
+        if current_minutes <= 15:
+            # Round down to :00
+            rounded_minutes = 0
+        elif current_minutes <= 45:
+            # Round to :30
+            rounded_minutes = 30
+        else:
+            # Round up to next hour :00
+            dt = dt + timedelta(hours=1)
+            rounded_minutes = 0
+        
+        # Create clean time
+        clean_time = dt.replace(minute=rounded_minutes, second=0, microsecond=0)
+        return clean_time
+    
+    def _verify_and_resolve_conflicts(self, attractions, event_date):
+        """
+        🔥 FINAL CONFLICT RESOLUTION: Verify and iteratively resolve any remaining conflicts
+        """
+        from datetime import datetime, timedelta
+        from copy import deepcopy
+        
+        logger.info(f"🔄 🔍 Verifying {len(attractions)} attractions for conflicts on {event_date.strftime('%Y-%m-%d')}")
+        
+        max_iterations = 5
+        iteration = 0
+        
+        while iteration < max_iterations:
+            iteration += 1
+            conflicts_found = False
+            
+            # Check all pairs for conflicts
+            for i, attr1 in enumerate(attractions):
+                for j, attr2 in enumerate(attractions[i+1:], i+1):
+                    start1, end1 = self._extract_naive_times(attr1)
+                    start2, end2 = self._extract_naive_times(attr2)
+                    
+                    # Check if they overlap
+                    if not (end1 <= start2 or end2 <= start1):
+                        logger.info(f"🔄 ⚠️  CONFLICT DETECTED (iter {iteration}): {attr1.title} vs {attr2.title}")
+                        logger.info(f"🔄     📅 {start1.strftime('%H:%M')}-{end1.strftime('%H:%M')} vs {start2.strftime('%H:%M')}-{end2.strftime('%H:%M')}")
+                        
+                        # 🔥 CRITICAL FIX: Always move the LATER event forward, never backward
+                        # This prevents events from being moved to already-occupied earlier times
+                        if start2 >= start1:
+                            # Move attr2 after attr1 (correct direction)
+                            new_start = self._round_to_30min(end1 + timedelta(minutes=30))
+                            duration = end2 - start2
+                            new_end = new_start + duration
+                            
+                            # 🔥 CHECK: Ensure we don't move past business hours (5 PM)
+                            business_end = datetime.combine(event_date, datetime.min.time().replace(hour=17))
+                            if new_end > business_end:
+                                logger.warning(f"🔄 ⚠️  Cannot reschedule {attr2.title} - would exceed business hours")
+                                # Move to next day instead of forcing into same day
+                                continue
+                            
+                            attr2.start_time = new_start
+                            attr2.end_time = new_end
+                            
+                            logger.info(f"🔄 ✅ Resolved: Moved {attr2.title} to {new_start.strftime('%H:%M')}-{new_end.strftime('%H:%M')}")
+                        else:
+                            # Move attr1 after attr2 (correct direction)  
+                            new_start = self._round_to_30min(end2 + timedelta(minutes=30))
+                            duration = end1 - start1
+                            new_end = new_start + duration
+                            
+                            # 🔥 CHECK: Ensure we don't move past business hours (5 PM)
+                            business_end = datetime.combine(event_date, datetime.min.time().replace(hour=17))
+                            if new_end > business_end:
+                                logger.warning(f"🔄 ⚠️  Cannot reschedule {attr1.title} - would exceed business hours")
+                                # Move to next day instead of forcing into same day
+                                continue
+                            
+                            attr1.start_time = new_start
+                            attr1.end_time = new_end
+                            
+                            logger.info(f"🔄 ✅ Resolved: Moved {attr1.title} to {new_start.strftime('%H:%M')}-{new_end.strftime('%H:%M')}")
+                        
+                        conflicts_found = True
+                        break
+                if conflicts_found:
+                    break
+            
+            if not conflicts_found:
+                logger.info(f"🔄 ✅ No conflicts found after {iteration} iteration(s)")
+                break
+        
+        if iteration >= max_iterations:
+            logger.warning(f"🔄 ⚠️  Max iterations reached, some conflicts may remain")
+        
+        return attractions
+    
+    def _generate_time_slots(self, business_start: datetime, business_end: datetime, blocked_periods: list):
+        """Generate available time slots, avoiding blocked periods"""
+        from datetime import timedelta
+        
+        # Start with the full business day
+        slots = [(business_start, business_end)]
+        
+        # Remove blocked periods
+        for block_start, block_end in blocked_periods:
+            new_slots = []
+            for slot_start, slot_end in slots:
+                # Check if this slot overlaps with the blocked period
+                if block_end <= slot_start or block_start >= slot_end:
+                    # No overlap, keep the slot
+                    new_slots.append((slot_start, slot_end))
+                else:
+                    # Overlap, split the slot
+                    if block_start > slot_start:
+                        # Add the part before the blocked period
+                        buffer_end = block_start - timedelta(hours=1)  # 1-hour buffer before flight
+                        if buffer_end > slot_start:
+                            new_slots.append((slot_start, buffer_end))
+                    
+                    if block_end < slot_end:
+                        # Add the part after the blocked period
+                        buffer_start = block_end + timedelta(hours=1)  # 1-hour buffer after flight
+                        if buffer_start < slot_end:
+                            new_slots.append((buffer_start, slot_end))
+            
+            slots = new_slots
+        
+        # Filter out slots that are too small (less than 1 hour)
+        slots = [(start, end) for start, end in slots if (end - start) >= timedelta(hours=1)]
+        
+        return sorted(slots)
+    
+    def _adjust_attraction_time(self, attraction_event, scheduled_events: List):
+        """Adjust attraction event time to avoid conflicts with scheduled events"""
+        from datetime import datetime, timedelta
+        
+        # Log the input event for debugging
+        logger.debug(f"🕐 🔍 Adjusting time for: {attraction_event.title}")
+        logger.debug(f"🕐    Original start: {attraction_event.start_time} (type: {type(attraction_event.start_time)})")
+        logger.debug(f"🕐    Original end: {attraction_event.end_time} (type: {type(attraction_event.end_time)})")
+        
+        # Handle both datetime objects and ISO strings
+        if isinstance(attraction_event.start_time, str):
+            original_start = datetime.fromisoformat(attraction_event.start_time.replace('Z', '+00:00'))
+            logger.debug(f"🕐    Parsed start from string: {original_start}")
+        else:
+            original_start = attraction_event.start_time
+            logger.debug(f"🕐    Using datetime object: {original_start}")
+            
+        if isinstance(attraction_event.end_time, str):
+            original_end = datetime.fromisoformat(attraction_event.end_time.replace('Z', '+00:00'))
+            logger.debug(f"🕐    Parsed end from string: {original_end}")
+        else:
+            original_end = attraction_event.end_time
+            logger.debug(f"🕐    Using datetime object: {original_end}")
+            
+        duration = original_end - original_start
+        logger.debug(f"🕐    Duration: {duration}")
+        
+        # Get the date and find available time slots
+        event_date = original_start.date()
+        
+        # Business hours: 9:00 AM to 6:00 PM (in the same timezone as the original event)
+        if original_start.tzinfo:
+            # Create timezone-aware business hours
+            business_start = original_start.replace(hour=9, minute=0, second=0, microsecond=0)
+            business_end = original_start.replace(hour=18, minute=0, second=0, microsecond=0)
+            logger.debug(f"🕐    Timezone-aware business hours: {business_start} - {business_end}")
+        else:
+            # Create naive business hours
+            business_start = datetime.combine(event_date, datetime.min.time().replace(hour=9))
+            business_end = datetime.combine(event_date, datetime.min.time().replace(hour=18))
+            logger.debug(f"🕐    Naive business hours: {business_start} - {business_end}")
+            
+        logger.debug(f"🕐    Business hours timezone: {business_start.tzinfo}")
+        
+        # Handle special cases for arrival/departure days
+        same_date_flights = []
+        for e in scheduled_events:
+            if e.event_type == 'flight':
+                # Handle both datetime objects and ISO strings for flight start_time
+                if isinstance(e.start_time, str):
+                    flight_date = datetime.fromisoformat(e.start_time.replace('Z', '+00:00')).date()
+                else:
+                    flight_date = e.start_time.date()
+                
+                if flight_date == event_date:
+                    same_date_flights.append(e)
+        
+        # Get destination IATA and city name from attraction event
+        attraction_location = attraction_event.location or ''
+        
+        # Convert IATA to city name for matching
+        from app.knowledge.geographical_data import GeographicalMappings
+        attraction_city = GeographicalMappings.get_city_name(attraction_location)
+        
+        # Check for arrival flights (incoming to this destination)
+        arrival_flights = []
+        departure_flights = []
+        
+        for flight in same_date_flights:
+            flight_details = flight.details or {}
+            flight_destination = flight_details.get('destination', '')
+            flight_origin = flight_details.get('origin', '')
+            
+            # Check if this flight is arriving to the attraction's destination
+            # Match by IATA code or city name
+            if (flight_destination == attraction_location or 
+                flight_destination == attraction_city or
+                attraction_city.lower() in flight_destination.lower()):
+                arrival_flights.append(flight)
+            
+            # Check if this flight is departing from the attraction's destination
+            if (flight_origin == attraction_location or
+                flight_origin == attraction_city or
+                attraction_city.lower() in flight_origin.lower()):
+                departure_flights.append(flight)
+        
+        # Adjust business hours based on flights
+        if arrival_flights:
+            # If there's an arrival flight, attractions can only start after arrival + buffer time
+            arrival_flight = min(arrival_flights, key=lambda x: x.start_time if isinstance(x.start_time, datetime) else datetime.fromisoformat(x.start_time.replace('Z', '+00:00')))
+            # Handle both datetime objects and ISO strings for flight end_time
+            if isinstance(arrival_flight.end_time, str):
+                arrival_end = datetime.fromisoformat(arrival_flight.end_time.replace('Z', '+00:00'))
+            else:
+                arrival_end = arrival_flight.end_time
+            # Add 2-hour buffer for immigration, baggage, transport to city
+            earliest_start = arrival_end + timedelta(hours=2)
+            business_start = max(business_start, earliest_start)
+            logger.info(f"🕐 ✈️  Arrival day adjustment: earliest attraction start at {business_start.strftime('%H:%M')} due to {arrival_flight.title}")
+        
+        if departure_flights:
+            # If there's a departure flight, attractions must end before departure - buffer time
+            departure_flight = min(departure_flights, key=lambda x: x.start_time if isinstance(x.start_time, datetime) else datetime.fromisoformat(x.start_time.replace('Z', '+00:00')))
+            # Handle both datetime objects and ISO strings for flight start_time
+            if isinstance(departure_flight.start_time, str):
+                departure_start = datetime.fromisoformat(departure_flight.start_time.replace('Z', '+00:00'))
+            else:
+                departure_start = departure_flight.start_time
+            # Subtract 3-hour buffer for hotel checkout, transport to airport, check-in
+            latest_end = departure_start - timedelta(hours=3)
+            business_end = min(business_end, latest_end)
+            logger.info(f"🕐 ✈️  Departure day adjustment: latest attraction end at {business_end.strftime('%H:%M')} due to {departure_flight.title}")
+        
+        # Check if we still have enough time for the attraction
+        if business_start + duration > business_end:
+            logger.warning(f"🕐 ⚠️  Not enough time on {event_date} for {attraction_event.title} (need {duration}, have {business_end - business_start})")
+            
+            # Try to move to next day instead of giving up
+            logger.info(f"🕐 📅 Attempting to move {attraction_event.title} to next day...")
+            
+            next_day = event_date + timedelta(days=1)
+            
+            # Create business hours for next day
+            if original_start.tzinfo:
+                next_business_start = original_start.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                next_business_end = original_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            else:
+                next_business_start = datetime.combine(next_day, datetime.min.time().replace(hour=9))
+                next_business_end = datetime.combine(next_day, datetime.min.time().replace(hour=18))
+                
+            # Check for flights or other conflicts on next day
+            next_day_conflicts = []
+            for e in scheduled_events:
+                if isinstance(e.start_time, str):
+                    check_date = datetime.fromisoformat(e.start_time.replace('Z', '+00:00')).date()
+                else:
+                    check_date = e.start_time.date()
+                    
+                if check_date == next_day:
+                    next_day_conflicts.append(e)
+            
+            # Try multiple strategies for next day
+            if len(next_day_conflicts) == 0 and next_business_start + duration <= next_business_end:
+                logger.info(f"🕐 ✅ Moving {attraction_event.title} to {next_day} at {next_business_start.strftime('%H:%M')}")
+                
+                from copy import deepcopy
+                adjusted_event = deepcopy(attraction_event)
+                adjusted_event.start_time = next_business_start
+                adjusted_event.end_time = next_business_start + duration
+                return adjusted_event
+            
+            # Strategy 2: Try reducing duration by 60 minutes if original is too long
+            reduced_duration = duration - timedelta(minutes=60)
+            if reduced_duration >= timedelta(hours=1) and next_business_start + reduced_duration <= next_business_end and len(next_day_conflicts) <= 1:
+                logger.info(f"🕐 ⏱️  Trying reduced duration on next day: {reduced_duration}")
+                from copy import deepcopy
+                adjusted_event = deepcopy(attraction_event)
+                adjusted_event.start_time = next_business_start
+                adjusted_event.end_time = next_business_start + reduced_duration
+                return adjusted_event
+            
+            # Strategy 3: Last resort - keep original time but log warning
+            logger.error(f"🕐 ❌ All strategies failed for {attraction_event.title} (next day conflicts: {len(next_day_conflicts)}), keeping original time")
+            return attraction_event
+        
+        # Find conflicts on the same date
+        same_date_events = []
+        for e in scheduled_events:
+            if isinstance(e.start_time, str):
+                event_date_check = datetime.fromisoformat(e.start_time.replace('Z', '+00:00')).date()
+            else:
+                event_date_check = e.start_time.date()
+            
+            if event_date_check == event_date:
+                same_date_events.append(e)
+        
+        # Try to find a conflict-free time slot
+        candidate_start = business_start
+        
+        while candidate_start + duration <= business_end:
+            candidate_end = candidate_start + duration
+            
+            # Check for conflicts with existing events
+            has_conflict = False
+            for existing_event in same_date_events:
+                # Handle both datetime objects and ISO strings
+                if isinstance(existing_event.start_time, str):
+                    existing_start = datetime.fromisoformat(existing_event.start_time.replace('Z', '+00:00'))
+                else:
+                    existing_start = existing_event.start_time
+                    
+                if isinstance(existing_event.end_time, str):
+                    existing_end = datetime.fromisoformat(existing_event.end_time.replace('Z', '+00:00'))
+                else:
+                    existing_end = existing_event.end_time
+                
+                # Add 1-hour buffer between attraction events (but not for flights/hotels)
+                buffer_time = timedelta(hours=1) if hasattr(existing_event, 'event_type') and existing_event.event_type == 'attraction' else timedelta(0)
+                
+                # Check if times overlap (including buffer for attractions)
+                effective_existing_end = existing_end + buffer_time
+                effective_candidate_start = candidate_start
+                
+                if (effective_candidate_start < effective_existing_end and candidate_end > existing_start):
+                    has_conflict = True
+                    logger.debug(f"🕐 ⚠️  Conflict detected with {getattr(existing_event, 'title', 'Unknown')} (buffer: {buffer_time})")
+                    break
+            
+            if not has_conflict:
+                # Double-check: ensure we have enough buffer time after this slot
+                next_conflict_start = None
+                for check_event in same_date_events:
+                    if isinstance(check_event.start_time, str):
+                        check_start = datetime.fromisoformat(check_event.start_time.replace('Z', '+00:00'))
+                    else:
+                        check_start = check_event.start_time
+                    
+                    if check_start > candidate_end:
+                        if next_conflict_start is None or check_start < next_conflict_start:
+                            next_conflict_start = check_start
+                
+                # Ensure we have at least 1-hour buffer before next event
+                if next_conflict_start is None or (next_conflict_start - candidate_end) >= timedelta(hours=1):
+                    logger.info(f"🕐 ✅ Found valid time slot: {candidate_start.strftime('%H:%M')} - {candidate_end.strftime('%H:%M')}")
+                    break
+                else:
+                    logger.debug(f"🕐 ⚠️  Insufficient buffer to next event at {next_conflict_start.strftime('%H:%M')}")
+                    has_conflict = True
+            
+            # Move to next 30-minute slot and try again (more granular)
+            candidate_start += timedelta(minutes=30)
+        
+        # If we couldn't find a slot, try moving to next day
+        if candidate_start + duration > business_end:
+            logger.warning(f"🕐 ⚠️  Could not find conflict-free time for {attraction_event.title} on {event_date}")
+            
+            # 🚨 Try to move to next day
+            logger.info(f"🕐 📅 Attempting to move {attraction_event.title} to next day due to conflicts...")
+            
+            next_day = event_date + timedelta(days=1)
+            
+            # Create business hours for next day
+            if original_start.tzinfo:
+                next_business_start = original_start.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                next_business_end = original_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            else:
+                next_business_start = datetime.combine(next_day, datetime.min.time().replace(hour=9))
+                next_business_end = datetime.combine(next_day, datetime.min.time().replace(hour=18))
+                
+            # Check for flights or other conflicts on next day
+            next_day_conflicts = []
+            for e in scheduled_events:
+                if isinstance(e.start_time, str):
+                    check_date = datetime.fromisoformat(e.start_time.replace('Z', '+00:00')).date()
+                else:
+                    check_date = e.start_time.date()
+                    
+                if check_date == next_day:
+                    next_day_conflicts.append(e)
+            
+            # Try multiple strategies for next day  
+            if len(next_day_conflicts) == 0 and next_business_start + duration <= next_business_end:
+                logger.info(f"🕐 ✅ Moving {attraction_event.title} to {next_day} at {next_business_start.strftime('%H:%M')}")
+                
+                from copy import deepcopy
+                adjusted_event = deepcopy(attraction_event)
+                adjusted_event.start_time = next_business_start
+                adjusted_event.end_time = next_business_start + duration
+                return adjusted_event
+            
+            # 🚨 Strategy 2: Try reducing duration by 30 minutes if original is too long
+            reduced_duration = duration - timedelta(minutes=30)
+            if reduced_duration >= timedelta(hours=1) and next_business_start + reduced_duration <= next_business_end and len(next_day_conflicts) <= 1:
+                logger.info(f"🕐 ⏱️  Trying reduced duration on next day: {reduced_duration}")
+                from copy import deepcopy
+                adjusted_event = deepcopy(attraction_event)
+                adjusted_event.start_time = next_business_start
+                adjusted_event.end_time = next_business_start + reduced_duration
+                return adjusted_event
+            
+            # 🚨 Strategy 3: Last resort - keep original time but log warning
+            logger.error(f"🕐 ❌ All strategies failed for {attraction_event.title} (next day conflicts: {len(next_day_conflicts)}), keeping original time")
+            return attraction_event
+        
+        # Create a new CalendarEvent with adjusted times
+        from copy import deepcopy
+        adjusted_event = deepcopy(attraction_event)
+        adjusted_event.start_time = candidate_start
+        adjusted_event.end_time = candidate_start + duration
+        
+        # Log the successful adjustment with timezone info
+        logger.info(f"🕐 ✅ Successfully adjusted {attraction_event.title}")
+        logger.info(f"🕐    Final time: {adjusted_event.start_time} - {adjusted_event.end_time}")
+        logger.info(f"🕐    Timezone: {adjusted_event.start_time.tzinfo}")
+        
+        return adjusted_event
+    
+    def _get_attractions_for_destination(self, tool_results: Dict[str, Any], destination_iata: str, city_name: str) -> List:
+        """Extract attractions for a specific destination from multi-city attraction search results"""
+        if "attraction_search" not in tool_results:
+            logger.info(f"🎯 No attraction_search results found in tool_results")
+            return []
+        
+        attraction_result = tool_results["attraction_search"]
+        if not hasattr(attraction_result, 'attractions') or not attraction_result.attractions:
+            logger.info(f"🎯 No attractions found in attraction_search results")
+            return []
+        
+        # Filter attractions for this specific destination
+        # In multi-city mode, each attraction has location set to IATA code
+        city_attractions = []
+        
+        # 🔧 Convert city name to IATA code for matching
+        from app.knowledge.geographical_data import GeographicalMappings
+        city_iata = None
+        
+        # Find IATA code for this city
+        for iata, city in GeographicalMappings.IATA_TO_CITY.items():
+            if city.lower() == city_name.lower():
+                city_iata = iata
+                break
+        
+        logger.info(f"🎯 Looking for attractions with location matching:")
+        logger.info(f"🎯   - Destination IATA: '{destination_iata}'")
+        logger.info(f"🎯   - City name: '{city_name}'")
+        logger.info(f"🎯   - City IATA: '{city_iata}'")
+        
+        for attraction in attraction_result.attractions:
+            attraction_location = getattr(attraction, 'location', '')
+            logger.debug(f"🎯 Checking attraction location: '{attraction_location}'")
+            
+            # Match by multiple criteria
+            if (attraction_location == destination_iata or           # Direct IATA match
+                attraction_location == city_iata or                 # City's IATA code match
+                attraction_location.lower() == city_name.lower() or # City name match
+                city_name.lower() in attraction_location.lower()):  # Partial city name match
+                city_attractions.append(attraction)
+                logger.info(f"🎯 ✅ Matched attraction: {getattr(attraction, 'name', 'Unknown')} (location: {attraction_location})")
+                
+        logger.info(f"🎯 Found {len(city_attractions)} attractions for {city_name} (IATA: {destination_iata})")
+        logger.info(f"🎯 Total attractions in search results: {len(attraction_result.attractions)}")
+        
+        # 🔍 Debug: Show all attraction locations if no matches found
+        if len(city_attractions) == 0 and len(attraction_result.attractions) > 0:
+            logger.info(f"🎯 ❌ No matches found. All attraction locations in results:")
+            for i, attraction in enumerate(attraction_result.attractions[:10]):  # Show first 10
+                logger.info(f"🎯   [{i+1}] {getattr(attraction, 'name', 'Unknown')} -> location: '{getattr(attraction, 'location', 'None')}'")
+        
+        return city_attractions
     
     def _extract_origin_from_message(self, user_message: str) -> Optional[str]:
         """Extract origin city/airport from user message"""
@@ -879,8 +1869,8 @@ class PlanManager:
         elif any(word in user_lower for word in ['tokyo', 'nrt', 'hnd']):
             return "NRT"
         
-        logger.info(f"🛫 No origin found in message, using default")
-        return None
+        logger.info(f"🛫 No origin found in message, using default: Toronto (YYZ)")
+        return "YYZ" 
 
     def _extract_flight_details_for_route(
         self, tool_results: Dict[str, Any], origin: str, destination: str, sequence: int
@@ -1154,7 +2144,7 @@ class PlanManager:
         """Create calendar event from structured event data with event type validation"""
         try:
             # Import required classes
-            from app.api.schemas import CalendarEvent, CalendarEventType
+            from app.api.schemas import CalendarEvent
             import uuid
             
             # Parse timestamps
@@ -1162,9 +2152,22 @@ class PlanManager:
             end_time = event_data.get("end_time")
             
             if isinstance(start_time, str):
-                start_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                # Parse and convert to timezone-naive local time
+                if start_time.endswith('+00:00') or start_time.endswith('Z'):
+                    start_time = datetime.fromisoformat(start_time.replace("Z", "+00:00")).replace(tzinfo=None)
+                else:
+                    start_time = datetime.fromisoformat(start_time)
+            elif hasattr(start_time, 'tzinfo') and start_time.tzinfo is not None:
+                start_time = start_time.replace(tzinfo=None)
+                
             if isinstance(end_time, str):
-                end_time = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+                # Parse and convert to timezone-naive local time
+                if end_time.endswith('+00:00') or end_time.endswith('Z'):
+                    end_time = datetime.fromisoformat(end_time.replace("Z", "+00:00")).replace(tzinfo=None)
+                else:
+                    end_time = datetime.fromisoformat(end_time)
+            elif hasattr(end_time, 'tzinfo') and end_time.tzinfo is not None:
+                end_time = end_time.replace(tzinfo=None)
             
             # Validate and map event type
             raw_event_type = event_data.get("event_type", "activity")
@@ -1182,7 +2185,10 @@ class PlanManager:
                 details=event_data.get("details", {})
             )
             
-            return event
+            # Apply meal timing correction if this is a meal event
+            corrected_event = self._correct_meal_timing(event)
+            
+            return corrected_event
             
         except Exception as e:
             logger.error(f"Failed to create calendar event from structured data: {e}")
@@ -1224,6 +2230,63 @@ class PlanManager:
         logger.warning(f"Unknown event type '{raw_type}', defaulting to 'activity'")
         return CalendarEventType.ACTIVITY
 
+    def _correct_meal_timing(self, event: 'CalendarEvent') -> 'CalendarEvent':
+        """Correct meal event timing to ensure proper meal hours and durations"""
+        from app.api.schemas import CalendarEventType
+        
+        if event.event_type != CalendarEventType.MEAL:
+            return event  # Only process meal events
+        
+        # Determine meal type from title/description
+        title_lower = event.title.lower()
+        description_lower = event.description.lower()
+        
+        # Map meal types to appropriate times
+        meal_timing = {
+            'breakfast': {'start_hour': 8, 'duration_hours': 1},
+            'brunch': {'start_hour': 10, 'duration_hours': 2}, 
+            'lunch': {'start_hour': 12, 'duration_hours': 1.5},
+            'afternoon tea': {'start_hour': 15, 'duration_hours': 1},
+            'snack': {'start_hour': 15, 'duration_hours': 1},
+            'dinner': {'start_hour': 19, 'duration_hours': 2},
+            'late dinner': {'start_hour': 20, 'duration_hours': 2},
+            'drinks': {'start_hour': 18, 'duration_hours': 2},
+            'bar': {'start_hour': 18, 'duration_hours': 2}
+        }
+        
+        # Detect meal type
+        detected_type = None
+        for meal_type in meal_timing.keys():
+            if meal_type in title_lower or meal_type in description_lower:
+                detected_type = meal_type
+                break
+        
+        # Default to dinner if no specific type detected
+        if not detected_type:
+            detected_type = 'dinner'
+            logger.info(f"Could not detect meal type for '{event.title}', defaulting to dinner timing")
+        
+        # Get timing config
+        timing_config = meal_timing[detected_type]
+        
+        # Preserve the original date but correct the time
+        original_date = event.start_time.date()
+        corrected_start = datetime.combine(
+            original_date, 
+            datetime.min.time().replace(hour=timing_config['start_hour'], minute=0)
+        ).replace(tzinfo=event.start_time.tzinfo)
+        
+        corrected_end = corrected_start + timedelta(hours=timing_config['duration_hours'])
+        
+        # Log the correction
+        logger.info(f"Corrected meal timing for '{event.title}': {event.start_time.strftime('%H:%M')} -> {corrected_start.strftime('%H:%M')} (detected as {detected_type})")
+        
+        # Create corrected event
+        event.start_time = corrected_start
+        event.end_time = corrected_end
+        
+        return event
+
     async def _extract_plan_modifications(
         self, 
         user_message: str, 
@@ -1252,80 +2315,17 @@ class PlanManager:
             else:
                 logger.info("No existing events to format for LLM context")
             
-            prompt = f"""Analyze this travel planning conversation and determine what changes should be made to the existing travel plan.
-
-EXISTING PLAN EVENTS:
-{existing_events_context}
-
-USER REQUEST: {user_message}
-AGENT RESPONSE: {agent_response}
-
-TASK: Determine what modifications should be made to the existing plan based on this conversation.
-
-CRITICAL DELETION RULES:
-- If user wants to REMOVE a city/destination, you MUST delete ALL related events:
-  * ALL hotel events for that city
-  * ALL activity/attraction events for that city
-  * ALL connecting flights to/from that city
-- Look for phrases like "remove", "delete", "skip", "don't go to", "take out", "exclude"
-- When removing destinations from multi-city trips, be thorough in cleaning up ALL related events
-
-Analyze for:
-1. NEW events to add (flights, hotels, attractions, restaurants, activities)
-2. UPDATES to existing events (time changes, location changes, details updates)
-3. DELETIONS of existing events (if user wants to remove something)
-   - Pay special attention to city/destination removals
-   - Include ALL events related to removed destinations
-4. PLAN METADATA changes (destination, dates, budget, etc.)
-
-For each event, determine:
-- Event type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
-- Title and description
-- Start and end times (use ISO format: YYYY-MM-DDTHH:MM:SS+00:00)
-- Location
-- Any specific details mentioned
-
-When identifying events to delete:
-- Check event titles for city names mentioned in removal requests
-- Check event locations for city names
-- Check event details for destination codes (LON, PAR, etc.)
-- Look for hotel events that mention the removed city
-- Look for activities/attractions in the removed city
-
-Return ONLY a valid JSON response with this exact structure:
-{{
-    "new_events": [
-        {{
-            "title": "Event Title",
-            "description": "Event description",
-            "event_type": "flight|hotel|attraction|restaurant|meal|transportation|activity|meeting|free_time",
-            "start_time": "2025-07-27T10:00:00+00:00",
-            "end_time": "2025-07-27T16:00:00+00:00",
-            "location": "Location name",
-            "details": {{}}
-        }}
-    ],
-    "updated_events": [
-        {{
-            "id": "existing_event_id",
-            "title": "Updated Title",
-            "start_time": "2025-07-27T11:00:00+00:00",
-            "end_time": "2025-07-27T17:00:00+00:00"
-        }}
-    ],
-    "deleted_event_ids": ["event_id_to_delete"],
-    "plan_modifications": {{
-        "reason": "Why these changes were made",
-        "impact": "How this affects the overall plan"
-    }}
-}}
-
-If no changes are needed, return empty arrays for each section."""
+            prompt = prompt_manager.get_prompt(
+                PromptType.PLAN_MODIFICATION,
+                existing_events_context=existing_events_context,
+                user_message=user_message,
+                agent_response=agent_response
+            )
 
             response = await llm_service.chat_completion(
                 [{"role": "user", "content": prompt}],
                 temperature=0.2,
-                max_tokens=1000
+                max_tokens=3000  # Increased for multiple meal events
             )
             
             try:
@@ -1359,7 +2359,7 @@ If no changes are needed, return empty arrays for each section."""
                 new_events = []
                 for event_data in modifications.get("new_events", []):
                     try:
-                        event = self._create_calendar_event_from_data(event_data)
+                        event = self._create_calendar_event_from_structured_data(event_data)
                         if event:
                             new_events.append(event)
                     except Exception as e:
@@ -1706,23 +2706,11 @@ If no changes are needed, return empty arrays for each section."""
     ) -> List[CalendarEvent]:
         """Use LLM to extract calendar events from response"""
         try:
-            prompt = f"""
-            Extract calendar events from this travel planning conversation.
-            
-            User: {user_message}
-            Agent: {agent_response}
-            
-            Extract any specific travel events mentioned (flights, hotels, attractions, restaurants, activities).
-            For each event, determine:
-            - Title
-            - Type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
-            - Start time (estimate if not explicit)
-            - Duration/end time
-            - Location
-            - Description
-            
-            Return as JSON array of events. If no specific events are mentioned, return empty array.
-            """
+            prompt = prompt_manager.get_prompt(
+                PromptType.EVENT_EXTRACTION,
+                user_message=user_message,
+                agent_response=agent_response
+            )
             
             # Use LLM to extract events
             response = await llm_service.generate_completion(
@@ -1804,8 +2792,8 @@ If no changes are needed, return empty arrays for each section."""
         """Extract events using simple heuristics with intelligent date placement"""
         events = []
         
-        # Get trip parameters
-        start_date = self._extract_start_date(user_message) or datetime.now(timezone.utc)
+        # Get trip parameters - use local time without timezone
+        start_date = self._extract_start_date(user_message) or datetime.now().replace(tzinfo=None)
         duration_days = self._extract_duration_from_message(user_message) or 3
         destination = metadata.get("destination", "")
         
@@ -1880,17 +2868,20 @@ If no changes are needed, return empty arrays for each section."""
         
         # Look for attraction mentions - spread across trip days
         if any(word in response_lower for word in ["visit", "attraction", "museum", "park", "tour", "sightseeing"]):
+            # ✅ FIXED: Create attractions for all available activity days, not just 3
+            available_activity_days = max(1, duration_days - 2)  # At least 1 day of activities
+            
             # Create attractions for middle days of the trip
-            for day in range(min(duration_days, 3)):  # Max 3 attractions
-                visit_date = start_date + timedelta(days=day)
+            for day in range(available_activity_days):
+                visit_date = start_date + timedelta(days=day + 1)  # Start from day 2
                 # Safe time calculation to avoid exceeding 24-hour format
-                base_hour = 9
-                hour_offset = min(day * 2, 12)  # Max offset 12 hours, avoiding past 21:00
+                base_hour = 10
+                hour_offset = min(day * 2, 8)  # Max offset 8 hours, avoiding past 18:00
                 target_hour = base_hour + hour_offset
                 visit_start = visit_date.replace(hour=target_hour, minute=0, second=0, microsecond=0)
-                visit_end = visit_start + timedelta(hours=2)  # 2 hour visits
+                visit_end = visit_start + timedelta(hours=3)  # 3 hour visits
                 
-                attraction_names = ["City Tour", "Local Attractions", "Cultural Sites"]
+                attraction_names = ["City Tour", "Local Attractions", "Cultural Sites", "Historic District", "Shopping District", "Art Galleries", "Local Markets"]
                 
                 events.append(CalendarEvent(
                     id=f"event_{uuid.uuid4().hex[:8]}",
@@ -1903,6 +2894,63 @@ If no changes are needed, return empty arrays for each section."""
                     confidence=0.6,
                     source="heuristic_extraction"
                 ))
+        
+        # Look for meal/food mentions - create meal events throughout the trip
+        if any(word in response_lower for word in ["meal", "food", "restaurant", "dining", "eat", "breakfast", "lunch", "dinner", "cuisine", "specialties"]):
+            logger.info(f"Creating meal events for {duration_days} days")
+            
+            for day in range(duration_days):
+                meal_date = start_date + timedelta(days=day)
+                
+                # Create breakfast
+                breakfast_start = meal_date.replace(hour=8, minute=0, second=0, microsecond=0)
+                breakfast_end = breakfast_start + timedelta(hours=1)
+                
+                events.append(CalendarEvent(
+                    id=f"event_{uuid.uuid4().hex[:8]}",
+                    title=f"Breakfast in {destination}",
+                    description="Local breakfast experience",
+                    event_type=CalendarEventType.MEAL,
+                    start_time=breakfast_start,
+                    end_time=breakfast_end,
+                    location=destination,
+                    confidence=0.7,
+                    source="heuristic_extraction"
+                ))
+                
+                # Create lunch
+                lunch_start = meal_date.replace(hour=12, minute=30, second=0, microsecond=0)
+                lunch_end = lunch_start + timedelta(hours=1, minutes=30)
+                
+                events.append(CalendarEvent(
+                    id=f"event_{uuid.uuid4().hex[:8]}",
+                    title=f"Lunch in {destination}",
+                    description="Local lunch specialties",
+                    event_type=CalendarEventType.MEAL,
+                    start_time=lunch_start,
+                    end_time=lunch_end,
+                    location=destination,
+                    confidence=0.7,
+                    source="heuristic_extraction"
+                ))
+                
+                # Create dinner
+                dinner_start = meal_date.replace(hour=19, minute=0, second=0, microsecond=0)
+                dinner_end = dinner_start + timedelta(hours=2)
+                
+                events.append(CalendarEvent(
+                    id=f"event_{uuid.uuid4().hex[:8]}",
+                    title=f"Dinner in {destination}",
+                    description="Local dinner cuisine",
+                    event_type=CalendarEventType.MEAL,
+                    start_time=dinner_start,
+                    end_time=dinner_end,
+                    location=destination,
+                    confidence=0.7,
+                    source="heuristic_extraction"
+                ))
+                
+            logger.info(f"Created {duration_days * 3} meal events for the trip")
         
         return events
     
@@ -1981,8 +3029,8 @@ If no changes are needed, return empty arrays for each section."""
             elif any(word in agent_response.lower() for word in ["partial", "more information", "additional"]):
                 updates["completion_status"] = "partial"
         
-        # Always update timestamp
-        updates["last_updated"] = datetime.now(timezone.utc)
+        # Always update timestamp - use timezone-naive
+        updates["last_updated"] = datetime.now().replace(tzinfo=None)
         
         return updates
     
@@ -2006,19 +3054,19 @@ If no changes are needed, return empty arrays for each section."""
             matches = re.findall(pattern, user_message, re.IGNORECASE)
             for match in matches:
                 try:
-                    # Handle relative dates
+                    # Handle relative dates - use timezone-naive datetime
                     if 'tomorrow' in match.lower():
-                        return datetime.now(timezone.utc) + timedelta(days=1)
+                        return datetime.now().replace(tzinfo=None) + timedelta(days=1)
                     elif 'today' in match.lower():
-                        return datetime.now(timezone.utc)
+                        return datetime.now().replace(tzinfo=None)
                     elif 'next week' in match.lower():
-                        return datetime.now(timezone.utc) + timedelta(weeks=1)
+                        return datetime.now().replace(tzinfo=None) + timedelta(weeks=1)
                     elif 'next month' in match.lower():
-                        return datetime.now(timezone.utc) + timedelta(days=30)
+                        return datetime.now().replace(tzinfo=None) + timedelta(days=30)
                     else:
                         # Try to parse absolute dates
                         parsed_date = parser.parse(match, fuzzy=True)
-                        return parsed_date.replace(tzinfo=timezone.utc)
+                        return parsed_date.replace(tzinfo=None)
                 except Exception:
                     continue
         
@@ -2109,12 +3157,12 @@ If no changes are needed, return empty arrays for each section."""
             logger.error(f"Error saving plan {plan.plan_id}: {e}")
     
     def _datetime_serializer(self, obj):
-        """Custom serializer for datetime objects to ensure ISO format"""
+        """Custom serializer for datetime objects to ensure simple ISO format without timezone"""
         if isinstance(obj, datetime):
-            # Ensure timezone info and return standard ISO format
-            if obj.tzinfo is None:
-                obj = obj.replace(tzinfo=timezone.utc)
-            return obj.isoformat()  # Produces "2025-03-10T10:00:00+00:00" format
+            # Always return timezone-naive ISO format
+            if obj.tzinfo is not None:
+                obj = obj.replace(tzinfo=None)
+            return obj.isoformat()  # Produces "2025-03-10T10:00:00" format
         return str(obj)
 
 

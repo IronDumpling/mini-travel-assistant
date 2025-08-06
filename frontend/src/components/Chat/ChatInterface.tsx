@@ -211,6 +211,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [showDetailedProgress, setShowDetailedProgress] = useState(false);
   const [enableRefinement, setEnableRefinement] = useState(false); // 默认关闭 refinement loop
+  const [enableEnhancedLLM, setEnableEnhancedLLM] = useState(false); // 默认关闭 Advanced LLM processing
   const [currentTime, setCurrentTime] = useState(Date.now()); // 用于实时更新计时器
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -392,25 +393,49 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ sessionId }) => {
           </div>
         </form>
         
-        {/* Refinement Loop Option */}
-        <div className="mt-2 flex items-center gap-2">
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={enableRefinement}
-              onChange={(e) => setEnableRefinement(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              disabled={sendMessageMutation.isPending}
-            />
-            <span className="select-none">
-              Enable AI Refinement Loop
-            </span>
-          </label>
-          {enableRefinement && (
-            <div className="text-xs text-gray-500">
-              ✨ AI will refine responses for higher quality (slower)
-            </div>
-          )}
+        {/* AI Enhancement Options */}
+        <div className="mt-2 space-y-2">
+          {/* Refinement Loop Option */}
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enableRefinement}
+                onChange={(e) => setEnableRefinement(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                disabled={sendMessageMutation.isPending}
+              />
+              <span className="select-none">
+                Enable AI Refinement Loop
+              </span>
+            </label>
+            {enableRefinement && (
+              <div className="text-xs text-gray-500">
+                ✨ AI will refine responses for higher quality (slower)
+              </div>
+            )}
+          </div>
+
+          {/* Advanced LLM Processing Option */}
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enableEnhancedLLM}
+                onChange={(e) => setEnableEnhancedLLM(e.target.checked)}
+                className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                disabled={sendMessageMutation.isPending}
+              />
+              <span className="select-none">
+                Enable Advanced LLM Processing
+              </span>
+            </label>
+            {enableEnhancedLLM && (
+              <div className="text-xs text-gray-500">
+                🚀 Uses more advanced LLM capabilities for deeper analysis
+              </div>
+            )}
+          </div>
         </div>
         
         {sendMessageMutation.isPending && !isTyping && processingStartTime && (currentTime - processingStartTime) > 200000 && (

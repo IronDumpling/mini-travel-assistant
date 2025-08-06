@@ -22,6 +22,8 @@ class PromptType(Enum):
     RAG_GENERATION = "rag_generation"
     FUNCTION_CALLING = "function_calling"
     PLAN_GENERATION = "plan_generation"
+    PLAN_MODIFICATION = "plan_modification"
+    EVENT_EXTRACTION = "event_extraction"
 
 
 class PromptManager:
@@ -44,6 +46,8 @@ class PromptManager:
             PromptType.RAG_GENERATION.value: self._get_rag_generation_template(),
             PromptType.FUNCTION_CALLING.value: self._get_function_calling_template(),
             PromptType.PLAN_GENERATION.value: self._get_plan_generation_template(),
+            PromptType.PLAN_MODIFICATION.value: self._get_plan_modification_template(),
+            PromptType.EVENT_EXTRACTION.value: self._get_event_extraction_template(),
         }
 
     def _initialize_schemas(self) -> Dict[str, Dict[str, Any]]:
@@ -68,6 +72,8 @@ class PromptManager:
                         "properties": {
                             "primary": {"type": "string"},
                             "secondary": {"type": "array", "items": {"type": "string"}},
+                            "is_multi_destination": {"type": "boolean"},
+                            "all_destinations": {"type": "array", "items": {"type": "string"}},
                             "region": {"type": "string"},
                             "confidence": {
                                 "type": "number",
@@ -323,6 +329,73 @@ class PromptManager:
                 },
                 "required": ["natural_response", "structured_plan", "plan_events"]
             },
+            PromptType.PLAN_MODIFICATION.value: {
+                "type": "object",
+                "properties": {
+                    "new_events": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "title": {"type": "string"},
+                                "description": {"type": "string"},
+                                "event_type": {"type": "string"},
+                                "start_time": {"type": "string"},
+                                "end_time": {"type": "string"},
+                                "location": {"type": "string"},
+                                "details": {"type": "object"}
+                            },
+                            "required": ["title", "event_type", "start_time", "end_time", "location"]
+                        }
+                    },
+                    "updated_events": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "title": {"type": "string"},
+                                "start_time": {"type": "string"},
+                                "end_time": {"type": "string"}
+                            },
+                            "required": ["id"]
+                        }
+                    },
+                    "deleted_event_ids": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "plan_modifications": {
+                        "type": "object",
+                        "properties": {
+                            "reason": {"type": "string"},
+                            "impact": {"type": "string"}
+                        }
+                    }
+                },
+                "required": ["new_events", "updated_events", "deleted_event_ids"]
+            },
+            PromptType.EVENT_EXTRACTION.value: {
+                "type": "object",
+                "properties": {
+                    "events": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "title": {"type": "string"},
+                                "description": {"type": "string"},
+                                "event_type": {"type": "string"},
+                                "start_time": {"type": "string"},
+                                "end_time": {"type": "string"},
+                                "location": {"type": "string"}
+                            },
+                            "required": ["title", "event_type", "start_time", "end_time", "location"]
+                        }
+                    }
+                },
+                "required": ["events"]
+            },
         }
 
     def _get_intent_analysis_template(self) -> str:
@@ -351,10 +424,18 @@ class PromptManager:
            - complaint: Complaint or issue feedback
 
         2. Destination Analysis:
-           - Primary destination (explicitly mentioned)
-           - Secondary destinations (implied or related)
+           - Primary destination (main destination mentioned)
+           - Secondary destinations (additional cities/countries mentioned)
+           - Multi-destination detection (identify if multiple cities are mentioned for one trip)
            - Regional classification (Asia, Europe, etc.)
            - Confidence assessment
+           
+           IMPORTANT: Look for multiple destinations in phrases like:
+           - "travel to X, Y, and Z"
+           - "visiting A, B, C"
+           - "trip to Paris, London, Rome"
+           - "business travel to New York, Chicago, Los Angeles"
+           - If multiple cities are mentioned in one trip context, list ALL in secondary destinations
 
         3. Travel Details Extraction:
            - Trip duration
@@ -392,6 +473,8 @@ class PromptManager:
             "destination": {{
                 "primary": "...",
                 "secondary": [...],
+                "is_multi_destination": true/false,
+                "all_destinations": [...],
                 "region": "...",
                 "confidence": 0.0-1.0
             }},
@@ -928,6 +1011,128 @@ RESPONSE REQUIREMENTS:
 - Provide practical, implementable advice
 
 Generate a comprehensive response that helps the user optimize their travel plan:"""
+
+    def _get_plan_modification_template(self) -> str:
+        """Plan modification prompt template for analyzing changes to existing travel plans"""
+        return """Analyze this travel planning conversation and determine what changes should be made to the existing travel plan.
+
+EXISTING PLAN EVENTS:
+{existing_events_context}
+
+USER REQUEST: {user_message}
+AGENT RESPONSE: {agent_response}
+
+TASK: Determine what modifications should be made to the existing plan based on this conversation.
+
+CRITICAL DELETION RULES:
+- If user wants to REMOVE a city/destination, you MUST delete ALL related events:
+  * ALL hotel events for that city
+  * ALL activity/attraction events for that city
+  * ALL connecting flights to/from that city
+- Look for phrases like "remove", "delete", "skip", "don't go to", "take out", "exclude"
+- When removing destinations from multi-city trips, be thorough in cleaning up ALL related events
+
+Analyze for:
+1. NEW events to add (flights, hotels, attractions, restaurants, activities)
+2. UPDATES to existing events (time changes, location changes, details updates)
+3. DELETIONS of existing events (if user wants to remove something)
+   - Pay special attention to city/destination removals
+   - Include ALL events related to removed destinations
+4. PLAN METADATA changes (destination, dates, budget, etc.)
+
+For each event, determine:
+- Event type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
+- Title and description
+- Start and end times (use ISO format: YYYY-MM-DDTHH:MM:SS+00:00)
+- Location
+- Any specific details mentioned
+
+MEAL EVENT TIMING GUIDELINES:
+For meal events, use these time ranges based on meal type:
+- BREAKFAST: 07:00-09:00 (1-2 hours)
+- BRUNCH: 10:00-12:00 (1-2 hours)  
+- LUNCH: 12:00-14:00 (1-2 hours)
+- AFTERNOON TEA/SNACK: 15:00-16:00 (1 hour)
+- DINNER: 18:00-21:00 (1-3 hours)
+- LATE DINNER: 19:30-22:00 (1-3 hours)
+- BAR/DRINKS: 17:00-23:00 (1-4 hours)
+
+Examples of proper meal events:
+- "Breakfast at Café Central" → 08:00-09:00
+- "Traditional Lunch at Bistro" → 12:30-14:00  
+- "Dinner at Fine Restaurant" → 19:00-21:30
+- "Evening Drinks at Rooftop Bar" → 20:00-22:00
+
+NEVER make meal events all-day unless specifically requested (e.g., food festivals).
+
+When identifying events to delete:
+- Check event titles for city names mentioned in removal requests
+- Check event locations for city names
+- Check event details for destination codes (LON, PAR, etc.)
+- Look for hotel events that mention the removed city
+- Look for activities/attractions in the removed city
+
+Return ONLY a valid JSON response with this exact structure:
+{{
+    "new_events": [
+        {{
+            "title": "Event Title",
+            "description": "Event description",
+            "event_type": "flight|hotel|attraction|restaurant|meal|transportation|activity|meeting|free_time",
+            "start_time": "2025-07-27T10:00:00+00:00",
+            "end_time": "2025-07-27T16:00:00+00:00",
+            "location": "Location name",
+            "details": {{}}
+        }}
+    ],
+    "updated_events": [
+        {{
+            "id": "existing_event_id",
+            "title": "Updated Title",
+            "start_time": "2025-07-27T11:00:00+00:00",
+            "end_time": "2025-07-27T17:00:00+00:00"
+        }}
+    ],
+    "deleted_event_ids": ["event_id_to_delete"],
+    "plan_modifications": {{
+        "reason": "Why these changes were made",
+        "impact": "How this affects the overall plan"
+    }}
+}}
+
+If no changes are needed, return empty arrays for each section.
+
+IMPORTANT: Keep your response concise. If adding multiple meal events, limit to 3-5 events total to avoid token limits. Focus on the most important additions requested by the user."""
+
+    def _get_event_extraction_template(self) -> str:
+        """Event extraction prompt template for extracting calendar events from conversations"""
+        return """Extract calendar events from this travel planning conversation.
+
+User: {user_message}
+Agent: {agent_response}
+
+Extract any specific travel events mentioned (flights, hotels, attractions, restaurants, activities).
+For each event, determine:
+- Title
+- Type (flight/hotel/attraction/restaurant/meal/transportation/activity/meeting/free_time)
+- Start time (estimate if not explicit)
+- Duration/end time
+- Location
+- Description
+
+MEAL EVENT TIMING GUIDELINES:
+For meal events, use these time ranges based on meal type:
+- BREAKFAST: 07:00-09:00 (1-2 hours)
+- BRUNCH: 10:00-12:00 (1-2 hours)  
+- LUNCH: 12:00-14:00 (1-2 hours)
+- AFTERNOON TEA/SNACK: 15:00-16:00 (1 hour)
+- DINNER: 18:00-21:00 (1-3 hours)
+- LATE DINNER: 19:30-22:00 (1-3 hours)
+- BAR/DRINKS: 17:00-23:00 (1-4 hours)
+
+NEVER make meal events all-day unless specifically requested (e.g., food festivals).
+
+Return as JSON array of events. If no specific events are mentioned, return empty array."""
 
 
 # Create global instance
