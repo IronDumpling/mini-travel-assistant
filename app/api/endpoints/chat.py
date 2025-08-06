@@ -69,13 +69,21 @@ async def _async_update_plan(session_id: str, user_message: str, agent_response)
                     logger.info(f"🌍 Background plan update: Multi-destination trip with {len(multi_destinations)} destinations")
                 
                 # Generate plan directly from tool results using plan_manager
+                # Convert to unified destination format
+                if multi_destinations and len(multi_destinations) > 1:
+                    destinations_list = multi_destinations
+                    is_multi = True
+                else:
+                    destinations_list = [destination_name]
+                    is_multi = False
+                
                 plan_update_result = await plan_manager.generate_plan_from_tool_results(
                     session_id=session_id,
                     tool_results=tool_results,
-                    destination=destination_name,
+                    destinations=destinations_list,  # Use unified list format
                     user_message=user_message,
                     intent=intent,
-                    multi_destinations=multi_destinations
+                    is_multi_destination=is_multi  # Use explicit flag
                 )
             else:
                 # If no execution_result, fall back to basic response parsing

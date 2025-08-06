@@ -192,10 +192,10 @@ class PlanManager:
         self, 
         session_id: str, 
         tool_results: Dict[str, Any], 
-        destination: str, 
+        destinations: List[str],  # Always use list format 
         user_message: str,
         intent: Dict[str, Any] = None,
-        multi_destinations: List[str] = None
+        is_multi_destination: bool = False  # Explicit flag
     ) -> Dict[str, Any]:
         """
         Generate travel plan events directly from tool results (Fast non-LLM approach)
@@ -205,9 +205,13 @@ class PlanManager:
         import uuid
         
         try:
-            logger.info(f"Generating plan from tool results for destination: {destination}")
-            if multi_destinations and len(multi_destinations) > 1:
-                logger.info(f"🌍 Planning multi-destination trip with {len(multi_destinations)} destinations")
+            # Use unified destination handling - always work with destination lists
+            primary_destination = destinations[0] if destinations else "unknown"
+            logger.info(f"Generating plan from tool results for destinations: {destinations}")
+            if is_multi_destination and len(destinations) > 1:
+                logger.info(f"🌍 Planning multi-destination trip with {len(destinations)} destinations")
+            else:
+                logger.info(f"🏙️ Planning single destination trip to: {primary_destination}")
             
             # Get existing plan
             plan = self.get_plan_by_session(session_id)
@@ -223,21 +227,21 @@ class PlanManager:
             # ✅ Extract dates from user message or use smart defaults
             start_date = self._extract_trip_start_date(user_message, intent)
             
-            logger.info(f"Plan parameters: destination={destination}, duration={duration}, travelers={travelers}, start_date={start_date}")
+            logger.info(f"Plan parameters: destinations={destinations}, duration={duration}, travelers={travelers}, start_date={start_date}")
             
-            # Generate events from tool results
+            # Generate events from tool results using unified destination handling
             events = self._create_events_from_tools(
                 tool_results, 
-                destination, 
+                destinations, 
                 start_date, 
                 duration, 
                 travelers, 
                 user_message,
-                multi_destinations
+                is_multi_destination
             )
             
             # Update plan metadata (TravelPlanMetadata is a Pydantic model, not a dict)
-            plan.metadata.destination = destination
+            plan.metadata.destination = primary_destination  # Use primary destination for metadata
             plan.metadata.duration_days = duration
             plan.metadata.travelers = travelers
             plan.metadata.budget = self._estimate_budget(duration, travelers)
@@ -256,7 +260,7 @@ class PlanManager:
             # Save plan
             self._save_plan(plan)
             
-            logger.info(f"Generated {events_added} events for {duration}-day trip to {destination}")
+            logger.info(f"Generated {events_added} events for {duration}-day trip to {destinations}")
             
             return {
                 "success": True,
@@ -421,12 +425,12 @@ class PlanManager:
     def _create_events_from_tools(
         self, 
         tool_results: Dict[str, Any], 
-        destination: str, 
+        destinations: List[str],  # Always use list format
         start_date: datetime, 
         duration: int, 
         travelers: int,
         user_message: str,
-        multi_destinations: List[str] = None
+        is_multi_destination: bool = False
     ) -> List:
         """Create calendar events from tool results with accurate timing"""
         events = []
@@ -434,22 +438,43 @@ class PlanManager:
         import uuid
         
         current_time = start_date.replace(hour=8, minute=0, second=0, microsecond=0)
+        primary_destination = destinations[0] if destinations else "unknown"
         
-        # Handle multi-destination trips (passed as parameter)
-        if multi_destinations and len(multi_destinations) > 1:
-            logger.info(f"🌍 Planning multi-destination trip: {multi_destinations}")
+        # Use unified approach: always treat as multi-destination, single destination is just multi with 1 item
+        if is_multi_destination and len(destinations) > 1:
+            logger.info(f"🌍 Planning multi-destination trip: {destinations}")
             return self._create_multi_destination_events(
-                tool_results, multi_destinations, start_date, duration, travelers, user_message
+                tool_results, destinations, start_date, duration, travelers, user_message
             )
         else:
-            if multi_destinations:
-                logger.warning(f"⚠️ Multi-destinations provided but too short: {multi_destinations}")
-            else:
-                logger.info(f"🏙️ No multi-destinations provided, creating single destination events")
+            logger.info(f"🏙️ Planning single destination trip to: {primary_destination}")
+            # For single destination, use the multi-destination logic with single item
+            return self._create_multi_destination_events(
+                tool_results, destinations, start_date, duration, travelers, user_message
+            )
+    
+    def _create_multi_destination_events(
+        self, 
+        tool_results: Dict[str, Any], 
+        destinations: List[str], 
+        start_date: datetime, 
+        duration: int, 
+        travelers: int,
+        user_message: str
+    ) -> List:
+        """Create multi-destination events (now unified for both single and multi destinations)"""
+        from datetime import timedelta
+        import uuid
+        
+        logger.info(f"🗺️ Creating events for destinations: {destinations}")
+        events = []
         
         try:
-            # Add flight events (outbound and return)
-            if "flight_search" in tool_results:
+            # Extract origin from user message, flight search data, or use default
+            origin = self._extract_origin_from_message(user_message)
+            
+            # If no origin found in message, try to get it from flight search data
+            if not origin and "flight_search" in tool_results:
                 flight_result = tool_results["flight_search"]
                 if hasattr(flight_result, 'flights') and len(flight_result.flights) > 0:
                     # Outbound flight
@@ -2024,8 +2049,8 @@ class PlanManager:
         elif any(word in user_lower for word in ['tokyo', 'nrt', 'hnd']):
             return "NRT"
         
-        logger.info(f"🛫 No origin found in message, using default")
-        return None
+        logger.info(f"🛫 No origin found in message, using default: Toronto (YYZ)")
+        return "YYZ" 
 
     def _extract_flight_details_for_route(
         self, tool_results: Dict[str, Any], origin: str, destination: str, sequence: int

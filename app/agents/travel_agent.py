@@ -9,6 +9,7 @@ It also uses a rule-based approach to generate actions based on the user's inten
 from typing import Dict, List, Any, Optional, Union
 import time
 from datetime import datetime
+from dataclasses import dataclass
 from app.agents.base_agent import (
     BaseAgent,
     AgentMessage,
@@ -25,6 +26,48 @@ from app.core.prompt_manager import prompt_manager, PromptType
 from app.knowledge.geographical_data import GeographicalMappings, geo_mappings
 
 logger = get_logger(__name__)
+
+
+@dataclass
+class DestinationContext:
+    """Unified destination context for both single and multi-destination trips"""
+    primary: str                        # Primary destination
+    destinations: List[str]             # All destinations (single destination = [primary])
+    is_multi: bool                     # Whether this is multi-destination trip
+    iata_codes: List[str]              # Pre-converted IATA codes for all destinations
+    origin: Optional[str] = None       # Origin city/airport
+    
+    @classmethod
+    def from_single(cls, destination: str, origin: Optional[str] = None) -> 'DestinationContext':
+        """Create context for single destination"""
+        return cls(
+            primary=destination,
+            destinations=[destination],
+            is_multi=False,
+            iata_codes=[],  # Will be populated later
+            origin=origin
+        )
+    
+    @classmethod 
+    def from_multi(cls, destinations: List[str], origin: Optional[str] = None) -> 'DestinationContext':
+        """Create context for multi-destination"""
+        return cls(
+            primary=destinations[0] if destinations else "unknown",
+            destinations=destinations,
+            is_multi=True,
+            iata_codes=[],  # Will be populated later
+            origin=origin
+        )
+    
+    @property
+    def single_destination(self) -> str:
+        """Legacy compatibility: return primary destination as string"""
+        return self.primary
+    
+    @property
+    def multi_destinations(self) -> List[str]:
+        """Legacy compatibility: return destinations list"""
+        return self.destinations
 
 
 class TravelAgent(BaseAgent):
@@ -4191,53 +4234,70 @@ This will help me provide you with the most relevant travel guidance possible.""
 
         return selected_tools
 
-    def _extract_tool_parameters_from_intent(
-        self, selected_tools: List[str], intent: Dict[str, Any], user_message: str
-    ) -> Dict[str, Dict[str, Any]]:
-        """Extract tool parameters from intent analysis with safe defaults"""
-
-        import datetime
-
-        tool_parameters = {}
+    def _create_destination_context(self, intent: Dict[str, Any], user_message: str) -> DestinationContext:
+        """Create unified destination context from intent analysis"""
         destination_raw = intent.get("destination", "unknown")
         multi_destinations_raw = intent.get("multi_destinations", None)
         
-        logger.info(f" === TOOL PARAMETER EXTRACTION START ===")
+        logger.info(f" === DESTINATION CONTEXT CREATION START ===")
         logger.info(f" Raw destination from intent: {destination_raw}")
         logger.info(f" Raw multi_destinations from intent: {multi_destinations_raw}")
+        
+        # Extract origin from user message
+        origin = self._extract_origin_from_message(user_message)
         
         # Handle new structured destination format: {"primary": "Paris", "all": ["Paris", ...]}
         if isinstance(destination_raw, dict):
             logger.info(f" Structured destination format detected: {destination_raw}")
-            destination = destination_raw.get("primary", "unknown")
-            destination_all = destination_raw.get("all", None)
+            primary = destination_raw.get("primary", "unknown")
+            destinations_all = destination_raw.get("all", None)
             
             # Check if we have multiple destinations in the "all" field
-            if destination_all and isinstance(destination_all, list) and len(destination_all) > 1:
-                multi_destinations = destination_all
-                logger.info(f"  MULTI-DESTINATION from structured format: {multi_destinations}")
+            if destinations_all and isinstance(destinations_all, list) and len(destinations_all) > 1:
+                context = DestinationContext.from_multi(destinations_all, origin)
+                logger.info(f"  MULTI-DESTINATION from structured format: {destinations_all}")
             else:
-                multi_destinations = multi_destinations_raw
-                logger.info(f" Single destination from structured format: {destination}")
+                context = DestinationContext.from_single(primary, origin)
+                logger.info(f" Single destination from structured format: {primary}")
+                
         # Handle multi-destination case from direct field
         elif multi_destinations_raw and isinstance(multi_destinations_raw, list) and len(multi_destinations_raw) > 1:
-            destination = multi_destinations_raw[0]  # Primary destination
-            multi_destinations = multi_destinations_raw
-            logger.info(f"  MULTI-DESTINATION DETECTED: {multi_destinations}")
-            logger.info(f" Using primary destination: {destination}")
-        # Handle legacy list format
-        elif isinstance(destination_raw, list):
-            destination = destination_raw[0] if destination_raw else "unknown"
-            multi_destinations = destination_raw if len(destination_raw) > 1 else None
-            logger.warning(f" Intent contained destination as list {destination_raw}, using first item: {destination}")
-        # Handle simple string format
+            context = DestinationContext.from_multi(multi_destinations_raw, origin)
+            logger.info(f"  MULTI-DESTINATION DETECTED: {multi_destinations_raw}")
         else:
-            destination = destination_raw if destination_raw else "unknown"
-            multi_destinations = multi_destinations_raw
+            # Simple single destination case
+            destination = destination_raw if isinstance(destination_raw, str) else "unknown"
+            context = DestinationContext.from_single(destination, origin)
             logger.info(f" Simple destination format: {destination}")
         
-        logger.info(f" Final destination for tools: {destination}")
-        logger.info(f" Final multi_destinations: {multi_destinations}")
+        # Convert cities to IATA codes
+        context.iata_codes = []
+        for dest in context.destinations:
+            iata_code = self._convert_city_to_iata_code(dest) if dest != "unknown" else "NRT"
+            context.iata_codes.append(iata_code)
+        
+        logger.info(f" Created destination context: primary={context.primary}, is_multi={context.is_multi}")
+        logger.info(f" IATA codes: {context.iata_codes}")
+        logger.info(f" === DESTINATION CONTEXT CREATION END ===")
+        
+        return context
+
+    def _extract_tool_parameters_from_intent(
+        self, selected_tools: List[str], intent: Dict[str, Any], user_message: str
+    ) -> Dict[str, Dict[str, Any]]:
+        """Extract tool parameters from intent analysis using unified destination context"""
+
+        import datetime
+        
+        # Create unified destination context
+        dest_context = self._create_destination_context(intent, user_message)
+        
+        logger.info(f" === TOOL PARAMETER EXTRACTION START ===")
+        logger.info(f" Using destination context: {dest_context.destinations}")
+        logger.info(f" Multi-destination mode: {dest_context.is_multi}")
+        
+        # Use the unified destination context instead of legacy variables
+        tool_parameters = {}
         
         # Generate safe default dates (30 days from now)
         default_check_in = (
@@ -4257,15 +4317,12 @@ This will help me provide you with the most relevant travel guidance possible.""
 
         for tool_name in selected_tools:
             if tool_name == "attraction_search":
-                # Handle multi-destination attraction search like flight_search does
-                if multi_destinations and len(multi_destinations) > 1:
-                    # Convert multi-destinations to IATA codes for attraction search
-                    multi_dest_iata = self._convert_city_to_iata_code(multi_destinations)
-                    attraction_location = multi_dest_iata
+                # Unified destination handling - always use IATA codes from context
+                if dest_context.is_multi:
+                    attraction_location = dest_context.iata_codes  # List of IATA codes
                     logger.info(f"  MULTI-DESTINATION ATTRACTION SEARCH: {attraction_location}")
                 else:
-                    # Single destination - convert to IATA code
-                    attraction_location = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                    attraction_location = dest_context.iata_codes[0]  # Single IATA code
                     logger.info(f" Single destination attraction search: {attraction_location}")
                 
                 tool_parameters[tool_name] = {
@@ -4290,11 +4347,11 @@ This will help me provide you with the most relevant travel guidance possible.""
                 if check_out_date in ["unknown", "", None]:
                     check_out_date = default_check_out
                 
-                # Convert destination to IATA code(s) for consistent multi-location support  
-                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
+                # Use primary destination for hotel search (hotels are typically booked per destination)
+                hotel_location = dest_context.iata_codes[0]  # Use primary destination for hotel search
                 
                 tool_parameters[tool_name] = {
-                    "location": destination_result,  # Can be single IATA code or list for multi-location
+                    "location": hotel_location,  # Single IATA code for hotel search
                     "check_in": check_in_date,
                     "check_out": check_out_date,
                     "guests": max(travel_details.get("travelers", 1), 1),
@@ -4313,41 +4370,18 @@ This will help me provide you with the most relevant travel guidance possible.""
                 if departure_date in ["unknown", "", None]:
                     departure_date = default_departure
 
-                # Extract origin from user message
-                origin = self._extract_origin_from_message(user_message)
-                if origin == "Unknown":
-                    origin = "Singapore"  # Default fallback for Singapore
+                # Use origin from destination context (already extracted)
+                origin_iata = self._convert_city_to_iata_code(dest_context.origin or "Toronto")
+                origin_iata = origin_iata[0] if isinstance(origin_iata, list) else origin_iata
                 
-                # Convert origin to IATA code (should be single for origin)
-                origin_result = self._convert_city_to_iata_code(origin)
-                # For origin, we always use the first code if it's a list (shouldn't happen for origin)
-                origin_iata = origin_result[0] if isinstance(origin_result, list) else origin_result
-                
-                # Convert destination to IATA code(s) for consistent multi-location support
-                destination_result = self._convert_city_to_iata_code(destination) if destination != "unknown" else "NRT"
-                
-                #  NEW: Enable flight_chain for multi-destination searches
-                # Check for multi-destination from intent first, then from IATA conversion result
-                is_multi_destination = (multi_destinations and len(multi_destinations) > 1) or \
-                                     (isinstance(destination_result, list) and len(destination_result) > 1)
-                flight_chain_enabled = is_multi_destination
-                
-                if flight_chain_enabled:
-                    dest_count = len(multi_destinations) if multi_destinations else len(destination_result)
-                    logger.info(f"  MULTI-DESTINATION FLIGHT CHAIN ENABLED: {dest_count} destinations")
-                    logger.info(f" Multi-destinations: {multi_destinations or destination_result}")
+                # Unified flight destination handling using context
+                if dest_context.is_multi:
+                    flight_destination = dest_context.iata_codes  # List of IATA codes for flight chain
+                    logger.info(f"  MULTI-DESTINATION FLIGHT CHAIN ENABLED: {len(dest_context.destinations)} destinations")
+                    logger.info(f" Multi-destinations: {dest_context.destinations}")
                 else:
-                    logger.info(f" Single destination flight: {destination}")
-                
-                # If we have multi-destinations from intent, use those for flight search
-                if flight_chain_enabled and multi_destinations:
-                    # Convert multi-destinations to IATA codes
-                    multi_dest_iata = self._convert_city_to_iata_code(multi_destinations)
-                    flight_destination = multi_dest_iata
-                    logger.info(f" Using multi-destinations for flight chain: {flight_destination}")
-                else:
-                    flight_destination = destination_result
-                    logger.info(f" Using single destination for flight: {flight_destination}")
+                    flight_destination = dest_context.iata_codes[0]  # Single IATA code
+                    logger.info(f" Single destination flight: {dest_context.primary}")
                 
                 tool_parameters[tool_name] = {
                     "origin": origin_iata,  # Use extracted origin converted to IATA code
@@ -4356,7 +4390,7 @@ This will help me provide you with the most relevant travel guidance possible.""
                     "passengers": max(travel_details.get("travelers", 1), 1),
                     "class_type": "economy",
                     "budget_level": travel_details.get("budget", {}).get("level", "mid-range"),
-                    "flight_chain": flight_chain_enabled,  # Enable flight chain for multi-city trips
+                    "flight_chain": dest_context.is_multi,  # Enable flight chain for multi-city trips
                 }
                 
                 logger.info(f" Flight search parameters: {tool_parameters[tool_name]}")
@@ -4682,13 +4716,17 @@ This will help me provide you with the most relevant travel guidance possible.""
             logger.info(f" Multi-destinations: {multi_destinations}")
             logger.info(f" Tool results keys: {list(tool_results.keys())}")
             
+            # Convert to unified destination format
+            destinations_list = multi_destinations if multi_destinations else [destination_name]
+            is_multi = bool(multi_destinations and len(multi_destinations) > 1)
+            
             plan_result = await plan_manager.generate_plan_from_tool_results(
                 session_id=session_id,
                 tool_results=tool_results,
-                destination=destination_name,
+                destinations=destinations_list,  # Always use list format
                 user_message=user_message,
                 intent=intent,
-                multi_destinations=multi_destinations
+                is_multi_destination=is_multi  # Explicit flag
             )
             
             logger.info(f" Plan manager returned: {plan_result}")
