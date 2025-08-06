@@ -462,193 +462,6 @@ class PlanManager:
         travelers: int,
         user_message: str
     ) -> List:
-        """Create multi-destination events (now unified for both single and multi destinations)"""
-        from datetime import timedelta
-        import uuid
-        
-        logger.info(f"🗺️ Creating events for destinations: {destinations}")
-        events = []
-        
-        try:
-            # Extract origin from user message, flight search data, or use default
-            origin = self._extract_origin_from_message(user_message)
-            
-            # If no origin found in message, try to get it from flight search data
-            if not origin and "flight_search" in tool_results:
-                flight_result = tool_results["flight_search"]
-                if hasattr(flight_result, 'flights') and len(flight_result.flights) > 0:
-                    # Outbound flight
-                    outbound_flight = flight_result.flights[0]
-                    outbound_time = current_time.replace(hour=10, minute=0)  # 10 AM departure
-                    
-                    event = self._create_calendar_event_from_data({
-                        "id": f"flight_outbound_{str(uuid.uuid4())[:8]}",
-                        "title": f"Flight to {destination}",
-                        "description": f"Flight details: {getattr(outbound_flight, 'airline', 'TBA')} - Duration: {getattr(outbound_flight, 'duration', 'TBA')} minutes",
-                        "event_type": "flight",
-                        "start_time": outbound_time.isoformat(),
-                        "end_time": (outbound_time + timedelta(hours=int(getattr(outbound_flight, 'duration', 360) / 60))).isoformat(),
-                        "location": f"Airport → {destination}",
-                        "details": {
-                            "source": "flight_search",
-                            "airline": getattr(outbound_flight, 'airline', 'TBA'),
-                            "price": {"amount": getattr(outbound_flight, 'price', 500), "currency": "USD"},
-                            "flight_number": getattr(outbound_flight, 'flight_number', 'TBA'),
-                            "duration_minutes": getattr(outbound_flight, 'duration', 360)
-                        }
-                    })
-                    if event:
-                        events.append(event)
-                    
-                    # Return flight (on last day)
-                    return_time = (start_date + timedelta(days=duration-1)).replace(hour=18, minute=0)
-                    if len(flight_result.flights) > 1:
-                        return_flight = flight_result.flights[1]
-                    else:
-                        return_flight = outbound_flight  # Use same flight as template
-                    
-                    event = self._create_calendar_event_from_data({
-                        "id": f"flight_return_{str(uuid.uuid4())[:8]}",
-                        "title": f"Return Flight",
-                        "description": f"Return flight: {getattr(return_flight, 'airline', 'TBA')}",
-                        "event_type": "flight",
-                        "start_time": return_time.isoformat(),
-                        "end_time": (return_time + timedelta(hours=int(getattr(return_flight, 'duration', 360) / 60))).isoformat(),
-                        "location": f"{destination} → Home",
-                        "details": {
-                            "source": "flight_search",
-                            "airline": getattr(return_flight, 'airline', 'TBA'),
-                            "price": {"amount": getattr(return_flight, 'price', 500), "currency": "USD"},
-                            "flight_number": getattr(return_flight, 'flight_number', 'TBA'),
-                            "duration_minutes": getattr(return_flight, 'duration', 360)
-                        }
-                    })
-                    if event:
-                        events.append(event)
-            
-            # Add hotel events (full duration - 1 day to account for departure)
-            if "hotel_search" in tool_results:
-                hotel_result = tool_results["hotel_search"]
-                if hasattr(hotel_result, 'hotels') and len(hotel_result.hotels) > 0:
-                    hotel = hotel_result.hotels[0]
-                    checkin_time = current_time.replace(hour=15, minute=0)  # 3 PM check-in
-                    checkout_time = (start_date + timedelta(days=duration-1)).replace(hour=11, minute=0)  # 11 AM checkout
-                    
-                    event = self._create_calendar_event_from_data({
-                        "id": f"hotel_stay_{str(uuid.uuid4())[:8]}",
-                        "title": f"Hotel: {getattr(hotel, 'name', 'Hotel in ' + destination)}",
-                        "description": f"Accommodation in {destination} for {duration-1} nights",
-                        "event_type": "hotel",
-                        "start_time": checkin_time.isoformat(),
-                        "end_time": checkout_time.isoformat(),
-                        "location": getattr(hotel, 'location', destination),
-                        "details": {
-                            "source": "hotel_search",
-                            "rating": getattr(hotel, 'rating', 4.0),
-                            "price_per_night": {"amount": getattr(hotel, 'price_per_night', 150), "currency": "USD"},
-                            "nights": duration - 1
-                        }
-                    })
-                    if event:
-                        events.append(event)
-            
-            # Add attraction events (spread across middle days)
-            if "attraction_search" in tool_results:
-                attraction_result = tool_results["attraction_search"]
-                if hasattr(attraction_result, 'attractions') and len(attraction_result.attractions) > 0:
-                    # Day 1: Arrival, Day N: Departure, Days 2 to N-1: Activities
-                    available_activity_days = max(1, duration - 2)  # At least 1 day of activities
-                    max_attractions_per_day = 2  # Allow multiple attractions per day
-                    max_attractions = available_activity_days * max_attractions_per_day
-                    
-                    # Use available attractions up to our calculated maximum
-                    attractions = attraction_result.attractions[:min(len(attraction_result.attractions), max_attractions)]
-                    
-                    logger.info(f"📅 Creating {len(attractions)} attraction events across {available_activity_days} days (max {max_attractions_per_day} per day)")
-                    
-                    for i, attraction in enumerate(attractions):
-                        # Distribute attractions across available activity days
-                        day_offset = (i // max_attractions_per_day) + 1  # Start from day 2
-                        attraction_of_day = i % max_attractions_per_day  # 0 or 1 (morning/afternoon)
-                        
-                        visit_day = start_date + timedelta(days=day_offset)  
-                        
-                        # Schedule attractions at different times of day
-                        if attraction_of_day == 0:
-                            visit_hour = 10  # Morning activity (10 AM)
-                        else:
-                            visit_hour = 14  # Afternoon activity (2 PM)
-                            
-                        visit_time = visit_day.replace(hour=visit_hour, minute=0)
-                        
-                        event = self._create_calendar_event_from_data({
-                            "id": f"attraction_{i+1}_{str(uuid.uuid4())[:8]}",
-                            "title": f"Visit {getattr(attraction, 'name', f'Attraction in {destination}')}",
-                            "description": getattr(attraction, 'category', 'Sightseeing activity'),
-                            "event_type": "attraction",
-                            "start_time": visit_time.isoformat(),
-                            "end_time": (visit_time + timedelta(hours=3)).isoformat(),
-                            "location": getattr(attraction, 'location', destination),
-                            "details": {
-                                "source": "attraction_search",
-                                "rating": getattr(attraction, 'rating', 4.5),
-                                "category": getattr(attraction, 'category', 'Tourism')
-                            }
-                        })
-                        if event:
-                            events.append(event)
-            
-            # Add default activities if no specific events were created
-            if len(events) <= 2:  # Only flights
-                # Create activities for all available days, not just 3
-                available_activity_days = max(1, duration - 2)  # At least 1 day of activities
-                
-                for i in range(available_activity_days):
-                    day = start_date + timedelta(days=i+1)
-                    event_time = day.replace(hour=10, minute=0)  # Consistent 10 AM start
-                    event = self._create_calendar_event_from_data({
-                        "id": f"activity_{i+1}_{str(uuid.uuid4())[:8]}",
-                        "title": f"Explore {destination} - Day {i+1}",
-                        "description": f"Discover the best of {destination}",
-                        "event_type": "activity",
-                        "start_time": event_time.isoformat(),
-                        "end_time": (event_time + timedelta(hours=6)).isoformat(),  # Full day activity
-                        "location": destination,
-                        "details": {
-                            "source": "default_generation",
-                            "recommendations": ["Bring camera", "Wear comfortable shoes"]
-                        }
-                    })
-                    if event:
-                        events.append(event)
-            
-            logger.info(f"Created {len(events)} events for {duration}-day trip")
-            return events
-            
-        except Exception as e:
-            logger.error(f"Error creating events from tool results: {e}")
-            # Return basic fallback event
-            fallback_event = self._create_calendar_event_from_data({
-                "id": f"basic_trip_{str(uuid.uuid4())[:8]}",
-                "title": f"Trip to {destination}",
-                "description": f"{duration}-day travel to {destination}",
-                "event_type": "activity",
-                "start_time": current_time.isoformat(),
-                "end_time": (current_time + timedelta(hours=4)).isoformat(),
-                "location": destination,
-                "details": {"source": "fallback_generation"}
-            })
-            return [fallback_event] if fallback_event else []
-    
-    def _create_multi_destination_events(
-        self, 
-        tool_results: Dict[str, Any], 
-        destinations: List[str], 
-        start_date: datetime, 
-        duration: int, 
-        travelers: int,
-        user_message: str
-    ) -> List:
         """Create calendar events for multi-destination trips with complete flight chain"""
         events = []
         from datetime import timedelta
@@ -664,11 +477,9 @@ class PlanManager:
         try:
             logger.info(f"🗺️ Creating multi-destination itinerary for {len(destinations)} cities: {destinations}")
             
-            # ✅ Extract origin from user message, flight search data, or use default
-            origin = self._extract_origin_from_message(user_message)
-            
-            # ✅ If no origin found in message, try to get it from flight search data
-            if not origin and "flight_search" in tool_results:
+            # ✅ PRIORITY 1: Extract origin from flight search data (most reliable)
+            origin = None
+            if "flight_search" in tool_results:
                 flight_result = tool_results["flight_search"]
                 if hasattr(flight_result, 'data') and flight_result.data:
                     flight_data = flight_result.data
@@ -677,8 +488,17 @@ class PlanManager:
                         if len(flight_chain) > 0:
                             origin = flight_chain[0]  # First city in chain is origin
                             logger.info(f"🛫 Extracted origin from flight chain: {origin}")
+                    elif flight_data.get("origin"):
+                        origin = flight_data.get("origin")
+                        logger.info(f"🛫 Extracted origin from flight data: {origin}")
             
-            # ✅ Final fallback
+            # ✅ PRIORITY 2: If no origin found in flight data, try user message
+            if not origin:
+                origin = self._extract_origin_from_message(user_message)
+                if origin:
+                    logger.info(f"🛫 Extracted origin from user message: {origin}")
+            
+            # ✅ PRIORITY 3: Final fallback
             if not origin:
                 origin = "YYZ"  # Default to Toronto
                 logger.warning(f"🛫 No origin found, using default: {origin}")
