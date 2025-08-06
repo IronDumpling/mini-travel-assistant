@@ -1,0 +1,716 @@
+[
+  {
+    "test_id": "1e362452-3106-4440-9e94-23fb374dd473",
+    "test_type": "single_session",
+    "session_id": "61a5c0fa-f739-4a0c-b354-6cd242ae4b40",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 7-day trip to London for 2 people with a budget of $3000",
+      "session_id": "61a5c0fa-f739-4a0c-b354-6cd242ae4b40",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": false,
+      "content": "I'm taking too long to process your request. Please try again.",
+      "confidence": 0.0,
+      "actions_taken": [],
+      "next_steps": [],
+      "session_id": "61a5c0fa-f739-4a0c-b354-6cd242ae4b40",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 90.28297233581543,
+    "refinement_enabled": true,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": false,
+    "final_confidence": 0.0,
+    "final_actions": [],
+    "final_next_steps": [],
+    "timestamp": "2025-08-06T12:02:12.102507",
+    "error_message": null
+  },
+  {
+    "test_id": "b9b85a22-45d5-4a13-8778-0c45915e61ec",
+    "test_type": "single_session",
+    "session_id": "8263002a-0ab4-4c4b-9cd7-ce721ea1d575",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a romantic weekend in Paris for 2 people, focusing on fine dining and cultural experiences",
+      "session_id": "8263002a-0ab4-4c4b-9cd7-ce721ea1d575",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "To provide you with the best travel planning assistance, I'll need a bit more information about your trip. Could you share details like your destination, travel dates, budget, and any specific interests or preferences you have? This will help me tailor recommendations for flights, accommodations, activities, and dining options that suit your needs perfectly.",
+      "confidence": 1.0,
+      "actions_taken": [
+        "Request destination details",
+        "Ask for travel dates",
+        "Inquire about budget range",
+        "Gather information on traveler preferences",
+        "Identify any special requirements"
+      ],
+      "next_steps": [
+        "Please provide your destination city or country",
+        "Share your planned travel dates",
+        "Indicate your approximate budget per category (flights, hotels, etc.)",
+        "Mention any must-see attractions or activities",
+        "Let me know if you have any dietary restrictions or accessibility needs"
+      ],
+      "session_id": "8263002a-0ab4-4c4b-9cd7-ce721ea1d575",
+      "refinement_details": {
+        "final_iteration": 3,
+        "final_quality_score": 0.8200000000000001,
+        "refinement_status": "max_iterations_reached",
+        "quality_dimensions": {
+          "relevance": 0.15,
+          "information_fusion": 0.2,
+          "completeness": 0.15,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05,
+          "plan_structure_quality": 0.15
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.895,
+            "quality_scores": {
+              "overall": 0.895
+            },
+            "actions_taken": [],
+            "response_time": 0.0,
+            "improvements_made": []
+          },
+          {
+            "iteration": 2,
+            "confidence": 0.535,
+            "quality_scores": {
+              "overall": 0.535
+            },
+            "actions_taken": [],
+            "response_time": 0.0,
+            "improvements_made": [
+              "Provide more comprehensive information"
+            ]
+          },
+          {
+            "iteration": 3,
+            "confidence": 1.0,
+            "quality_scores": {
+              "overall": 0.8200000000000001
+            },
+            "actions_taken": [
+              "Request destination details",
+              "Ask for travel dates",
+              "Inquire about budget range",
+              "Gather information on traveler preferences",
+              "Identify any special requirements"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 2,
+        "total_iterations": 3
+      },
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 146.98897099494934,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.895,
+        "quality_scores": {
+          "overall": 0.895
+        },
+        "actions_taken": [],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-08-06T12:04:40.098675"
+      },
+      {
+        "iteration": 2,
+        "confidence": 0.535,
+        "quality_scores": {
+          "overall": 0.535
+        },
+        "actions_taken": [],
+        "response_time": 0.0,
+        "improvements_made": [
+          "Provide more comprehensive information"
+        ],
+        "timestamp": "2025-08-06T12:04:40.098684"
+      },
+      {
+        "iteration": 3,
+        "confidence": 1.0,
+        "quality_scores": {
+          "overall": 0.8200000000000001
+        },
+        "actions_taken": [
+          "Request destination details",
+          "Ask for travel dates",
+          "Inquire about budget range",
+          "Gather information on traveler preferences",
+          "Identify any special requirements"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-08-06T12:04:40.098688"
+      }
+    ],
+    "total_loops": 3,
+    "final_success": true,
+    "final_confidence": 1.0,
+    "final_actions": [
+      "Request destination details",
+      "Ask for travel dates",
+      "Inquire about budget range",
+      "Gather information on traveler preferences",
+      "Identify any special requirements"
+    ],
+    "final_next_steps": [
+      "Please provide your destination city or country",
+      "Share your planned travel dates",
+      "Indicate your approximate budget per category (flights, hotels, etc.)",
+      "Mention any must-see attractions or activities",
+      "Let me know if you have any dietary restrictions or accessibility needs"
+    ],
+    "timestamp": "2025-08-06T12:04:40.098698",
+    "error_message": null
+  },
+  {
+    "test_id": "07d7a44c-e09f-4d97-af9e-5b05f686a20e",
+    "test_type": "single_session",
+    "session_id": "88c66ffb-e45a-4c09-af96-23aee94d70a9",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "I need a 3-day business trip to Tokyo with meetings in Shibuya and Shinjuku areas",
+      "session_id": "88c66ffb-e45a-4c09-af96-23aee94d70a9",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s your **comprehensive 3-day business trip plan for Tokyo**, meticulously tailored for meetings in **Shibuya and Shinjuku**, with seamless logistics, strategic downtime, and curated local experiences:\n\n---\n\n### **Tokyo 3-Day Business Trip Itinerary**  \n**Focus:** Efficiency, productivity, and authentic local immersion  \n\n#### **Day 1: Arrival & Shibuya Meetings**  \n- **Morning:**  \n  - Arrive via **United Airlines (UA)** for optimal efficiency (85–113 min flight time, ~$556 USD).  \n  - Check into **Cerulean Tower Tokyu Hotel** (Shibuya) or **Palace Hotel Tokyo** (central location) for proximity to meetings.  \n- **Afternoon:**  \n  - Meetings in Shibuya (e.g., Shibuya Scramble Square or nearby offices).  \n  - Lunch at **Shibuya Sky’s rooftop restaurants** (4.6/5 rating) with panoramic city views.  \n- **Evening:**  \n  - Unwind at **Meiji Jingu** (4.6/5), a serene shrine near Shibuya, or explore **teamLab Borderless** (4.6/5) for immersive digital art.  \n\n#### **Day 2: Shinjuku Meetings & Networking**  \n- **Morning/Afternoon:**  \n  - Meetings in Shinjuku (e.g., Shinjuku Nomura Building or Tokyo Opera City).  \n  - Coffee break at **Tokyo Metropolitan Government Building’s observatory** (free skyline views).  \n- **Evening:**  \n  - Dinner in **Golden Gai** (iconic alleyway bars) or **Omoide Yokocho** for local izakaya fare.  \n  - Optional: Visit **Tokyo Tower** (4.5/5) for夜景 (night views).  \n\n#### **Day 3: Wrap-Up & Departure**  \n- **Morning:**  \n  - Final meetings or coworking at **Roppongi Hills** (4.2/5) for modern amenities.  \n  - Quick cultural stop at **Imperial Palace** (4.4/5) en route to the airport.  \n- **Afternoon:**  \n  - Depart via **United Airlines (UA)** or **WestJet (WS)** (~$465–556 USD).  \n\n---\n\n### **Key Recommendations**  \n1. **Hotels:** Prioritize **Cerulean Tower Tokyu Hotel** (Shibuya) or **Palace Hotel Tokyo** (central) for convenience.  \n2. **Transport:** Use Tokyo’s efficient metro; consider a **Pasmo card** for seamless travel.  \n3. **Downtime:** Balance work with visits to **Shibuya Sky**, **teamLab Borderless**, or **Meiji Jingu**.  \n4. **Dining:** Leverage Shibuya/Shinjuku’s diverse options—from sushi bars to ramen joints.  \n\n*Pro Tip:* Confirm meeting venues in advance—Shibuya and Shinjuku stations are hubs but can be crowded.  \n\nLet me know if you’d like adjustments (e.g., hotel price checks, flight alternatives, or extended cultural activities). Safe travels!",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Tokyo",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "88c66ffb-e45a-4c09-af96-23aee94d70a9",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 0.985,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.15,
+          "information_fusion": 0.2,
+          "completeness": 0.15,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05,
+          "plan_structure_quality": 0.15
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.85,
+            "quality_scores": {
+              "overall": 0.985
+            },
+            "actions_taken": [
+              "Analyze travel requirements for Tokyo",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      },
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 88.60192775726318,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.85,
+        "quality_scores": {
+          "overall": 0.985
+        },
+        "actions_taken": [
+          "Analyze travel requirements for Tokyo",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-08-06T12:06:09.728287"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Tokyo",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T12:06:09.728299",
+    "error_message": null
+  },
+  {
+    "test_id": "af02cb47-b8da-4aa0-9017-09fba2e3f76c",
+    "test_type": "single_session",
+    "session_id": "37277d72-2872-4baa-8557-eef593741de4",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 5-day family trip to Singapore with 2 adults and 2 children (ages 8 and 12)",
+      "session_id": "37277d72-2872-4baa-8557-eef593741de4",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": false,
+      "content": "I'm taking too long to process your request. Please try again.",
+      "confidence": 0.0,
+      "actions_taken": [],
+      "next_steps": [],
+      "session_id": "37277d72-2872-4baa-8557-eef593741de4",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 90.33608508110046,
+    "refinement_enabled": true,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": false,
+    "final_confidence": 0.0,
+    "final_actions": [],
+    "final_next_steps": [],
+    "timestamp": "2025-08-06T12:07:41.076321",
+    "error_message": null
+  },
+  {
+    "test_id": "1d809f47-5f05-4e0a-a0f6-31ba35c71522",
+    "test_type": "single_session",
+    "session_id": "6c8cee18-d6ad-4d21-85d3-599058e77b30",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Create a 14-day backpacking itinerary across Europe for a student with a $1500 budget",
+      "session_id": "6c8cee18-d6ad-4d21-85d3-599058e77b30",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": false,
+      "content": "I'm taking too long to process your request. Please try again.",
+      "confidence": 0.0,
+      "actions_taken": [],
+      "next_steps": [],
+      "session_id": "6c8cee18-d6ad-4d21-85d3-599058e77b30",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 92.77994775772095,
+    "refinement_enabled": true,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": false,
+    "final_confidence": 0.0,
+    "final_actions": [],
+    "final_next_steps": [],
+    "timestamp": "2025-08-06T12:09:14.871109",
+    "error_message": null
+  },
+  {
+    "test_id": "89ce1bde-6bb6-4311-b1e8-41c915b6c73d",
+    "test_type": "single_session",
+    "session_id": "feee5f9e-b303-4e86-9eed-1bbcacaa1c7c",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a luxury 4-day trip to Dubai for celebrating our anniversary, budget is flexible",
+      "session_id": "feee5f9e-b303-4e86-9eed-1bbcacaa1c7c",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "**Luxury 4-Day Anniversary Trip to Dubai**  \n*Celebrate in style with this curated itinerary for an unforgettable experience*  \n\n---\n\n### **Day 1: Arrival & Romantic Welcome**  \n**Accommodation**: For a truly luxurious stay, consider *Burj Al Arab* or *Atlantis The Palm* (though not listed in current results, these are iconic options worth exploring separately). Alternatively, I can assist with bespoke villa bookings for added privacy.  \n\n**Evening**:  \n- **Private Dhow Cruise**: Glide along Dubai Marina with a candlelit dinner on a traditional wooden dhow.  \n- **The Dubai Fountain Show**: Witness the world’s largest choreographed fountain system (Rating: 4.8) from a VIP vantage point at *Burj Khalifa Lake*.  \n\n---\n\n### **Day 2: Iconic Experiences & Culinary Delights**  \n**Morning**:  \n- **Burj Khalifa “At the Top”** (Rating: 4.7): Skip-the-line access to the 124th floor for panoramic views.  \n- **Brunch at Armani/Amal**: Award-winning Indian cuisine with Burj Khalifa vistas.  \n\n**Afternoon**:  \n- **Private Shopping Concierge**: Explore the *Dubai Gold Souk* (Rating: 4.4) or haute couture boutiques in *The Dubai Mall*.  \n\n**Evening**:  \n- **Dinner at Pierchic**: Overwater fine dining at Al Qasr Hotel, featuring fresh seafood and sunset views.  \n\n---\n\n### **Day 3: Adventure & Relaxation**  \n**Morning**:  \n- **Hot Air Balloon Ride**: Soar over the desert at sunrise, followed by a gourmet champagne breakfast.  \n\n**Afternoon**:  \n- **Couples Spa at Talise Ottoman**: Ottoman-inspired treatments at Jumeirah Zabeel Saray.  \n\n**Evening**:  \n- **Exclusive Desert Safari**: Private vintage Land Rover transfer, bespoke Bedouin-style dinner under the stars.  \n\n---\n\n### **Day 4: Cultural Immersion & Farewell**  \n**Morning**:  \n- **Museum of the Future** (Rating: 4.4): A futuristic showcase of innovation.  \n- **AYA Universe** (Rating: 4.7): Immersive digital art experience at Wafi City.  \n\n**Afternoon**:  \n- **Helicopter Tour**: 30-minute private flight over Palm Jumeirah and Downtown.  \n\n**Evening**:  \n- **Anniversary Dinner at Zuma**: World-class Japanese cuisine in a chic setting.  \n\n---\n\n### **Logistics & Tips**  \n**Flights**: Current options from $1,325 (EgyptAir) to $1,606 (Qatar Airways). Consider Emirates for premium luxury (not listed; inquire for tailored options).  \n**Transport**: Private chauffeur services recommended for seamless transfers.  \n**Visa**: Check UAE’s visa-free entry or e-visa options based on your nationality.  \n\n---\n\n**Final Notes**:  \n- Let me refine hotel/activity choices based on your preferences (e.g., beachfront vs. city-center).  \n- For added surprises: Champagne in your suite, rose petal turndown, or a private yacht charter can be arranged.  \n\nWould you like to customize any part of this itinerary?  \n\n*Wishing you a magical anniversary in Dubai!* 🌹",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Dubai",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "feee5f9e-b303-4e86-9eed-1bbcacaa1c7c",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 0.9550000000000001,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.15,
+          "information_fusion": 0.2,
+          "completeness": 0.15,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05,
+          "plan_structure_quality": 0.15
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.85,
+            "quality_scores": {
+              "overall": 0.9550000000000001
+            },
+            "actions_taken": [
+              "Analyze travel requirements for Dubai",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      },
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 89.29699945449829,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.85,
+        "quality_scores": {
+          "overall": 0.9550000000000001
+        },
+        "actions_taken": [
+          "Analyze travel requirements for Dubai",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-08-06T12:10:45.183500"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Dubai",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T12:10:45.183509",
+    "error_message": null
+  },
+  {
+    "test_id": "6bff13dd-515e-4fbe-92f0-e61ee0d3d434",
+    "test_type": "single_session",
+    "session_id": "9607f1be-80f4-4464-af73-bc46385e333b",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "I'm planning a solo trip to Barcelona for 6 days, interested in art, architecture, and nightlife",
+      "session_id": "9607f1be-80f4-4464-af73-bc46385e333b",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s your expertly crafted 6-day solo trip plan for Barcelona, blending art, architecture, and nightlife with current recommendations:\n\n---\n\n### **🌆 Barcelona Solo Travel Plan (6 Days)**  \n**Tailored for your interests:** Modernist architecture, iconic art, and vibrant nightlife.  \n\n#### **✈️ Travel Essentials**  \n- **Flights:** Best current options (round-trip):  \n  - **$388 USD** (82 min flight) – Ideal for quick arrival.  \n  - **$456–467 USD** (longer layovers) – Budget-friendly alternatives.  \n- **Hotels:** Top picks for solo travelers (central locations):  \n  - **Musik Boutique Hotel** (artsy vibe, near nightlife)  \n  - **987 Barcelona Hotel** (modern design, close to attractions)  \n  *Pro Tip:* Check prices directly as rates fluctuate.  \n\n---\n\n### **🎨 Art & Architecture Itinerary**  \n**Day 1–3: Modernist Masterpieces**  \n1. **Sagrada Família (4.8/5)** – Gaudí’s unfinished marvel. *Book timed tickets to avoid queues.*  \n2. **Casa Batlló (4.7/5)** & **La Pedrera (4.6/5)** – Iconic Gaudí houses on Passeig de Gràcia.  \n3. **Park Güell (4.4/5)** – Mosaic-covered hillside with city views. *Go early for photos.*  \n\n**Day 4–5: Historic & Hidden Gems**  \n- **Cathedral of Barcelona (4.6/5)** – Gothic splendor in Ciutat Vella.  \n- **Arc de Triomf (4.6/5)** & **Ciutadella Park** – Perfect for solo strolls.  \n- **Mercat de la Boqueria (4.5/5)** – Foodie paradise on La Rambla.  \n\n**Day 6: Contemporary Art**  \n- **MACBA** (Museum of Contemporary Art) – Street art vibe.  \n- **CCCB** – Cutting-edge exhibitions near Raval.  \n\n---\n\n### **🌙 Nightlife Highlights**  \n- **Poble Sec:** Cozy bars like *El Rouge*.  \n- **Gràcia:** Bohemian pubs (try *Sol Soler*).  \n- **Opium/Catwalk** (beach clubs) – For late-night dancing.  \n*Safety Tip:* Use licensed taxis at night.  \n\n---\n\n### **🚍 Practical Tips**  \n- **Transport:** Get a **T-Casual card** (10 metro/bus rides).  \n- **Solo Dining:** Try *El Nacional* (food hall) or *Tickets Bar* (tapas).  \n- **Local Etiquette:** Dinner starts at 9 PM; greet with \"Hola!\"  \n\n---\n\n### **📅 Suggested Daily Flow**  \n| Day       | Morning              | Afternoon          | Evening          |  \n|-----------|----------------------|--------------------|------------------|  \n| Mon       | Sagrada Família      | Park Güell         | Gràcia bars      |  \n| Tue       | Casa Batlló          | La Pedrera         | Poble Sec        |  \n| ...       | ...                  | ...                | ...              |  \n\nLet me know if you’d like adjustments or deeper dives into specific areas! Enjoy Barcelona’s creative energy.  \n\n*[Note: Always verify attraction hours and book tickets in advance for popular sites.]*",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Barcelona",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "9607f1be-80f4-4464-af73-bc46385e333b",
+      "refinement_details": {
+        "final_iteration": 1,
+        "final_quality_score": 0.985,
+        "refinement_status": "quality_threshold_met",
+        "quality_dimensions": {
+          "relevance": 0.15,
+          "information_fusion": 0.2,
+          "completeness": 0.15,
+          "accuracy": 0.15,
+          "actionability": 0.15,
+          "personalization": 0.05,
+          "plan_structure_quality": 0.15
+        },
+        "user_requested_refinement": true,
+        "configuration_isolation": true,
+        "iterations": [
+          {
+            "iteration": 1,
+            "confidence": 0.85,
+            "quality_scores": {
+              "overall": 0.985
+            },
+            "actions_taken": [
+              "Analyze travel requirements for Barcelona",
+              "Search for comprehensive travel options",
+              "Search for accommodation options",
+              "Search for flight information",
+              "Search for attractions and activities",
+              "Compile comprehensive travel information"
+            ],
+            "response_time": 0.0,
+            "improvements_made": []
+          }
+        ],
+        "actual_refinement_loops": 0,
+        "total_iterations": 1
+      },
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 91.31015634536743,
+    "refinement_enabled": true,
+    "refinement_loops": [
+      {
+        "iteration": 1,
+        "confidence": 0.85,
+        "quality_scores": {
+          "overall": 0.985
+        },
+        "actions_taken": [
+          "Analyze travel requirements for Barcelona",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "response_time": 0.0,
+        "improvements_made": [],
+        "timestamp": "2025-08-06T12:12:17.506816"
+      }
+    ],
+    "total_loops": 1,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Barcelona",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T12:12:17.506825",
+    "error_message": null
+  },
+  {
+    "test_id": "74127b36-35cd-4516-90b0-d7073478988f",
+    "test_type": "single_session",
+    "session_id": "564dda6a-3927-41ec-8eab-42aaa6f18731",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 5-day ski trip to the Swiss Alps for 4 people in February",
+      "session_id": "564dda6a-3927-41ec-8eab-42aaa6f18731",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": false,
+      "content": "I'm taking too long to process your request. Please try again.",
+      "confidence": 0.0,
+      "actions_taken": [],
+      "next_steps": [],
+      "session_id": "564dda6a-3927-41ec-8eab-42aaa6f18731",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 90.28382706642151,
+    "refinement_enabled": true,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": false,
+    "final_confidence": 0.0,
+    "final_actions": [],
+    "final_next_steps": [],
+    "timestamp": "2025-08-06T12:13:48.803457",
+    "error_message": null
+  },
+  {
+    "test_id": "cde809e6-e402-4ad4-badc-46d7271e4863",
+    "test_type": "single_session",
+    "session_id": "c509662b-8ab5-4a15-9ab8-36750e0de8f0",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 7-day trip to Berlin and Munich for 2 people with a budget of $7000 in this summer",
+      "session_id": "c509662b-8ab5-4a15-9ab8-36750e0de8f0",
+      "enable_refinement": true
+    },
+    "response_data": {
+      "success": false,
+      "content": "I'm taking too long to process your request. Please try again.",
+      "confidence": 0.0,
+      "actions_taken": [],
+      "next_steps": [],
+      "session_id": "c509662b-8ab5-4a15-9ab8-36750e0de8f0",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 91.05820655822754,
+    "refinement_enabled": true,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": false,
+    "final_confidence": 0.0,
+    "final_actions": [],
+    "final_next_steps": [],
+    "timestamp": "2025-08-06T12:15:20.874570",
+    "error_message": null
+  }
+]

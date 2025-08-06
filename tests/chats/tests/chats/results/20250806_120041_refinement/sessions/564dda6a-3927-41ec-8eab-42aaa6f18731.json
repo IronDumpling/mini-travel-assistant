@@ -1,0 +1,56 @@
+{
+  "session_id": "564dda6a-3927-41ec-8eab-42aaa6f18731",
+  "title": "Single Test: winter_ski_trip",
+  "description": "Single query test for winter_ski_trip",
+  "status": "inactive",
+  "created_at": "2025-08-06 16:12:18.516892+00:00",
+  "last_activity": "2025-08-06 16:13:38.540332+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Updated plan metadata"
+      ],
+      "events_added": 0,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_modifications": {
+        "reason": "The agent failed to process the user's request for a 5-day ski trip to the Swiss Alps for 4 people in February. No existing plan was provided to modify.",
+        "impact": "A new plan needs to be created from scratch as there is no existing plan to update or delete events from."
+      }
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "564dda6a-3927-41ec-8eab-42aaa6f18731_0",
+      "user_message": "Plan a 5-day ski trip to the Swiss Alps for 4 people in February",
+      "agent_response": "I'm taking too long to process your request. Please try again.",
+      "timestamp": "2025-08-06 16:13:38.540318+00:00",
+      "metadata": {
+        "confidence": 0.0,
+        "actions_taken": [],
+        "refinement_used": true,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.0,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.5,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

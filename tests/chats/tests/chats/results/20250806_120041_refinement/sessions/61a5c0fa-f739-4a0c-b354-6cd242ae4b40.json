@@ -1,0 +1,56 @@
+{
+  "session_id": "61a5c0fa-f739-4a0c-b354-6cd242ae4b40",
+  "title": "Single Test: london_7_days_budget",
+  "description": "Single query test for london_7_days_budget",
+  "status": "inactive",
+  "created_at": "2025-08-06 16:00:41.815218+00:00",
+  "last_activity": "2025-08-06 16:02:01.844170+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Updated plan metadata"
+      ],
+      "events_added": 0,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_modifications": {
+        "reason": "The agent failed to process the user's request for a 7-day trip to London with a budget of $3000 for 2 people. The existing plan is empty or incomplete.",
+        "impact": "A new plan needs to be created from scratch to meet the user's request."
+      }
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "61a5c0fa-f739-4a0c-b354-6cd242ae4b40_0",
+      "user_message": "Plan a 7-day trip to London for 2 people with a budget of $3000",
+      "agent_response": "I'm taking too long to process your request. Please try again.",
+      "timestamp": "2025-08-06 16:02:01.844125+00:00",
+      "metadata": {
+        "confidence": 0.0,
+        "actions_taken": [],
+        "refinement_used": true,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.0,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.5,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

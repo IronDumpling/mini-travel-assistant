@@ -1,0 +1,274 @@
+{
+  "plan_id": "plan_27c129708d0e",
+  "session_id": "9607f1be-80f4-4464-af73-bc46385e333b",
+  "events": [
+    {
+      "id": "flight_YYZ_to_Barcelona_2f9fb458",
+      "title": "Flight: Toronto \u2192 Barcelona",
+      "description": "Departure from Toronto to Barcelona - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:59.541443",
+      "end_time": "2025-08-07T09:00:59.541443",
+      "location": "Toronto \u2192 Barcelona",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 2,
+        "origin": "YYZ",
+        "destination": "Barcelona",
+        "airline": "S4",
+        "price": {
+          "amount": 388.3,
+          "currency": "USD"
+        },
+        "flight_number": "7027",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_1_513da104",
+      "title": "Visit Bas\u00edlica de la Sagrada Fam\u00edlia",
+      "description": "Bas\u00edlica de la Sagrada Fam\u00edlia is a tourist attraction located at Carrer de Mallorca, 401, L'Eixample, 08013 Barcelona, Spain with a 4.8/5 rating based on 295263 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-07T09:30:00",
+      "end_time": "2025-08-07T13:00:00",
+      "location": "Carrer de Mallorca, 401, L'Eixample, 08013 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJk_s92NyipBIRUMnDG8Kq2Js"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_2_ad928a38",
+      "title": "Visit Casa Batll\u00f3",
+      "description": "Casa Batll\u00f3 is a tourist attraction located at Pg. de Gr\u00e0cia, 43, L'Eixample, 08007 Barcelona, Spain with a 4.7/5 rating based on 178922 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-07T13:30:00",
+      "end_time": "2025-08-07T15:30:00",
+      "location": "Pg. de Gr\u00e0cia, 43, L'Eixample, 08007 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJYUFLSe2ipBIRD04uni940kA"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_3_8fa25bfe",
+      "title": "Visit La Pedrera - Casa Mil\u00e0",
+      "description": "La Pedrera - Casa Mil\u00e0 is a tourist attraction located at Pg. de Gr\u00e0cia, 92, L'Eixample, 08008 Barcelona, Spain with a 4.6/5 rating based on 103531 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T11:30:00",
+      "location": "Pg. de Gr\u00e0cia, 92, L'Eixample, 08008 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ1eGKmZOipBIRah43T2Kjn8Q"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_4_f575b3a7",
+      "title": "Visit Spotify Camp Nou",
+      "description": "Spotify Camp Nou is a sports & recreation located at Les Corts, 08028 Barcelona, Spain with a 4.6/5 rating based on 165323 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T12:00:00",
+      "end_time": "2025-08-08T16:00:00",
+      "location": "Les Corts, 08028 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Sports & Recreation",
+        "place_id": "ChIJr3spdvWYpBIRuQQb_jBT9kQ"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_5_6a2341f5",
+      "title": "Visit Cathedral of Barcelona",
+      "description": "Cathedral of Barcelona is a tourist attraction located at Pla de la Seu, s/n, Ciutat Vella, 08002 Barcelona, Spain with a 4.6/5 rating based on 76412 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T13:00:00",
+      "location": "Pla de la Seu, s/n, Ciutat Vella, 08002 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJg2xxlvmipBIRg1jhdSQR9hY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_7_df2896f9",
+      "title": "Visit Arc de Triomf",
+      "description": "Arc de Triomf is a tourist attraction located at Passeig de Llu\u00eds Companys, Ciutat Vella, 08003 Barcelona, Spain with a 4.6/5 rating based on 93064 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T12:00:00",
+      "location": "Passeig de Llu\u00eds Companys, Ciutat Vella, 08003 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJoXZqNuOipBIRsZU39a8r_qk"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_8_719ab3d7",
+      "title": "Visit Pla\u00e7a de Catalunya",
+      "description": "Pla\u00e7a de Catalunya is a tourist attraction located at Pla\u00e7a de Catalunya, L'Eixample, 08002 Barcelona, Spain with a 4.5/5 rating based on 205542 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T12:30:00",
+      "end_time": "2025-08-10T16:00:00",
+      "location": "Pla\u00e7a de Catalunya, L'Eixample, 08002 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJGUgrYPGipBIRS9ZgHK_C7B4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_9_9d7a6bac",
+      "title": "Visit Mercat de la Boqueria",
+      "description": "Mercat de la Boqueria is a tourist attraction located at La Rambla, 91, Ciutat Vella, 08001 Barcelona, Spain with a 4.5/5 rating based on 197847 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T12:00:00",
+      "location": "La Rambla, 91, Ciutat Vella, 08001 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 5,
+        "attraction_of_day": 1,
+        "rating": 4.5,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJAVoetfeipBIR1a1z3FTGCoY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_10_c465db84",
+      "title": "Visit Park G\u00fcell",
+      "description": "Park G\u00fcell is a park located at Gr\u00e0cia, 08024 Barcelona, Spain with a 4.4/5 rating based on 217845 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T13:30:00",
+      "end_time": "2025-08-11T17:00:00",
+      "location": "Gr\u00e0cia, 08024 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 5,
+        "attraction_of_day": 2,
+        "rating": 4.4,
+        "category": "Park",
+        "place_id": "ChIJq0HUUq6ipBIRWM6qGqALmok"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Barcelona_to_YYZ_2db4c2c5",
+      "title": "Return Flight: Barcelona \u2192 Toronto",
+      "description": "Return journey from Barcelona to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-13T18:00:59.541443",
+      "end_time": "2025-08-13T19:00:59.541443",
+      "location": "Barcelona \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 2,
+        "origin": "Barcelona",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Barcelona"
+        ],
+        "airline": "S4",
+        "price": {
+          "amount": 388.3,
+          "currency": "USD"
+        },
+        "flight_number": "7027",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Barcelona_ec08afcc",
+      "title": "HOTEL BASIC - OLERDOLA",
+      "description": "Accommodation in Barcelona for 6 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:59.541443",
+      "end_time": "2025-08-13T11:00:59.541443",
+      "location": "OLERDOLA",
+      "details": {
+        "source": "hotel_search",
+        "nights": 6,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": "Barcelona",
+    "duration_days": 6,
+    "travelers": 1,
+    "budget": 900,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T12:11:59.615311",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T16:10:46.194324",
+  "updated_at": "2025-08-06T16:10:46.194324"
+}

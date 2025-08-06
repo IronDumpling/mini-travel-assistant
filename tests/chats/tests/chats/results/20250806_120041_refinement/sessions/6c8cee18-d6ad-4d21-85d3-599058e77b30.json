@@ -1,0 +1,56 @@
+{
+  "session_id": "6c8cee18-d6ad-4d21-85d3-599058e77b30",
+  "title": "Single Test: budget_backpacking_europe",
+  "description": "Single query test for budget_backpacking_europe",
+  "status": "inactive",
+  "created_at": "2025-08-06 16:07:42.088422+00:00",
+  "last_activity": "2025-08-06 16:09:02.106944+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Updated plan metadata"
+      ],
+      "events_added": 0,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_modifications": {
+        "reason": "The agent failed to generate a plan due to processing delays, and no existing plan was provided to modify.",
+        "impact": "A new 14-day backpacking itinerary for Europe with a $1500 budget needs to be created from scratch."
+      }
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "6c8cee18-d6ad-4d21-85d3-599058e77b30_0",
+      "user_message": "Create a 14-day backpacking itinerary across Europe for a student with a $1500 budget",
+      "agent_response": "I'm taking too long to process your request. Please try again.",
+      "timestamp": "2025-08-06 16:09:02.106931+00:00",
+      "metadata": {
+        "confidence": 0.0,
+        "actions_taken": [],
+        "refinement_used": true,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.0,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.5,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

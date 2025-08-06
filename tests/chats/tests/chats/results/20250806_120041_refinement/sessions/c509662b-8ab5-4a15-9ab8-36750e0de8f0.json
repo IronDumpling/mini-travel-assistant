@@ -1,0 +1,56 @@
+{
+  "session_id": "c509662b-8ab5-4a15-9ab8-36750e0de8f0",
+  "title": "Single Test: german_summer_trip",
+  "description": "Single query test for german_summer_trip",
+  "status": "inactive",
+  "created_at": "2025-08-06 16:13:49.813447+00:00",
+  "last_activity": "2025-08-06 16:15:09.838949+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Updated plan metadata"
+      ],
+      "events_added": 0,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_modifications": {
+        "reason": "The agent response indicated a processing delay, but no specific changes or removals were requested by the user.",
+        "impact": "No modifications are needed to the existing plan as the user did not provide any specific instructions for changes."
+      }
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "c509662b-8ab5-4a15-9ab8-36750e0de8f0_0",
+      "user_message": "Plan a 7-day trip to Berlin and Munich for 2 people with a budget of $7000 in this summer",
+      "agent_response": "I'm taking too long to process your request. Please try again.",
+      "timestamp": "2025-08-06 16:15:09.838934+00:00",
+      "metadata": {
+        "confidence": 0.0,
+        "actions_taken": [],
+        "refinement_used": true,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.0,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.5,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}
