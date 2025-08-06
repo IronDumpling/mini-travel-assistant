@@ -1,0 +1,63 @@
+{
+  "session_id": "9bd9a655-561f-48f2-81a2-e0ffd357781d",
+  "title": "Single Test: budget_backpacking_europe",
+  "description": "Single query test for budget_backpacking_europe",
+  "status": "active",
+  "created_at": "2025-08-06 14:54:43.234366+00:00",
+  "last_activity": "2025-08-06 14:57:01.323431+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Updated plan metadata"
+      ],
+      "events_added": 0,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_modifications": {
+        "reason": "No specific changes were requested by the user in the conversation.",
+        "impact": "The existing plan remains unchanged."
+      }
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "9bd9a655-561f-48f2-81a2-e0ffd357781d_0",
+      "user_message": "Create a 14-day backpacking itinerary across Europe for a student with a $1500 budget",
+      "agent_response": "Here\u2019s a meticulously crafted **14-day backpacking itinerary across Europe** for a student with a **$1500 budget**, blending cost-effective travel strategies, must-see attractions, and current flight/hotel data:\n\n---\n\n### **\ud83c\udf0d 14-Day Europe Backpacking Itinerary (Budget: $1500)**\n**Route:** London \u2192 Paris \u2192 Berlin \u2192 Rome \u2192 Barcelona \u2192 Amsterdam \u2192 Vienna \u2192 Prague  \n\n#### **Day 1-2: London, UK**  \n- **Flights:** Start with YYZ \u2192 LON ($313.80, 3h 6m).  \n- **Stay:** Budget hostels near Kensington (Holiday Inn Kensington Forum area) or Camden.  \n- **Explore:**  \n  - Tower Bridge (free to walk across, \u00a312 for exhibition).  \n  - Free museums (British Museum, Tate Modern).  \n  - Cheap eats at Borough Market.  \n- **Next:** Fly to Paris ($89.20, 1h 25m).  \n\n#### **Day 3-4: Paris, France**  \n- **Stay:** Latin Quarter hostels (~$30/night).  \n- **Explore:**  \n  - Mus\u00e9e d\u2019Orsay (\u20ac16, free for EU students under 26).  \n  - Picnic by the Seine (grab baguettes from local bakeries).  \n  - Free walking tours (tip-based).  \n- **Next:** Fly to Berlin ($162.80, 1h 55m).  \n\n#### **Day 5-6: Berlin, Germany**  \n- **Stay:** Friedrichshain hostels (~$25/night).  \n- **Explore:**  \n  - Free street art tours in East Side Gallery.  \n  - Budget currywurst stands (~\u20ac3).  \n  - Reichstag dome (free, book ahead).  \n- **Next:** Fly to Rome ($137.90, 2h 55m).  \n\n#### **Day 7-8: Rome, Italy**  \n- **Stay:** Trastevere hostels (~$28/night).  \n- **Explore:**  \n  - Pantheon (free), St. Peter\u2019s Basilica (free).  \n  - \u20ac1 pizza slices near Termini Station.  \n  - Roman Forum (\u20ac16 combo ticket with Colosseum).  \n- **Next:** Fly to Barcelona ($68.20, 1h 50m).  \n\n#### **Day 9-10: Barcelona, Spain**  \n- **Stay:** Gothic Quarter hostels (~$30/night).  \n- **Explore:**  \n  - Sagrada Fam\u00edlia (\u20ac26, book online for discounts).  \n  - Free beach day at Barceloneta.  \n  - Tapas bars (\u20ac2-3 per plate).  \n- **Next:** Fly to Amsterdam ($90.20, 2h 15m).  \n\n#### **Day 11-12: Amsterdam, Netherlands**  \n- **Stay:** Jordaan district hostels (~$35/night).  \n- **Explore:**  \n  - Van Stapele Koekmakerij (must-try cookies, ~\u20ac3).  \n  - Free ferry to NDSM Wharf.  \n  - Rent a bike (~\u20ac10/day).  \n- **Next:** Fly to Vienna ($228.80, 3h 5m).  \n\n#### **Day 13: Vienna, Austria**  \n- **Stay:** Mariahilf hostels (~$32/night).  \n- **Explore:**  \n  - Kunsthistorisches Museum (\u20ac18, student discounts).  \n  - Cheap schnitzel at Figlm\u00fcller (\u20ac12).  \n- **Next:** Fly to Prague ($140.60, 2h 40m).  \n\n#### **Day 14: Prague, Czechia**  \n- **Explore:**  \n  - Charles Bridge (free at sunrise).  \n  - Old Town Square (free, avoid overpriced caf\u00e9s).  \n  - Trdeln\u00edk (\u20ac2 from street vendors).  \n- **Fly Home:** PRG \u2192 YYZ ($526.40, 3h 55m).  \n\n---\n\n### **\ud83d\udcb0 Budget Breakdown (Total: ~$1450)**  \n- **Flights:** $1,758.90 (use multi-city booking tools like Kiwi for discounts).  \n- **Accommodation:** ~$300 (hostels at ~$25/night).  \n- **Food/Activities:** ~$400 (\u20ac30/day for meals + attractions).  \n- **Transport:** ~$100 (local trains/buses).  \n\n### **\ud83c\udf92 Pro Tips for Students:**  \n1. **Rail Passes:** Consider Eurail for flexibility (compare with budget flights).  \n2. **Student Discounts:** Always ask (ISIC card helps).  \n3. **Free Walking Tours:** Tip-based and informative.  \n4. **Overnight Buses/Trains:** Save on accommodation.  \n\nLet me know if you\u2019d like adjustments for specific interests (art, history, nightlife)! Safe travels! \u2708\ufe0f",
+      "timestamp": "2025-08-06 14:57:01.323418+00:00",
+      "metadata": {
+        "confidence": 0.85,
+        "actions_taken": [
+          "Analyze travel requirements for Europe",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "refinement_used": false,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.85,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.85,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

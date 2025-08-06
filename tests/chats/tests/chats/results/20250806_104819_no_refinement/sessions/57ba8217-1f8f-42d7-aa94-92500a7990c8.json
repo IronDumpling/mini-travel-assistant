@@ -1,0 +1,62 @@
+{
+  "session_id": "57ba8217-1f8f-42d7-aa94-92500a7990c8",
+  "title": "Single Test: family_singapore",
+  "description": "Single query test for family_singapore",
+  "status": "active",
+  "created_at": "2025-08-06 14:52:53.534732+00:00",
+  "last_activity": "2025-08-06 14:54:20.013658+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Generated 13 events from tool results"
+      ],
+      "events_added": 13,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_generation_method": "fast_tool_based",
+      "duration": 5,
+      "travelers": 2
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "57ba8217-1f8f-42d7-aa94-92500a7990c8_0",
+      "user_message": "Plan a 5-day family trip to Singapore with 2 adults and 2 children (ages 8 and 12)",
+      "agent_response": "Here\u2019s your **5-day family-friendly Singapore itinerary** for 2 adults and 2 children (ages 8 and 12), blending must-see attractions, cultural experiences, and practical recommendations based on current data:\n\n---\n\n### **Day 1: Iconic Landmarks & City Exploration**  \n**Morning:**  \n- **Marina Bay Sands & Gardens by the Bay** (Rating: 4.7)  \n  Start at the iconic Marina Bay Sands SkyPark for panoramic views, then explore the futuristic Gardens by the Bay. Kids will love the Cloud Forest\u2019s waterfall and the Flower Dome.  \n- **Merlion Park** (Rating: 4.6)  \n  Snap family photos with Singapore\u2019s famous half-lion, half-fish statue.  \n\n**Afternoon:**  \n- **Lau Pa Sat** (Rating: 4.4)  \n  Try local hawker fare like satay or chicken rice at this historic food center.  \n\n**Evening:**  \n- **Clarke Quay** (Rating: 4.5)  \n  Stroll along the riverfront, or take a family-friendly bumboat cruise to see the city lights.  \n\n---\n\n### **Day 2: Wildlife & Adventure**  \n**Full Day at Mandai Wildlife Reserve:**  \n- **Singapore Zoo** (Rating: 4.6)  \n  Meet orangutans and pygmy hippos at this open-concept zoo. Add-on: River Wonders or Night Safari for extra adventure.  \n\n**Evening:**  \n- **Maxwell Food Centre** (Rating: 4.4)  \n  Sample more local dishes like Hainanese chicken rice.  \n\n---\n\n### **Day 3: Culture & Creativity**  \n**Morning:**  \n- **National Gallery Singapore** (Rating: 4.6)  \n  Interactive art exhibits will engage kids, while adults appreciate Southeast Asian masterpieces.  \n\n**Afternoon:**  \n- **Singapore Botanic Gardens** (Rating: 4.7)  \n  Picnic by Swan Lake or explore the Jacob Ballas Children\u2019s Garden (with water play areas).  \n\n**Evening:**  \n- **Holiday Inn Singapore Orchard** (or similar)  \n  Relax at a family-friendly hotel with a pool.  \n\n---\n\n### **Day 4: Sentosa Island Fun**  \n**Full Day on Sentosa:**  \n- **Universal Studios Singapore** (Thrill rides for teens + kiddie zones)  \n- **S.E.A. Aquarium** or Adventure Cove Waterpark  \n- **Palawan Beach** for sandcastle-building.  \n\n**Dinner:**  \n- **Din Tai Fung** at Resorts World Sentosa for kid-friendly dumplings.  \n\n---\n\n### **Day 5: Relax & Souvenir Shopping**  \n**Morning:**  \n- **Chinatown** for colorful streets and child-friendly souvenir shops.  \n- **Buddha Tooth Relic Temple** (cultural pitstop).  \n\n**Afternoon:**  \n- **Flight Prep**: Consider staying at **Crowne Plaza Changi Airport** (Rating: N/A) if you have an early departure, with its airport-connected convenience.  \n\n---\n\n### **Practical Tips**  \n- **Flights**: Current options start at **$2,545 USD** (e.g., WS/AC airlines, ~5-hour flights).  \n- **Hotels**: Family-friendly picks:  \n  - **Holiday Inn Singapore Orchard** (central location)  \n  - **Carlton Hotel Singapore** (near Marina Bay)  \n- **Transport**: Use the MRT (subway) for affordability; taxis are also family-friendly.  \n- **Visa**: Check requirements based on nationality.  \n\nThis itinerary balances excitement and downtime, with attractions rated 4.4+ by visitors. Let me know if you\u2019d like adjustments or additional bookings!  \n\n---  \n*Note: Hotel ratings/prices were unavailable; I\u2019ve prioritized locations near key attractions. Confirm details closer to your travel dates.*",
+      "timestamp": "2025-08-06 14:54:20.013639+00:00",
+      "metadata": {
+        "confidence": 0.85,
+        "actions_taken": [
+          "Analyze travel requirements for Singapore",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "refinement_used": false,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.85,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.85,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

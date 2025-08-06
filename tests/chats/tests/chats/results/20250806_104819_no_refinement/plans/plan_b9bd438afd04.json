@@ -1,0 +1,769 @@
+{
+  "plan_id": "plan_b9bd438afd04",
+  "session_id": "fb590729-24a0-4f67-ba2d-89e5280f1855",
+  "events": [
+    {
+      "id": "flight_YYZ_to_Paris_f3f12181",
+      "title": "Flight: Toronto \u2192 Paris",
+      "description": "Departure from Toronto to Paris - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-04-07T08:00:16.915527",
+      "end_time": "2025-04-07T10:00:16.915527",
+      "location": "Toronto \u2192 Paris",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 6,
+        "origin": "YYZ",
+        "destination": "Paris",
+        "airline": "WS",
+        "price": {
+          "amount": 629.6,
+          "currency": "USD"
+        },
+        "flight_number": "252",
+        "duration_minutes": 120
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "e0402c73-38d6-4528-8043-d8271b861713",
+      "title": "Eiffel Tower",
+      "description": "Start with panoramic views. Book tickets early to avoid queues.",
+      "event_type": "attraction",
+      "start_time": "2025-04-07T10:30:00",
+      "end_time": "2025-04-07T13:00:00",
+      "location": "Paris",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "9e57ff37-d613-4187-946d-e9f4fc2571bf",
+      "title": "Breakfast at Du Pain et des Id\u00e9es",
+      "description": "Enjoy famous croissants and pain au chocolat",
+      "event_type": "meal",
+      "start_time": "2025-04-08T08:00:00",
+      "end_time": "2025-04-08T09:00:00",
+      "location": "Du Pain et des Id\u00e9es, Paris",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Paris_3_4ec300cf",
+      "title": "Louvre Museum",
+      "description": "Louvre Museum is a tourist attraction located at 75001 Paris, France with a 4.7/5 rating based on 350469 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-08T09:00:00",
+      "end_time": "2025-04-08T11:30:00",
+      "location": "PAR",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJD3uTd9hx5kcR1IQvGfr8dbk"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "3d2df558-1227-408c-bacb-4e049b9d8bc6",
+      "title": "Lunch at Le Comptoir du Relais",
+      "description": "Try traditional B\u0153uf Bourguignon",
+      "event_type": "meal",
+      "start_time": "2025-04-09T12:00:00",
+      "end_time": "2025-04-09T13:30:00",
+      "location": "Le Comptoir du Relais, Paris",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Paris_5_ee673ee3",
+      "title": "Notre-Dame Cathedral of Paris",
+      "description": "Notre-Dame Cathedral of Paris is a tourist attraction located at 6 Parvis Notre-Dame - Pl. Jean-Paul II, 75004 Paris, France with a 4.7/5 rating based on 71669 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-09T09:00:00",
+      "end_time": "2025-04-09T12:00:00",
+      "location": "PAR",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJATr1n-Fx5kcRjQb6q6cdQDY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Paris_to_Amsterdam_d3edd751",
+      "title": "Flight: Paris \u2192 Amsterdam",
+      "description": "Connecting flight from Paris to Amsterdam",
+      "event_type": "flight",
+      "start_time": "2025-04-12T14:00:16.915527",
+      "end_time": "2025-04-12T16:00:16.915527",
+      "location": "Paris \u2192 Amsterdam",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 6,
+        "origin": "Paris",
+        "destination": "Amsterdam",
+        "airline": "SK",
+        "price": {
+          "amount": 295.4,
+          "currency": "USD"
+        },
+        "flight_number": "830",
+        "duration_minutes": 120
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "acbe0278-750c-4cd9-ac5b-9d2325ee31d2",
+      "title": "Train: Paris \u2192 Amsterdam",
+      "description": "Thalys high-speed train from Paris to Amsterdam",
+      "event_type": "transportation",
+      "start_time": "2025-04-12T09:00:00",
+      "end_time": "2025-04-12T12:00:00",
+      "location": "Paris \u2192 Amsterdam",
+      "details": {
+        "cost": "\u20ac35\u2013\u20ac120",
+        "duration": "3h20m"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Amsterdam_3_964682df",
+      "title": "Visit Vondelpark",
+      "description": "Vondelpark is a park located at 1071 AA Amsterdam, Netherlands with a 4.7/5 rating based on 56683 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-13T09:00:00",
+      "end_time": "2025-04-13T12:00:00",
+      "location": "AMS",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Park",
+        "place_id": "ChIJz3y0xeIJxkcRNcogBVV41Gw"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Amsterdam_5_a43b648b",
+      "title": "Visit Royal Palace Amsterdam",
+      "description": "Royal Palace Amsterdam is a tourist attraction located at Nieuwezijds Voorburgwal 147, 1012 RJ Amsterdam, Netherlands with a 4.6/5 rating based on 25162 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-14T09:00:00",
+      "end_time": "2025-04-14T13:00:00",
+      "location": "AMS",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJFQ6IwMYJxkcRis8dtZlOkTk"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Amsterdam_7_bb68c0cd",
+      "title": "Visit ARTIS",
+      "description": "ARTIS is a zoo located at Plantage Kerklaan 38-40, 1018 CZ Amsterdam, Netherlands with a 4.5/5 rating based on 34537 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-15T09:00:00",
+      "end_time": "2025-04-15T11:30:00",
+      "location": "AMS",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.5,
+        "category": "Zoo",
+        "place_id": "ChIJYQCs26EJxkcRPUqKm3hTaA4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Amsterdam_1_e7ed6c82",
+      "title": "Visit Van Stapele Koekmakerij",
+      "description": "Van Stapele Koekmakerij is a tourist attraction located at Rokin 17, 1012 KK Amsterdam, Netherlands with a 4.8/5 rating based on 12495 reviews (Moderate).",
+      "event_type": "attraction",
+      "start_time": "2025-04-15T12:00:00",
+      "end_time": "2025-04-15T15:30:00",
+      "location": "AMS",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJbWVeiMEJxkcRM0UW81iB8dI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_1_60f50d22",
+      "title": "Visit Brandenburg Gate",
+      "description": "Brandenburg Gate is a tourist attraction located at Pariser Platz, 10117 Berlin, Germany with a 4.7/5 rating based on 175402 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-16T09:00:00",
+      "end_time": "2025-04-16T12:30:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJiQnyVcZRqEcRY0xnhE77uyY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_3_0d4d1d27",
+      "title": "Visit East Side Gallery",
+      "description": "East Side Gallery is a art gallery located at M\u00fchlenstra\u00dfe, 10243 Berlin, Germany with a 4.6/5 rating based on 60588 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-17T09:00:00",
+      "end_time": "2025-04-17T11:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Art Gallery",
+        "place_id": "ChIJS6_t9aZHqEcRGCiRSnvpm94"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_5_3453941d",
+      "title": "Visit Charlottenburg Palace",
+      "description": "Charlottenburg Palace is a tourist attraction located at Spandauer Damm 10-22, 14059 Berlin, Germany with a 4.6/5 rating based on 29047 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-18T09:00:00",
+      "end_time": "2025-04-18T13:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ85FCdSVRqEcRGv55KkmuuIs"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_7_9255e354",
+      "title": "Visit Potsdamer Platz",
+      "description": "Potsdamer Platz is a tourist attraction located at Potsdamer Platz, 10785 Berlin, Germany with a 4.4/5 rating based on 66750 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-19T09:00:00",
+      "end_time": "2025-04-19T12:30:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.4,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJIeqReMlRqEcRquFNJTyYoUw"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_4_b5bdd89b",
+      "title": "Visit Berlin Cathedral",
+      "description": "Berlin Cathedral is a tourist attraction located at Am Lustgarten, 10178 Berlin, Germany with a 4.6/5 rating based on 42144 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-19T13:00:00",
+      "end_time": "2025-04-19T16:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJS9HC895RqEcR_IovsNVoDng"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "3660ca86-b15b-42c4-8a72-59e7871e3ae7",
+      "title": "Train: Berlin \u2192 Prague",
+      "description": "EC train from Berlin to Prague",
+      "event_type": "transportation",
+      "start_time": "2025-04-20T09:00:00",
+      "end_time": "2025-04-20T11:30:00",
+      "location": "Berlin \u2192 Prague",
+      "details": {
+        "cost": "\u20ac25\u2013\u20ac50",
+        "duration": "4h30m"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Prague_3_fba9a15b",
+      "title": "Visit Vy\u0161ehrad",
+      "description": "Vy\u0161ehrad is a tourist attraction located at V Pevnosti 163/2, 128 00 Praha 2-Vy\u0161ehrad, Czechia with a 4.8/5 rating based on 49908 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-21T09:00:00",
+      "end_time": "2025-04-21T12:30:00",
+      "location": "PRG",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 4,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJCd13PWeUC0cRZihTX2RPn0w"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Prague_5_e4fba143",
+      "title": "Visit Prague Astronomical Clock",
+      "description": "Prague Astronomical Clock is a tourist attraction located at Starom\u011bstsk\u00e9 n\u00e1m. 1, 110 00 Praha 1-Star\u00e9 M\u011bsto, Czechia with a 4.7/5 rating based on 81896 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-22T09:00:00",
+      "end_time": "2025-04-22T12:30:00",
+      "location": "PRG",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 4,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJSS_AOemUC0cRlgaiWrJEe_E"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Prague_7_f84201a4",
+      "title": "Visit Franz Kafka - Rotating Head by David Cerny",
+      "description": "Franz Kafka - Rotating Head by David Cerny is a tourist attraction located at Charv\u00e1tova, Nov\u00e9 M\u011bsto, 110 00 Praha-Praha 1, Czechia with a 4.5/5 rating based on 33820 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-23T09:00:00",
+      "end_time": "2025-04-23T11:30:00",
+      "location": "PRG",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 4,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.5,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJSfv87u2UC0cRMLvFpMvuPNY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Prague_2_6a512ba5",
+      "title": "Visit Old Town Square",
+      "description": "Old Town Square is a tourist attraction located at Starom\u011bstsk\u00e9 n\u00e1m., 110 00 Praha 1-Star\u00e9 M\u011bsto, Czechia with a 4.8/5 rating based on 113299 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-23T12:30:00",
+      "end_time": "2025-04-23T15:30:00",
+      "location": "PRG",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 4,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJIfpRNOmUC0cRxHIewgck75c"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "80861ee4-5a0a-4273-a647-b88dad2f788e",
+      "title": "Train: Prague \u2192 Vienna",
+      "description": "Railjet train from Prague to Vienna",
+      "event_type": "transportation",
+      "start_time": "2025-04-24T09:00:00",
+      "end_time": "2025-04-24T12:00:00",
+      "location": "Prague \u2192 Vienna",
+      "details": {
+        "cost": "\u20ac20\u2013\u20ac40",
+        "duration": "4h"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Prague_4_e745b4b4",
+      "title": "Visit Prague Castle",
+      "description": "Prague Castle is a tourist attraction located at 119 08 Prague 1, Czechia with a 4.7/5 rating based on 184484 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-24T12:30:00",
+      "end_time": "2025-04-24T15:30:00",
+      "location": "PRG",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 4,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJw7ckbB6VC0cRnyUSr4g8zyo"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Vienna_3_2a259cd2",
+      "title": "Visit Belvedere Palace",
+      "description": "Belvedere Palace is a museum located at 1030 Vienna, Austria with a 4.7/5 rating based on 79350 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-25T09:00:00",
+      "end_time": "2025-04-25T12:00:00",
+      "location": "VIE",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 5,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Museum",
+        "place_id": "ChIJpZ4LAn0HbUcRB3aToFL8ZUo"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Amsterdam_4_58c025dc",
+      "title": "Visit Van Gogh Museum",
+      "description": "Van Gogh Museum is a tourist attraction located at Museumplein 6, 1071 DJ Amsterdam, Netherlands with a 4.6/5 rating based on 98145 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-25T12:30:00",
+      "end_time": "2025-04-25T15:00:00",
+      "location": "AMS",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJX1rTlu8JxkcRGsV8-a4oKMI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "6c66b550-7c46-40a2-91af-0bddf9e2ae3a",
+      "title": "Dinner at Figlm\u00fcller",
+      "description": "Authentic Wiener Schnitzel experience",
+      "event_type": "meal",
+      "start_time": "2025-04-26T19:00:00",
+      "end_time": "2025-04-26T21:00:00",
+      "location": "Figlm\u00fcller, Vienna",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Vienna_5_0d5304ee",
+      "title": "Visit Hofburg",
+      "description": "Hofburg is a tourist attraction located at 1010 Vienna, Austria with a 4.7/5 rating based on 53972 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-26T09:00:00",
+      "end_time": "2025-04-26T12:30:00",
+      "location": "VIE",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 5,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ3wYgv5kHbUcRX0LEFIAWhYY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Vienna_7_c3f1ec7f",
+      "title": "Visit St. Charles's Church",
+      "description": "St. Charles's Church is a tourist attraction located at Karlskirche, Karlsplatz 10, 1040 Wien, Austria with a 4.6/5 rating based on 27401 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-27T09:00:00",
+      "end_time": "2025-04-27T12:00:00",
+      "location": "VIE",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 5,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJx2oWgoIHbUcRMvVm3Lylq84"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_6_1a67a6b8",
+      "title": "Visit Berlin Zoological Garden",
+      "description": "Berlin Zoological Garden is a zoo located at Hardenbergpl. 8, 10787 Berlin, Germany with a 4.5/5 rating based on 70402 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-27T13:30:00",
+      "end_time": "2025-04-27T15:30:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Zoo",
+        "place_id": "ChIJaW_IvapRqEcRfq6A6TrrOYE"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Vienna_to_YYZ_3d9b0a80",
+      "title": "Return Flight: Vienna \u2192 Toronto",
+      "description": "Return journey from Vienna to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-04-28T18:00:16.915527",
+      "end_time": "2025-04-28T19:00:16.915527",
+      "location": "Vienna \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 6,
+        "total_flights": 6,
+        "origin": "Vienna",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Paris",
+          "Amsterdam",
+          "Berlin",
+          "Prague",
+          "Vienna"
+        ],
+        "airline": "LO",
+        "price": {
+          "amount": 1125.6,
+          "currency": "USD"
+        },
+        "flight_number": "226",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Prague_8_0dd0dad8",
+      "title": "Visit Petrin Tower",
+      "description": "Petrin Tower is a tourist attraction located at Pet\u0159\u00ednsk\u00e9 sady 633, 118 00 Praha 1-Mal\u00e1 Strana, Czechia with a 4.5/5 rating based on 33032 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-28T09:00:00",
+      "end_time": "2025-04-28T11:00:00",
+      "location": "PRG",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 4,
+        "day_in_destination": 4,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJd71LDf2UC0cRkcGvwf8x33E"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Vienna_2_bcfe0c42",
+      "title": "Visit Sch\u00f6nbrunn Palace",
+      "description": "Sch\u00f6nbrunn Palace is a tourist attraction located at Sch\u00f6nbrunner Schlo\u00dfstra\u00dfe 47, 1130 Wien, Austria with a 4.7/5 rating based on 167497 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-04-28T12:00:00",
+      "end_time": "2025-04-28T14:30:00",
+      "location": "VIE",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 5,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJv3zAHAmobUcRyYvq5F26aU4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Paris_e983f739",
+      "title": "Ibis Paris Tour Montparnasse",
+      "description": "Accommodation in Paris for 5 nights",
+      "event_type": "hotel",
+      "start_time": "2025-04-07T15:00:16.915527",
+      "end_time": "2025-04-12T11:00:16.915527",
+      "location": "PARIS",
+      "details": {
+        "source": "hotel_search",
+        "nights": 5,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Amsterdam_ed189018",
+      "title": "The Flying Pig Downtown Hostel",
+      "description": "Accommodation in Amsterdam for 4 nights",
+      "event_type": "hotel",
+      "start_time": "2025-04-12T15:00:16.915527",
+      "end_time": "2025-04-16T11:00:16.915527",
+      "location": "PARIS",
+      "details": {
+        "source": "hotel_search",
+        "nights": 4,
+        "destination_sequence": 2,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Berlin_717f11f4",
+      "title": "Circus Hostel",
+      "description": "Accommodation in Berlin for 4 nights",
+      "event_type": "hotel",
+      "start_time": "2025-04-16T15:00:16.915527",
+      "end_time": "2025-04-20T11:00:16.915527",
+      "location": "PARIS",
+      "details": {
+        "source": "hotel_search",
+        "nights": 4,
+        "destination_sequence": 3,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Prague_6cabc0a2",
+      "title": "Hostel One Miru",
+      "description": "Accommodation in Prague for 4 nights",
+      "event_type": "hotel",
+      "start_time": "2025-04-20T15:00:16.915527",
+      "end_time": "2025-04-24T11:00:16.915527",
+      "location": "PARIS",
+      "details": {
+        "source": "hotel_search",
+        "nights": 4,
+        "destination_sequence": 4,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Vienna_2be54a08",
+      "title": "Wombats City Hostel",
+      "description": "Accommodation in Vienna for 4 nights",
+      "event_type": "hotel",
+      "start_time": "2025-04-24T15:00:16.915527",
+      "end_time": "2025-04-28T11:00:16.915527",
+      "location": "PARIS",
+      "details": {
+        "source": "hotel_search",
+        "nights": 4,
+        "destination_sequence": 5,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": {
+      "primary": "Paris",
+      "all": [
+        "Paris",
+        "Amsterdam",
+        "Berlin",
+        "Prague",
+        "Vienna"
+      ]
+    },
+    "duration_days": 4,
+    "travelers": 2,
+    "budget": 6300,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T11:27:52.501150",
+    "confidence": 0.88,
+    "completion_status": "partial"
+  },
+  "created_at": "2025-08-06T15:14:28.080261",
+  "updated_at": "2025-08-06T15:27:52.501393"
+}

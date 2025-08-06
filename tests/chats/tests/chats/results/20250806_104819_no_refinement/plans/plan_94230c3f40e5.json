@@ -1,0 +1,18 @@
+{
+  "plan_id": "plan_94230c3f40e5",
+  "session_id": "9bd9a655-561f-48f2-81a2-e0ffd357781d",
+  "events": [],
+  "metadata": {
+    "destination": "Europe",
+    "duration_days": null,
+    "travelers": 1,
+    "budget": 14.0,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T10:57:08.684038",
+    "confidence": 0.8,
+    "completion_status": "draft"
+  },
+  "created_at": "2025-08-06T14:54:43.234903",
+  "updated_at": "2025-08-06T14:57:08.684288"
+}

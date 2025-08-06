@@ -1,0 +1,254 @@
+{
+  "plan_id": "plan_3c21f169327f",
+  "session_id": "fbc1cc38-8f33-49e8-95a7-6bf1db1b9f0a",
+  "events": [
+    {
+      "id": "flight_YYZ_to_Dubai_e90f40e6",
+      "title": "Flight: Toronto \u2192 Dubai",
+      "description": "Departure from Toronto to Dubai - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:26.155439",
+      "end_time": "2025-08-07T18:00:26.155439",
+      "location": "Toronto \u2192 Dubai",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 2,
+        "origin": "YYZ",
+        "destination": "Dubai",
+        "airline": "MS",
+        "price": {
+          "amount": 1324.96,
+          "currency": "USD"
+        },
+        "flight_number": "996",
+        "duration_minutes": 600
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Dubai_3_4d931d50",
+      "title": "Visit Burj Khalifa",
+      "description": "Burj Khalifa is a tourist attraction located at 1 Sheikh Mohammed bin Rashid Blvd - Downtown Dubai - Dubai - United Arab Emirates with a 4.7/5 rating based on 166294 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T12:00:00",
+      "location": "1 Sheikh Mohammed bin Rashid Blvd - Downtown Dubai - Dubai - United Arab Emirates",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJS-JnijRDXz4R4rfO4QLlRf8"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Dubai_4_97e5383c",
+      "title": "Visit AYA",
+      "description": "AYA is a tourist attraction located at Wafi City - Oud Metha - Dubai - United Arab Emirates with a 4.7/5 rating based on 15895 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T13:30:00",
+      "end_time": "2025-08-08T17:00:00",
+      "location": "Wafi City - Oud Metha - Dubai - United Arab Emirates",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ0S3qW85dXz4Rj-hyqYEpY4g"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Dubai_5_f78927b1",
+      "title": "Visit Dubai Frame",
+      "description": "Dubai Frame is a tourist attraction located at Zabeel Park Jogging Track - Za'abeel - Al Kifaf - Dubai - United Arab Emirates with a 4.6/5 rating based on 67932 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T12:30:00",
+      "location": "Zabeel Park Jogging Track - Za'abeel - Al Kifaf - Dubai - United Arab Emirates",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJQZ3ZINtCXz4RmFeoAa81MPk"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Dubai_6_54bb4ad7",
+      "title": "Visit Metro station",
+      "description": "Metro station is a tourist attraction located at 48 9th St - Muteena - Dubai - United Arab Emirates with a 4.6/5 rating based on 2766 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T13:00:00",
+      "end_time": "2025-08-09T15:00:00",
+      "location": "48 9th St - Muteena - Dubai - United Arab Emirates",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJR5HQHHpdXz4Ru8eKm7vgFyY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Dubai_7_b5881f1b",
+      "title": "Visit Alserkal Avenue",
+      "description": "Alserkal Avenue is a art gallery located at 17th St - Al Quoz - Al Quoz Industrial Area 1 - Dubai - United Arab Emirates with a 4.5/5 rating based on 6789 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T11:00:00",
+      "location": "17th St - Al Quoz - Al Quoz Industrial Area 1 - Dubai - United Arab Emirates",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.5,
+        "category": "Art Gallery",
+        "place_id": "ChIJKc4P3H9pXz4RTyLpHxr6Dyg"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Dubai_8_2e21c9fe",
+      "title": "Visit Dubai Aquarium & Underwater Zoo",
+      "description": "Dubai Aquarium & Underwater Zoo is a aquarium located at Dubai - Downtown Dubai - Dubai - United Arab Emirates with a 4.5/5 rating based on 73409 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T12:30:00",
+      "end_time": "2025-08-10T15:30:00",
+      "location": "Dubai - Downtown Dubai - Dubai - United Arab Emirates",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Aquarium",
+        "place_id": "ChIJRcbZaklDXz4RKd2od-FVCyM"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Dubai_to_YYZ_7065899e",
+      "title": "Return Flight: Dubai \u2192 Toronto",
+      "description": "Return journey from Dubai to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-11T18:00:26.155439",
+      "end_time": "2025-08-12T04:00:26.155439",
+      "location": "Dubai \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 2,
+        "origin": "Dubai",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Dubai"
+        ],
+        "airline": "MS",
+        "price": {
+          "amount": 1324.96,
+          "currency": "USD"
+        },
+        "flight_number": "996",
+        "duration_minutes": 600
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Dubai_1_335650bc",
+      "title": "Visit St. Mary's Catholic Church, Dubai",
+      "description": "St. Mary's Catholic Church, Dubai is a tourist attraction located at 247 Oud Metha Rd - Umm Hurair 2 - Umm Hurair Second - Dubai - United Arab Emirates with a 4.8/5 rating based on 14723 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T12:00:00",
+      "location": "247 Oud Metha Rd - Umm Hurair 2 - Umm Hurair Second - Dubai - United Arab Emirates",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJg3FZly1dXz4Rxhg-7x-DjAI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Dubai_2_bc1147c1",
+      "title": "Visit The Dubai Fountain",
+      "description": "The Dubai Fountain is a tourist attraction located at Downtown Dubai - Dubai - United Arab Emirates with a 4.8/5 rating based on 105488 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T13:30:00",
+      "end_time": "2025-08-11T16:00:00",
+      "location": "Downtown Dubai - Dubai - United Arab Emirates",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJP_HMuyloXz4RyC5haEhlfT4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Dubai_143b2bc5",
+      "title": "AL JAWHARA GARDENS HOTEL",
+      "description": "Accommodation in Dubai for 4 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:26.155439",
+      "end_time": "2025-08-11T11:00:26.155439",
+      "location": "DUBAI",
+      "details": {
+        "source": "hotel_search",
+        "nights": 4,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": "Dubai",
+    "duration_days": 4,
+    "travelers": 2,
+    "budget": 1200,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T10:58:26.224101",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T14:57:15.588473",
+  "updated_at": "2025-08-06T14:57:15.588473"
+}

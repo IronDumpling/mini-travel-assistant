@@ -1,0 +1,421 @@
+{
+  "plan_id": "plan_8fdcd466edf9",
+  "session_id": "e532eff4-4b52-4b37-a86a-5bbe94c43553",
+  "events": [
+    {
+      "id": "flight_YYZ_to_Berlin_0f4a6e84",
+      "title": "Flight: Toronto \u2192 Berlin",
+      "description": "Departure from Toronto to Berlin - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:33.127788",
+      "end_time": "2025-08-07T13:00:33.127788",
+      "location": "Toronto \u2192 Berlin",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 3,
+        "origin": "YYZ",
+        "destination": "Berlin",
+        "airline": "FI",
+        "price": {
+          "amount": 1586.8,
+          "currency": "USD"
+        },
+        "flight_number": "602",
+        "duration_minutes": 300
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_1_3965f0e5",
+      "title": "Visit Brandenburg Gate",
+      "description": "Brandenburg Gate is a tourist attraction located at Pariser Platz, 10117 Berlin, Germany with a 4.7/5 rating based on 175402 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-07T13:30:00",
+      "end_time": "2025-08-07T16:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJiQnyVcZRqEcRY0xnhE77uyY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_3_d16a60a2",
+      "title": "Visit East Side Gallery",
+      "description": "East Side Gallery is a tourist attraction located at M\u00fchlenstra\u00dfe, 10243 Berlin, Germany with a 4.6/5 rating based on 60588 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T11:30:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJS6_t9aZHqEcRGCiRSnvpm94"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_4_77be8212",
+      "title": "Visit Berlin Cathedral",
+      "description": "Berlin Cathedral is a tourist attraction located at Am Lustgarten, 10178 Berlin, Germany with a 4.6/5 rating based on 42143 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T12:00:00",
+      "end_time": "2025-08-08T14:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJS9HC895RqEcR_IovsNVoDng"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_5_7ae60ed9",
+      "title": "Visit Charlottenburg Palace",
+      "description": "Charlottenburg Palace is a tourist attraction located at Spandauer Damm 10-22, 14059 Berlin, Germany with a 4.6/5 rating based on 29047 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T13:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ85FCdSVRqEcRGv55KkmuuIs"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_6_4476b5e5",
+      "title": "Visit Berlin Zoological Garden",
+      "description": "Berlin Zoological Garden is a zoo located at Hardenbergpl. 8, 10787 Berlin, Germany with a 4.5/5 rating based on 70402 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T14:00:00",
+      "end_time": "2025-08-09T16:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Zoo",
+        "place_id": "ChIJaW_IvapRqEcRfq6A6TrrOYE"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_7_7a454076",
+      "title": "Visit Potsdamer Platz",
+      "description": "Potsdamer Platz is a tourist attraction located at Potsdamer Platz, 10785 Berlin, Germany with a 4.4/5 rating based on 66748 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T12:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.4,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJIeqReMlRqEcRquFNJTyYoUw"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_8_274346ad",
+      "title": "Visit Alexanderplatz",
+      "description": "Alexanderplatz is a tourist attraction located at 10178 Berlin, Germany with a 4.3/5 rating based on 230696 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T13:00:00",
+      "end_time": "2025-08-10T17:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 2,
+        "rating": 4.3,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJbygR2x5OqEcRbhbkZsMB_DA"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Berlin_to_Munich_73f8b69a",
+      "title": "Flight: Berlin \u2192 Munich",
+      "description": "Connecting flight from Berlin to Munich",
+      "event_type": "flight",
+      "start_time": "2025-08-11T14:00:33.127788",
+      "end_time": "2025-08-11T15:00:33.127788",
+      "location": "Berlin \u2192 Munich",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 3,
+        "origin": "Berlin",
+        "destination": "Munich",
+        "airline": "LH",
+        "price": {
+          "amount": 250.4,
+          "currency": "USD"
+        },
+        "flight_number": "1961",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Munich_1_ddca1b4c",
+      "title": "Visit Olympiapark M\u00fcnchen",
+      "description": "Olympiapark M\u00fcnchen is a park located at Spiridon-Louis-Ring 21, 80809 M\u00fcnchen, Germany with a 4.7/5 rating based on 75589 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T11:30:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Park",
+        "place_id": "ChIJM7U-OGN2nkcRS91BCoGkObE"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Munich_3_566aad6a",
+      "title": "Visit Allianz Arena",
+      "description": "Allianz Arena is a sports & recreation located at Franz-Beckenbauer-Platz 5, 80939 M\u00fcnchen, Germany with a 4.6/5 rating based on 80316 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T09:00:00",
+      "end_time": "2025-08-12T12:30:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Sports & Recreation",
+        "place_id": "ChIJHyWKEoVznkcRI8QyjkJgTe0"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Munich_4_638298f8",
+      "title": "Visit Nymphenburg Palace",
+      "description": "Nymphenburg Palace is a tourist attraction located at 80638 Munich, Germany with a 4.6/5 rating based on 36093 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T13:30:00",
+      "end_time": "2025-08-12T15:30:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJLWiif8x3nkcRZm0epRZWTCc"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Munich_5_789338be",
+      "title": "Visit BMW Museum",
+      "description": "BMW Museum is a tourist attraction located at Am Olympiapark 2, 80809 M\u00fcnchen, Germany with a 4.6/5 rating based on 42447 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-13T09:00:00",
+      "end_time": "2025-08-13T13:00:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJa0ubVnx2nkcRiGkSeL3MxpU"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Munich_6_b17f6f4b",
+      "title": "Visit Munich Residence",
+      "description": "Munich Residence is a tourist attraction located at Residenzstra\u00dfe 1, 80333 M\u00fcnchen, Germany with a 4.6/5 rating based on 19843 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-13T14:00:00",
+      "end_time": "2025-08-13T16:00:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJrWV_DYx1nkcRD_tKgCHVad4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Munich_to_YYZ_3dd0d269",
+      "title": "Return Flight: Munich \u2192 Toronto",
+      "description": "Return journey from Munich to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-14T18:00:33.127788",
+      "end_time": "2025-08-14T19:00:33.127788",
+      "location": "Munich \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 3,
+        "total_flights": 3,
+        "origin": "Munich",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Berlin",
+          "Munich"
+        ],
+        "airline": "WS",
+        "price": {
+          "amount": 1165.4,
+          "currency": "USD"
+        },
+        "flight_number": "5046",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Munich_2_f38faa72",
+      "title": "Visit English Garden",
+      "description": "English Garden is a park located at Munich, Germany with a 4.7/5 rating based on 65503 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-14T09:00:00",
+      "end_time": "2025-08-14T11:00:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Park",
+        "place_id": "ChIJayv4lZd1nkcR0e_vfGLfm8k"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Berlin_2_f5735514",
+      "title": "Visit Reichstag Building",
+      "description": "Reichstag Building is a tourist attraction located at Platz der Republik 1, 11011 Berlin, Germany with a 4.7/5 rating based on 8871 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-14T12:00:00",
+      "end_time": "2025-08-14T14:00:00",
+      "location": "BER",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJbVDuQcdRqEcR5X3xq9NSG2Q"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Berlin_3c95d2a8",
+      "title": "WYNDHAM GRAND BERLIN POTSDAMER PLATZ",
+      "description": "Accommodation in Berlin for 4 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:33.127788",
+      "end_time": "2025-08-11T11:00:33.127788",
+      "location": "BERLIN",
+      "details": {
+        "source": "hotel_search",
+        "nights": 4,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Munich_1d103087",
+      "title": "WYNDHAM GRAND BERLIN POTSDAMER PLATZ",
+      "description": "Accommodation in Munich for 3 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-11T15:00:33.127788",
+      "end_time": "2025-08-14T11:00:33.127788",
+      "location": "BERLIN",
+      "details": {
+        "source": "hotel_search",
+        "nights": 3,
+        "destination_sequence": 2,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": "Berlin",
+    "duration_days": 7,
+    "travelers": 2,
+    "budget": 2100,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T11:03:33.237430",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T15:02:07.051298",
+  "updated_at": "2025-08-06T15:02:07.051298"
+}

@@ -1,0 +1,62 @@
+{
+  "session_id": "fbc1cc38-8f33-49e8-95a7-6bf1db1b9f0a",
+  "title": "Single Test: luxury_dubai",
+  "description": "Single query test for luxury_dubai",
+  "status": "active",
+  "created_at": "2025-08-06 14:57:15.587937+00:00",
+  "last_activity": "2025-08-06 14:58:26.153023+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Generated 11 events from tool results"
+      ],
+      "events_added": 11,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_generation_method": "fast_tool_based",
+      "duration": 4,
+      "travelers": 2
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "fbc1cc38-8f33-49e8-95a7-6bf1db1b9f0a_0",
+      "user_message": "Plan a luxury 4-day trip to Dubai for celebrating our anniversary, budget is flexible",
+      "agent_response": "**Luxury 4-Day Anniversary Trip to Dubai \u2013 A Curated Experience**  \n\nCongratulations on your anniversary! Dubai is the perfect destination for a lavish celebration, and I\u2019ve crafted a bespoke itinerary blending luxury, romance, and unforgettable experiences. Here\u2019s your tailored plan:  \n\n---\n\n### **Day 1: Arrival & Iconic Luxury**  \n**Accommodation:**  \n- **The Ritz-Carlton Residences** (Ultra-luxury, perfect for privacy and indulgence)  \n- **Fairmont Dubai** (Sophisticated elegance with world-class service)  \n\n**Evening:**  \n- **Burj Khalifa at Sunset** (Priority access to the At the Top SKY lounge for champagne and panoramic views)  \n- **Dinner at At.mosphere** (Michelin-starred dining on the 122nd floor of Burj Khalifa)  \n- **The Dubai Fountain Show** (Private abra boat ride for a romantic front-row view)  \n\n---\n\n### **Day 2: Desert Romance & Cultural Gems**  \n**Morning:**  \n- Private hot air balloon ride over the desert with a gourmet breakfast (exclusive operators like Balloon Adventures Dubai)  \n\n**Afternoon:**  \n- **Museum of the Future** (A futuristic marvel\u2014book VIP guided tours)  \n- **Lunch at Al Hadheerah** (Authentic Emirati cuisine in a desert oasis at Bab Al Shams)  \n\n**Evening:**  \n- **Private Desert Safari** (Luxury SUV, bespoke dune dinner under the stars with live music)  \n\n---\n\n### **Day 3: Coastal Indulgence & Exclusive Experiences**  \n**Morning:**  \n- Yacht charter along Dubai Marina (4-hour private cruise with catering)  \n\n**Afternoon:**  \n- **AYA Universe** (Immersive digital art experience\u2014ideal for couples)  \n- **Gold Souk & Spice Souk** (Private shopping tour with a concierge)  \n\n**Evening:**  \n- **Dinner at Pierchic** (Overwater fine dining at Al Qasr Hotel)  \n\n---\n\n### **Day 4: Relaxation & Farewell in Style**  \n**Morning:**  \n- Spa day at **Talise Ottoman Spa** (Burj Al Arab\u2019s award-winning hammam)  \n\n**Afternoon:**  \n- Helicopter tour (12-minute \"Iconic Dubai\" route for aerial photos)  \n- Departure transfer in a chauffeured Rolls-Royce  \n\n---\n\n### **Logistics & Pro Tips**  \n**Flights:**  \n- Best options: **Qatar Airways (5-star service, $1605)** or **EgyptAir (shorter flight, $1325)**  \n\n**Visa & Etiquette:**  \n- Check UAE visa requirements (many nationalities get 30-day visa on arrival).  \n- Dress modestly in public areas; luxury venues are more relaxed.  \n\n**Transport:**  \n- Pre-book private transfers or a luxury chauffeur service (e.g., Emirates Executive).  \n\n**Extras:**  \n- Surprise your partner with a private butler or a rose petal turndown service (arrange with your hotel).  \n\nLet me know if you\u2019d like adjustments\u2014I can secure reservations or add VIP perks! \ud83c\udf1f",
+      "timestamp": "2025-08-06 14:58:26.153010+00:00",
+      "metadata": {
+        "confidence": 0.85,
+        "actions_taken": [
+          "Analyze travel requirements for Dubai",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "refinement_used": false,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.85,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.85,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

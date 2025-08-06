@@ -1,0 +1,214 @@
+{
+  "plan_id": "plan_e50c189f52c4",
+  "session_id": "50c1374b-5890-4d6e-b9cf-e0bdd33f22b0",
+  "events": [
+    {
+      "id": "flight_SIN_to_Tokyo_50bb65bf",
+      "title": "Flight: Singapore \u2192 Tokyo",
+      "description": "Departure from Singapore to Tokyo - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:35.236169",
+      "end_time": "2025-08-07T12:00:35.236169",
+      "location": "Singapore \u2192 Tokyo",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 2,
+        "origin": "SIN",
+        "destination": "Tokyo",
+        "airline": "WS",
+        "price": {
+          "amount": 465.9,
+          "currency": "USD"
+        },
+        "flight_number": "657",
+        "duration_minutes": 240
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Tokyo_1_1ecf7884",
+      "title": "Visit The Making of Harry Potter - Warner Bros. Studio Tour Tokyo",
+      "description": "The Making of Harry Potter - Warner Bros. Studio Tour Tokyo is a amusement park located at 1-ch\u014dme-1-7 Kasugach\u014d, Nerima City, Tokyo 179-0074, Japan with a 4.7/5 rating based on 11713 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-07T12:30:00",
+      "end_time": "2025-08-07T16:30:00",
+      "location": "1-ch\u014dme-1-7 Kasugach\u014d, Nerima City, Tokyo 179-0074, Japan",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Amusement Park",
+        "place_id": "ChIJZzjXkvLtGGARm2YFfi26zoU"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Tokyo_3_fb750985",
+      "title": "Visit Shibuya Sky",
+      "description": "Shibuya Sky is a tourist attraction located at Japan, \u3012150-6145 Tokyo, Shibuya, 2-ch\u014dme\u221224\u2212\uff11\uff12 \u30b9\u30af\u30e9\u30f3\u30d6\u30eb\u30b9\u30af\u30a8\u30a2 14\u968e\u30fb45\u968e 46\u968e\u30fb\u5c4b\u4e0a with a 4.6/5 rating based on 20177 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T12:30:00",
+      "location": "Japan, \u3012150-6145 Tokyo, Shibuya, 2-ch\u014dme\u221224\u2212\uff11\uff12 \u30b9\u30af\u30e9\u30f3\u30d6\u30eb\u30b9\u30af\u30a8\u30a2 14\u968e\u30fb45\u968e 46\u968e\u30fb\u5c4b\u4e0a",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ4Rr2JWiLGGARcyRSHuZ-9G8"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Tokyo_2_b1ba129f",
+      "title": "Visit Meiji Jingu",
+      "description": "Meiji Jingu is a tourist attraction located at 1-1 Yoyogikamizonoch\u014d, Shibuya, Tokyo 151-8557, Japan with a 4.6/5 rating based on 44249 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T13:00:00",
+      "end_time": "2025-08-08T17:00:00",
+      "location": "1-1 Yoyogikamizonoch\u014d, Shibuya, Tokyo 151-8557, Japan",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ5SZMmreMGGARcz8QSTiJyo8"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Tokyo_5_8938badb",
+      "title": "Visit Tokyo Tower",
+      "description": "Tokyo Tower is a shopping located at 4-ch\u014dme-2-8 Shibak\u014den, Minato City, Tokyo 105-0011, Japan with a 4.5/5 rating based on 87143 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T13:00:00",
+      "location": "4-ch\u014dme-2-8 Shibak\u014den, Minato City, Tokyo 105-0011, Japan",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.5,
+        "category": "Shopping",
+        "place_id": "ChIJCewJkL2LGGAR3Qmk0vCTGkg"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Tokyo_to_SIN_bc330a8d",
+      "title": "Return Flight: Tokyo \u2192 Singapore",
+      "description": "Return journey from Tokyo to Singapore - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-10T18:00:35.236169",
+      "end_time": "2025-08-10T22:00:35.236169",
+      "location": "Tokyo \u2192 Singapore",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 2,
+        "origin": "Tokyo",
+        "destination": "SIN",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Tokyo"
+        ],
+        "airline": "WS",
+        "price": {
+          "amount": 465.9,
+          "currency": "USD"
+        },
+        "flight_number": "657",
+        "duration_minutes": 240
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Tokyo_4_48097307",
+      "title": "Visit teamLab Borderless: MORI Building DIGITAL ART MUSEUM",
+      "description": "teamLab Borderless: MORI Building DIGITAL ART MUSEUM is a museum located at Japan, \u3012106-0041 Tokyo, Minato City, Toranomon, 5-ch\u014dme\u22129\u2212\uff19 Azabudai Hills Garden Plaza B, B1 with a 4.6/5 rating based on 24120 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T13:00:00",
+      "location": "Japan, \u3012106-0041 Tokyo, Minato City, Toranomon, 5-ch\u014dme\u22129\u2212\uff19 Azabudai Hills Garden Plaza B, B1",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Museum",
+        "place_id": "ChIJQ5Sa1PqJGGARUSaNKKOrMVg"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Tokyo_6_e80704fb",
+      "title": "Visit Shibuya Scramble Crossing",
+      "description": "Shibuya Scramble Crossing is a tourist attraction located at 21 Udagawacho, Shibuya, Tokyo 150-0042, Japan with a 4.5/5 rating based on 14635 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T14:00:00",
+      "end_time": "2025-08-10T16:30:00",
+      "location": "21 Udagawacho, Shibuya, Tokyo 150-0042, Japan",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJK9EM68qLGGARacmu4KJj5SA"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Tokyo_b6cdd6b3",
+      "title": "KEIO PLAZA HOTEL TOKYO SUMMIT",
+      "description": "Accommodation in Tokyo for 3 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:35.236169",
+      "end_time": "2025-08-10T11:00:35.236169",
+      "location": "TOKYO",
+      "details": {
+        "source": "hotel_search",
+        "nights": 3,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": "Tokyo",
+    "duration_days": 3,
+    "travelers": 1,
+    "budget": 500,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T10:52:35.308297",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T14:51:23.945062",
+  "updated_at": "2025-08-06T14:51:23.945063"
+}
