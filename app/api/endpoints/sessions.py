@@ -33,8 +33,24 @@ async def list_sessions():
         session_manager = get_session_manager()
         
         sessions = session_manager.list_sessions()
+        
+        # Transform sessions to match frontend expected format
+        transformed_sessions = []
+        for session in sessions:
+            session_data = session.model_dump()
+            # Map backend fields to frontend expected fields
+            transformed_session = {
+                "session_id": session_data["session_id"],
+                "title": session_data["title"],
+                "description": session_data.get("description"),
+                "created_at": session_data["created_at"],
+                "updated_at": session_data["last_activity"],  # Map last_activity to updated_at
+                "is_active": session_data["status"] == "active"
+            }
+            transformed_sessions.append(transformed_session)
+        
         return {
-            "sessions": [session.model_dump() for session in sessions],
+            "sessions": transformed_sessions,
             "current_session": session_manager.current_session_id,
             "total": len(sessions)
         }
@@ -57,9 +73,22 @@ async def create_session(session_data: SessionCreate):
         )
         session = session_manager.get_current_session()
         
+        # Transform session data to match frontend expected format
+        transformed_session = None
+        if session:
+            session_data = session.model_dump()
+            transformed_session = {
+                "session_id": session_data["session_id"],
+                "title": session_data["title"],
+                "description": session_data.get("description"),
+                "created_at": session_data["created_at"],
+                "updated_at": session_data["last_activity"],  # Map last_activity to updated_at
+                "is_active": session_data["status"] == "active"
+            }
+        
         return SessionResponse(
             session_id=session_id,
-            session=session.model_dump() if session else None,
+            session=transformed_session,
             message="Session created successfully"
         )
     except Exception as e:
@@ -100,8 +129,22 @@ async def get_session(session_id: str):
         success = session_manager.switch_session(session_id)
         if success:
             session = session_manager.get_current_session()
+            
+            # Transform session data to match frontend expected format
+            transformed_session = None
+            if session:
+                session_data = session.model_dump()
+                transformed_session = {
+                    "session_id": session_data["session_id"],
+                    "title": session_data["title"],
+                    "description": session_data.get("description"),
+                    "created_at": session_data["created_at"],
+                    "updated_at": session_data["last_activity"],  # Map last_activity to updated_at
+                    "is_active": session_data["status"] == "active"
+                }
+            
             return {
-                "session": session.model_dump() if session else None,
+                "session": transformed_session,
                 "message": f"Session {session_id} details retrieved"
             }
         else:
