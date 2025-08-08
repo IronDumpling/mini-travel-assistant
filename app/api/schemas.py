@@ -6,7 +6,7 @@ structured outputs rather than requiring complex parsing.
 """
 
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
 
@@ -108,3 +108,66 @@ class TravelPlanResponse(BaseModel):
     plan: Optional[TravelPlan] = None
     error: Optional[str] = None
     message: Optional[str] = None 
+
+# ===== Plan-related Models =====
+
+class CalendarEventType(str, Enum):
+    """Types of calendar events"""
+    FLIGHT = "flight"
+    HOTEL = "hotel"
+    ATTRACTION = "attraction"
+    RESTAURANT = "restaurant"
+    MEAL = "meal"
+    TRANSPORTATION = "transportation"
+    ACTIVITY = "activity"
+    MEETING = "meeting"
+    FREE_TIME = "free_time"
+
+class CalendarEvent(BaseModel):
+    """Individual calendar event"""
+    id: str = Field(..., description="Unique event identifier")
+    title: str = Field(..., description="Event title")
+    description: Optional[str] = Field(None, description="Event description")
+    event_type: CalendarEventType = Field(..., description="Type of event")
+    start_time: datetime = Field(..., description="Event start time")
+    end_time: datetime = Field(..., description="Event end time")
+    location: Optional[str] = Field(None, description="Event location")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Additional event details")
+    confidence: float = Field(0.8, description="Confidence score for this event")
+    source: str = Field("agent", description="Source of this event (agent, user, etc.)")
+
+class TravelPlanMetadata(BaseModel):
+    """Metadata for travel plan"""
+    destination: Optional[str] = None
+    duration_days: Optional[int] = None
+    travelers: int = 1
+    budget: Optional[float] = None
+    budget_currency: str = "USD"
+    interests: List[str] = Field(default_factory=list)
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    confidence: float = 0.8
+    completion_status: str = "draft"  # draft, partial, complete
+
+class SessionTravelPlan(BaseModel):
+    """Travel plan for a session"""
+    plan_id: str = Field(..., description="Unique plan identifier")
+    session_id: str = Field(..., description="Associated session ID")
+    events: List[CalendarEvent] = Field(default_factory=list, description="Calendar events")
+    metadata: TravelPlanMetadata = Field(default_factory=TravelPlanMetadata, description="Plan metadata")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PlanUpdateRequest(BaseModel):
+    """Request to update a plan"""
+    session_id: str
+    events_to_add: List[CalendarEvent] = Field(default_factory=list)
+    events_to_update: List[CalendarEvent] = Field(default_factory=list)
+    events_to_remove: List[str] = Field(default_factory=list)  # Event IDs
+    metadata_updates: Optional[TravelPlanMetadata] = None
+
+class PlanResponse(BaseModel):
+    """Response for plan operations"""
+    success: bool
+    plan: Optional[SessionTravelPlan] = None
+    message: str
+    events_count: int = 0 

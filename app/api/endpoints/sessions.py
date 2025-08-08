@@ -1,11 +1,16 @@
 """
-Session Management Endpoints - Session CRUD operations
+Session Management Endpoints - Session CRUD operations with RAG-enhanced search
 """
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
+from app.memory.conversation_memory import get_conversation_memory
+from app.core.logging_config import get_logger
+from datetime import datetime
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -28,8 +33,24 @@ async def list_sessions():
         session_manager = get_session_manager()
         
         sessions = session_manager.list_sessions()
+        
+        # Transform sessions to match frontend expected format
+        transformed_sessions = []
+        for session in sessions:
+            session_data = session.model_dump()
+            # Map backend fields to frontend expected fields
+            transformed_session = {
+                "session_id": session_data["session_id"],
+                "title": session_data["title"],
+                "description": session_data.get("description"),
+                "created_at": session_data["created_at"],
+                "updated_at": session_data["last_activity"],  # Map last_activity to updated_at
+                "is_active": session_data["status"] == "active"
+            }
+            transformed_sessions.append(transformed_session)
+        
         return {
-            "sessions": [session.model_dump() for session in sessions],
+            "sessions": transformed_sessions,
             "current_session": session_manager.current_session_id,
             "total": len(sessions)
         }
@@ -52,9 +73,22 @@ async def create_session(session_data: SessionCreate):
         )
         session = session_manager.get_current_session()
         
+        # Transform session data to match frontend expected format
+        transformed_session = None
+        if session:
+            session_data = session.model_dump()
+            transformed_session = {
+                "session_id": session_data["session_id"],
+                "title": session_data["title"],
+                "description": session_data.get("description"),
+                "created_at": session_data["created_at"],
+                "updated_at": session_data["last_activity"],  # Map last_activity to updated_at
+                "is_active": session_data["status"] == "active"
+            }
+        
         return SessionResponse(
             session_id=session_id,
-            session=session.model_dump() if session else None,
+            session=transformed_session,
             message="Session created successfully"
         )
     except Exception as e:
@@ -95,8 +129,22 @@ async def get_session(session_id: str):
         success = session_manager.switch_session(session_id)
         if success:
             session = session_manager.get_current_session()
+            
+            # Transform session data to match frontend expected format
+            transformed_session = None
+            if session:
+                session_data = session.model_dump()
+                transformed_session = {
+                    "session_id": session_data["session_id"],
+                    "title": session_data["title"],
+                    "description": session_data.get("description"),
+                    "created_at": session_data["created_at"],
+                    "updated_at": session_data["last_activity"],  # Map last_activity to updated_at
+                    "is_active": session_data["status"] == "active"
+                }
+            
             return {
-                "session": session.model_dump() if session else None,
+                "session": transformed_session,
                 "message": f"Session {session_id} details retrieved"
             }
         else:
@@ -117,12 +165,80 @@ async def delete_session(session_id: str):
         from app.memory.session_manager import get_session_manager
         session_manager = get_session_manager()
         
-        # TODO: Implement session deletion in session manager
-        return JSONResponse(
-            status_code=501,
-            content={"error": "Session deletion not yet implemented"}
-        )
+        # Check if session exists first
+        sessions = session_manager.list_sessions()
+        session_exists = any(s.session_id == session_id for s in sessions)
+        
+        if not session_exists:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Session not found"}
+            )
+        
+        # Delete the session
+        try:
+            # If this is the current session, we need to handle switching
+            current_session_id = session_manager.current_session_id
+            
+            # Try to delete using session manager
+            success = session_manager.delete_session(session_id)
+            
+            if success:
+                # If we deleted the current session, switch to another one or clear current
+                if current_session_id == session_id:
+                    remaining_sessions = session_manager.list_sessions()
+                    if remaining_sessions:
+                        session_manager.switch_session(remaining_sessions[0].session_id)
+                    else:
+                        session_manager.current_session_id = None
+                
+                return {
+                    "message": f"Session {session_id} deleted successfully",
+                    "deleted_session_id": session_id,
+                    "was_current_session": current_session_id == session_id
+                }
+            else:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "Failed to delete session - deletion operation failed"}
+                )
+                
+        except AttributeError:
+            # If session_manager doesn't have delete_session method, try manual deletion
+            logger.warning("Session manager doesn't have delete_session method, attempting manual deletion")
+            
+            # Try to manually remove from sessions list and files
+            import os
+            from pathlib import Path
+            
+            # Remove from memory
+            if hasattr(session_manager, 'sessions'):
+                session_manager.sessions = {k: v for k, v in session_manager.sessions.items() if k != session_id}
+            
+            # Try to remove session file if it exists
+            data_dir = Path(session_manager.storage_path)
+            session_file = data_dir / f"{session_id}.json"
+            
+            if session_file.exists():
+                session_file.unlink()
+                logger.info(f"Deleted session file: {session_file}")
+            
+            # If this was the current session, switch to another one
+            if session_manager.current_session_id == session_id:
+                remaining_sessions = session_manager.list_sessions()
+                if remaining_sessions:
+                    session_manager.switch_session(remaining_sessions[0].session_id)
+                else:
+                    session_manager.current_session_id = None
+            
+            return {
+                "message": f"Session {session_id} deleted successfully (manual deletion)",
+                "deleted_session_id": session_id,
+                "method": "manual_file_deletion"
+            }
+            
     except Exception as e:
+        logger.error(f"Session deletion failed: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={"error": f"Failed to delete session: {str(e)}"}
@@ -247,4 +363,153 @@ async def export_session_messages(session_id: str, format: str = "json"):
         return JSONResponse(
             status_code=500,
             content={"error": f"Failed to export session: {str(e)}"}
+        )
+
+# 🆕 RAG-Enhanced Intelligent Features
+
+@router.get("/sessions/{session_id}/intelligent-search")
+async def intelligent_search_session(session_id: str, query: str, limit: int = 10):
+    """使用RAG进行智能语义搜索"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 使用RAG进行语义搜索
+        results = await conversation_memory.search_conversations(
+            query=query,
+            session_id=session_id
+        )
+        
+        return {
+            "session_id": session_id,
+            "query": query,
+            "results": [
+                {
+                    "user_message": turn.user_message,
+                    "agent_response": turn.agent_response,
+                    "timestamp": turn.timestamp.isoformat(),
+                    "importance_score": turn.importance_score,
+                    "intent": turn.intent,
+                    "sentiment": turn.sentiment
+                }
+                for turn in results[:limit]
+            ],
+            "total_found": len(results),
+            "search_type": "semantic_rag"
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"智能搜索失败: {str(e)}"}
+        )
+
+@router.get("/sessions/{session_id}/preferences")
+async def extract_user_preferences(session_id: str):
+    """提取用户旅行偏好"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 使用RAG分析用户偏好
+        preferences = await conversation_memory.extract_user_preferences(session_id)
+        
+        return {
+            "session_id": session_id,
+            "preferences": preferences,
+            "extraction_method": "rag_analysis",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"偏好提取失败: {str(e)}"}
+        )
+
+@router.get("/sessions/{session_id}/summary")
+async def get_session_summary(session_id: str):
+    """生成智能会话总结"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 生成智能总结
+        summary = await conversation_memory.get_session_summary(session_id)
+        
+        return {
+            "session_id": session_id,
+            "summary": summary,
+            "generation_method": "rag_enhanced",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"总结生成失败: {str(e)}"}
+        )
+
+@router.get("/sessions/{session_id}/context")
+async def get_relevant_context(session_id: str, query: str, max_turns: int = 5):
+    """获取与查询相关的对话上下文"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 获取相关上下文
+        context_turns = await conversation_memory.get_relevant_context(
+            session_id=session_id,
+            query=query,
+            max_turns=max_turns
+        )
+        
+        return {
+            "session_id": session_id,
+            "query": query,
+            "relevant_context": [
+                {
+                    "user_message": turn.user_message,
+                    "agent_response": turn.agent_response,
+                    "timestamp": turn.timestamp.isoformat(),
+                    "importance_score": turn.importance_score,
+                    "intent": turn.intent
+                }
+                for turn in context_turns
+            ],
+            "context_count": len(context_turns),
+            "max_requested": max_turns
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"上下文获取失败: {str(e)}"}
+        )
+
+@router.get("/conversations/global-search")
+async def global_intelligent_search(query: str, limit: int = 20):
+    """跨所有会话的全局智能搜索"""
+    try:
+        conversation_memory = get_conversation_memory()
+        
+        # 全局语义搜索
+        results = await conversation_memory.search_conversations(
+            query=query,
+            session_id=None  # 搜索所有会话
+        )
+        
+        return {
+            "query": query,
+            "results": [
+                {
+                    "user_message": turn.user_message,
+                    "agent_response": turn.agent_response,
+                    "timestamp": turn.timestamp.isoformat(),
+                    "importance_score": turn.importance_score,
+                    "intent": turn.intent,
+                    "sentiment": turn.sentiment
+                }
+                for turn in results[:limit]
+            ],
+            "total_found": len(results),
+            "search_scope": "global",
+            "search_type": "semantic_rag"
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"全局搜索失败: {str(e)}"}
         ) 

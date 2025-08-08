@@ -1,0 +1,404 @@
+{
+  "plan_id": "plan_fdb1328a08ba",
+  "session_id": "24fa55a3-20db-4785-bb66-40b21f41c46e",
+  "events": [
+    {
+      "id": "a522772e-2259-4722-8bf7-69bd7267ce80",
+      "title": "Networking Dinner at RPM Steak",
+      "description": "High-end steakhouse ideal for networking dinners",
+      "event_type": "meal",
+      "start_time": "2025-08-12T19:00:00",
+      "end_time": "2025-08-12T21:00:00",
+      "location": "RPM Steak, 66 W Kinzie St, Chicago, IL",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Chicago_1_5c4ce335",
+      "title": "Visit Wrigley Field",
+      "description": "Wrigley Field is a sports & recreation located at 1060 W Addison St, Chicago, IL 60613, USA with a 4.8/5 rating based on 32893 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T09:00:00",
+      "end_time": "2025-08-12T12:30:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Sports & Recreation",
+        "place_id": "ChIJId-a5bLTD4gRRtbdduE-6hw"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "5f86d9e9-b842-4d2b-8811-bb50567671a8",
+      "title": "Coffee Break at Millennium Park",
+      "description": "Quick mental reset with a coffee break at Millennium Park",
+      "event_type": "activity",
+      "start_time": "2025-08-12T13:30:00",
+      "end_time": "2025-08-12T17:00:00",
+      "location": "Millennium Park, Chicago, IL",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Chicago_3_62df1506",
+      "title": "Visit The Art Institute of Chicago",
+      "description": "The Art Institute of Chicago is a museum located at 111 S Michigan Ave, Chicago, IL 60603, USA with a 4.8/5 rating based on 35975 reviews (Expensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-13T09:00:00",
+      "end_time": "2025-08-13T12:00:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Museum",
+        "place_id": "ChIJlUbZ4qMsDogR3tCinMzzKUg"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Chicago_5_e52b03b2",
+      "title": "Visit Field Museum",
+      "description": "Field Museum is a tourist attraction located at 1400 S Lake Shore Dr, Chicago, IL 60605, USA with a 4.7/5 rating based on 28390 reviews (Expensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-14T09:00:00",
+      "end_time": "2025-08-14T12:30:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJV0AwM30rDogR2sd-X0cgErU"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Chicago_7_afbbba28",
+      "title": "Visit Lincoln Park Zoo",
+      "description": "Lincoln Park Zoo is a zoo located at Chicago, IL 60614, USA with a 4.6/5 rating based on 36478 reviews (Free).",
+      "event_type": "attraction",
+      "start_time": "2025-08-15T09:00:00",
+      "end_time": "2025-08-15T11:30:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Zoo",
+        "place_id": "ChIJB5o6CWvTD4gR25QC-QbMQAk"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Chicago_9_8e7e96f2",
+      "title": "Visit Shedd Aquarium",
+      "description": "Shedd Aquarium is a aquarium located at 1200 S DuSable Lake Shore Dr, Chicago, IL 60605, USA with a 4.5/5 rating based on 31150 reviews (Expensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-16T09:00:00",
+      "end_time": "2025-08-16T12:00:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 5,
+        "attraction_of_day": 1,
+        "rating": 4.5,
+        "category": "Aquarium",
+        "place_id": "ChIJ-XW3X2MrDogR3_tQ3-OdBTI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Chicago_8_e6711331",
+      "title": "Visit Willis Tower",
+      "description": "Willis Tower is a tourist attraction located at 233 S Wacker Dr, Chicago, IL 60606, USA with a 4.5/5 rating based on 21941 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-16T13:00:00",
+      "end_time": "2025-08-16T16:00:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 4,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJu_tp4r4sDogRfYy4Xs5tDwE"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Chicago_to_Los Angeles_0c411427",
+      "title": "Flight: Chicago \u2192 Los Angeles",
+      "description": "Connecting flight from Chicago to Los Angeles",
+      "event_type": "flight",
+      "start_time": "2025-08-17T14:00:49.922327",
+      "end_time": "2025-08-17T18:34:00",
+      "location": "Chicago \u2192 Los Angeles",
+      "details": {
+        "airline": "Alaska Airlines",
+        "flight_number": "AS 413",
+        "cost": 144.0
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_1_9a05b8cc",
+      "title": "Visit Natural History Museum of Los Angeles County",
+      "description": "Natural History Museum of Los Angeles County is a tourist attraction located at 900 Exposition Blvd, Los Angeles, CA 90007, USA with a 4.8/5 rating based on 13302 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-17T09:00:00",
+      "end_time": "2025-08-17T13:00:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJXzARBf3HwoARJyT7uZSV-G4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_3_8ccaa96f",
+      "title": "Visit Dodger Stadium",
+      "description": "Dodger Stadium is a sports & recreation located at 1000 Vin Scully Ave, Los Angeles, CA 90012, USA with a 4.7/5 rating based on 47808 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-18T09:00:00",
+      "end_time": "2025-08-18T11:00:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Sports & Recreation",
+        "place_id": "ChIJdVYAVPnGwoAR3wmcg09VlJ4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "69e17236-cea6-4038-bfb5-ba93ad01afa6",
+      "title": "Airport Transfer - ORD to Downtown Chicago",
+      "description": "Transportation from O'Hare Airport to The Gwen Hotel",
+      "event_type": "transportation",
+      "start_time": "2025-08-18T12:00:00",
+      "end_time": "2025-08-18T14:00:00",
+      "location": "ORD Airport to 521 N Rush St, Chicago, IL",
+      "details": {
+        "mode": "Taxi or private transfer"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "e44d6623-6244-4ef2-b0d4-5dfeb920e538",
+      "title": "Business Lunch at Spago",
+      "description": "Celebrity chef restaurant perfect for business lunches",
+      "event_type": "meal",
+      "start_time": "2025-08-19T12:00:00",
+      "end_time": "2025-08-19T13:30:00",
+      "location": "Spago, 176 N Canon Dr, Beverly Hills, CA",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Los Angeles_5_b0d818bd",
+      "title": "Visit California Science Center",
+      "description": "California Science Center is a tourist attraction located at 700 Exposition Park Dr, Los Angeles, CA 90037, USA with a 4.7/5 rating based on 19292 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-19T09:00:00",
+      "end_time": "2025-08-19T11:30:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ21yHTgjIwoARcrUbrsffOB4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Chicago_4_c2250622",
+      "title": "Visit Cloud Gate",
+      "description": "Cloud Gate is a tourist attraction located at 201 E Randolph St, Chicago, IL 60602, USA with a 4.7/5 rating based on 35551 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-19T14:00:00",
+      "end_time": "2025-08-19T16:30:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ9Sszh6YsDogRUUo6zu8_TQY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_7_2479f7a0",
+      "title": "Visit The Greek Theatre",
+      "description": "The Greek Theatre is a tourist attraction located at 2700 N Vermont Ave, Los Angeles, CA 90027, USA with a 4.7/5 rating based on 6425 reviews (Expensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-20T09:00:00",
+      "end_time": "2025-08-20T11:30:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJRUJ9pJjAwoARhqQ6EhQynzs"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "3928a303-68fd-4289-9113-ba51daeb6d6d",
+      "title": "Airport Transfer - LAX to Downtown LA",
+      "description": "Transportation from LAX Airport to The Ritz-Carlton",
+      "event_type": "transportation",
+      "start_time": "2025-08-20T12:00:00",
+      "end_time": "2025-08-20T15:30:00",
+      "location": "LAX Airport to 900 W Olympic Blvd, Los Angeles, CA",
+      "details": {
+        "mode": "Taxi or private transfer"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "flight_Los Angeles_to_YYZ_3417096c",
+      "title": "Return Flight: Los Angeles \u2192 Toronto",
+      "description": "Return journey from Los Angeles to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-21T18:00:49.922327",
+      "end_time": "2025-08-21T22:53:00",
+      "location": "Los Angeles \u2192 Toronto",
+      "details": {
+        "airline": "Porter Airlines",
+        "flight_number": "PD 662",
+        "cost": 100.5
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_2_2005d890",
+      "title": "Visit Griffith Observatory",
+      "description": "Griffith Observatory is a tourist attraction located at 2800 E Observatory Rd, Los Angeles, CA 90027, USA with a 4.7/5 rating based on 16570 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-21T09:00:00",
+      "end_time": "2025-08-21T12:30:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJywjU6WG_woAR3NrWwrEH_3M"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "99c482fd-76e3-4fa6-96a2-0fcfa245b11c",
+      "title": "Sunset Stroll at Griffith Observatory",
+      "description": "Evening walk at Griffith Observatory for a mental break",
+      "event_type": "activity",
+      "start_time": "2025-08-21T13:30:00",
+      "end_time": "2025-08-21T17:00:00",
+      "location": "Griffith Observatory, Los Angeles, CA",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "e13ca4f1-8501-42d7-971c-bfd3bf909cc4",
+      "title": "The Gwen, a Luxury Collection Hotel",
+      "description": "Business hotel in Chicago's Magnificent Mile",
+      "event_type": "hotel",
+      "start_time": "2025-08-12T15:00:49.922327",
+      "end_time": "2025-08-17T11:00:49.922327",
+      "location": "521 N Rush St, Chicago, IL",
+      "details": {
+        "reason": "User requested business hotels near major business districts",
+        "nearby_attractions": "Millennium Park, The Art Institute of Chicago"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "36d0d355-9e93-409f-90de-158b08594bc6",
+      "title": "The Ritz-Carlton, Los Angeles",
+      "description": "Business hotel in Downtown LA",
+      "event_type": "hotel",
+      "start_time": "2025-08-17T15:00:49.922327",
+      "end_time": "2025-08-21T11:00:49.922327",
+      "location": "900 W Olympic Blvd, Los Angeles, CA",
+      "details": {
+        "reason": "User requested business hotels near major business districts",
+        "nearby_attractions": "Natural History Museum"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    }
+  ],
+  "metadata": {
+    "destination": {
+      "primary": "New York",
+      "all": [
+        "New York",
+        "Chicago",
+        "Los Angeles"
+      ]
+    },
+    "duration_days": 14,
+    "travelers": 1,
+    "budget": 2100,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T12:59:33.776194",
+    "confidence": 0.88,
+    "completion_status": "partial"
+  },
+  "created_at": "2025-08-06T16:49:43.532123",
+  "updated_at": "2025-08-06T16:59:33.776414"
+}

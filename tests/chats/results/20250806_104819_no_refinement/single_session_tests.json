@@ -1,0 +1,596 @@
+[
+  {
+    "test_id": "228c4046-2d59-4c9d-b3b4-9a8abae2ea0a",
+    "test_type": "single_session",
+    "session_id": "4c7b7c30-57ca-4d63-97e1-0f484cbb0a23",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 7-day trip to London for 2 people with a budget of $3000",
+      "session_id": "4c7b7c30-57ca-4d63-97e1-0f484cbb0a23",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s your expertly crafted 7-day London itinerary for two people, designed to maximize your $3,000 budget while delivering a rich blend of culture, history, and modern experiences. The plan includes current hotel options, flight prices, and top-rated attractions to ensure a seamless trip.\n\n---\n\n### **Trip Overview**  \n- **Destination**: London, UK  \n- **Duration**: 7 days  \n- **Budget**: $3,000 (for two)  \n- **Focus**: Culture, history, and local experiences  \n\n---\n\n### **Flights** (Round-trip for two)  \nCurrent flight options from the U.S. to London:  \n- **WestJet (WS)**: $627.60 per person (3h 6m flight)  \n- **SATA (S4)**: $953.20 per person (5h 55m flight)  \n- **Air Transat (TS)**: $965.20 per person (7h flight)  \n\n*Recommendation*: The WestJet option offers the best value, leaving ~$1,750 for accommodations and activities after flights.  \n\n---\n\n### **Accommodations**  \nCentrally located hotels (exact prices unavailable, but these are well-rated options):  \n1. **Holiday Inn Mayfair** – Prime location for exploring central London.  \n2. **Holiday Inn Kensington Forum** – Close to museums and Hyde Park.  \n3. **London Marriott Regents Park** – Ideal for quieter stays near Camden.  \n4. **Radisson Blu Hampshire** – Luxury option in the West End.  \n\n*Budget Tip*: Aim for ~$150–$200/night to stay within budget, leaving room for activities.  \n\n---\n\n### **7-Day Itinerary**  \n\n#### **Day 1: Arrival & Iconic Sights**  \n- **Morning**: Arrive in London; check into your hotel.  \n- **Afternoon**: Visit **Big Ben** (4.6/5) and **London Eye** (4.5/5).  \n- **Evening**: Stroll along the Thames; dinner at Borough Market (4.6/5).  \n\n#### **Day 2: Royal & Historic London**  \n- **Morning**: Tour **Buckingham Palace** (4.5/5); watch the Changing of the Guard.  \n- **Afternoon**: Explore **Westminster Abbey** and **Houses of Parliament**.  \n- **Evening**: Pub dinner in Covent Garden.  \n\n#### **Day 3: Museums & Culture**  \n- **Morning**: **British Museum** (4.7/5) – free entry!  \n- **Afternoon**: **Natural History Museum** (4.7/5) in South Kensington.  \n- **Evening**: Camden Market (4.6/5) for street food and live music.  \n\n#### **Day 4: East London & Modern Vibes**  \n- **Morning**: Walk across **Tower Bridge** (4.8/5); visit the Tower of London.  \n- **Afternoon**: Explore Shoreditch’s street art and boutique shops.  \n- **Evening**: Dinner in Brick Lane (famous for curry houses).  \n\n#### **Day 5: Day Trip to Greenwich**  \n- **Morning**: Take a Thames clipper to **Greenwich**; visit the Royal Observatory.  \n- **Afternoon**: Picnic in Greenwich Park with skyline views.  \n- **Evening**: Return to London; relax at your hotel.  \n\n#### **Day 6: Shopping & Leisure**  \n- **Morning**: Window-shop at **Harrods** (4.4/5) or Oxford Street.  \n- **Afternoon**: Hyde Park picnic or boat ride on the Serpentine.  \n- **Evening**: West End show (book discounted tickets in advance).  \n\n#### **Day 7: Farewell London**  \n- **Morning**: Last-minute souvenir shopping at Portobello Road Market.  \n- **Afternoon**: Depart for the airport.  \n\n---\n\n### **Budget Breakdown** (Estimate)  \n- **Flights**: ~$1,250 (WestJet for two)  \n- **Hotels**: ~$1,050 ($150/night × 7 nights)  \n- **Activities/Food**: ~$700 ($100/day for two)  \n\n*Total*: $3,000 (flexible based on hotel prices and dining choices).  \n\n---\n\n### **Pro Tips**  \n- Use an **Oyster Card** for affordable public transport.  \n- Book free attractions (e.g., museums) early to avoid crowds.  \n- Pre-book tickets for paid attractions (e.g., London Eye) for discounts.  \n\nLet me know if you’d like adjustments or additional details! Enjoy your London adventure!",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for London",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "4c7b7c30-57ca-4d63-97e1-0f484cbb0a23",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 98.98899745941162,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for London",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T10:49:58.288118",
+    "error_message": null
+  },
+  {
+    "test_id": "365ebf82-9eaf-4e1e-ba72-94ebe1f88dfb",
+    "test_type": "single_session",
+    "session_id": "a444768c-34dc-4b75-b1e9-09a6f6266234",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a romantic weekend in Paris for 2 people, focusing on fine dining and cultural experiences",
+      "session_id": "a444768c-34dc-4b75-b1e9-09a6f6266234",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "**Romantic Weekend in Paris: A Curated Experience of Fine Dining & Culture**  \n\nParis is the perfect destination for a romantic escape, blending world-class cuisine with timeless cultural treasures. Here’s your tailored itinerary for an unforgettable weekend, combining iconic experiences with current recommendations:  \n\n---\n\n### **Day 1: Classic Parisian Elegance**  \n**Morning:**  \n- **Eiffel Tower (4.7/5 rating)**  \n  Start your day with breathtaking views from this iconic landmark. Opt for early access to avoid crowds.  \n- **Seine River Stroll**  \n  Wander along the riverbanks to Île de la Cité, where you’ll find the stunning **Notre-Dame Cathedral (4.7/5)** (note: interior access may be limited due to restoration).  \n\n**Lunch:**  \n- **Le Jules Verne** (Eiffel Tower)  \n  A Michelin-starred gem offering gourmet French cuisine with panoramic views.  \n\n**Afternoon:**  \n- **Musée d’Orsay (4.8/5)**  \n  Explore Impressionist masterpieces in a beautifully converted railway station.  \n- **Luxembourg Gardens (4.7/5)**  \n  Relax in this picturesque park, perfect for a romantic stroll.  \n\n**Dinner:**  \n- **Epicure** (Three Michelin stars)  \n  A lavish dining experience at the Hôtel Le Bristol, featuring seasonal French dishes.  \n\n**Evening:**  \n- **Moonlight Seine Cruise**  \n  Book a private boat tour for champagne under the stars.  \n\n---\n\n### **Day 2: Art, History & Montmartre Charm**  \n**Morning:**  \n- **Louvre Museum (4.7/5)**  \n  Prioritize the *Mona Lisa* and *Venus de Milo* with early entry tickets.  \n\n**Brunch:**  \n- **Café de Flore**  \n  A legendary Saint-Germain spot for croissants and people-watching.  \n\n**Afternoon:**  \n- **Montmartre & Sacré-Cœur Basilica (4.7/5)**  \n  Meander through cobblestone streets, visit artists’ square (Place du Tertre), and admire the basilica’s mosaics.  \n\n**Dinner:**  \n- **La Tour d’Argent**  \n  A historic institution with refined French cuisine and Seine views.  \n\n**Nightcap:**  \n- **Bar Hemingway** (Ritz Paris)  \n  Sip bespoke cocktails in this intimate, literary-themed bar.  \n\n---\n\n### **Accommodation Recommendations**  \nWhile current hotel ratings are unavailable, consider these centrally located options:  \n- **Renaissance Paris Vendôme**: Luxury near the Louvre.  \n- **Mercure Paris Tour Eiffel**: Mid-range with iconic views.  \n\n### **Flights**  \nCurrent round-trip options start at **$629 USD** (WS airline, 2h9m flight).  \n\n---\n\n**Pro Tips:**  \n- Book dining reservations *now* for Michelin-starred venues.  \n- Purchase skip-the-line tickets for major attractions.  \n- Pack chic attire for upscale venues.  \n\nLet me know if you’d like adjustments or additional details—I’m happy to refine this further!  \n\n*Bon voyage et amoureux!*",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Paris",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "a444768c-34dc-4b75-b1e9-09a6f6266234",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 83.62845134735107,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Paris",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T10:51:22.929548",
+    "error_message": null
+  },
+  {
+    "test_id": "a0431b6b-0480-45cc-aeba-3dfe034ef7b8",
+    "test_type": "single_session",
+    "session_id": "50c1374b-5890-4d6e-b9cf-e0bdd33f22b0",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "I need a 3-day business trip to Tokyo with meetings in Shibuya and Shinjuku areas",
+      "session_id": "50c1374b-5890-4d6e-b9cf-e0bdd33f22b0",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s your **comprehensive 3-day business trip plan for Tokyo**, optimized for meetings in **Shibuya and Shinjuku**, with seamless logistics, strategic downtime, and curated local experiences:\n\n---\n\n### **Tokyo 3-Day Business Trip Itinerary**  \n**Focus:** Efficiency, productivity, and balanced exploration  \n\n#### **Day 1: Arrival & Shibuya Meetings**  \n- **Morning:**  \n  - Arrive via **United Airlines (UA)** for a quick 85-minute flight (~$556) or **WestJet (WS)** for a longer but economical option (~$466).  \n  - Check into a centrally located hotel like **The Gate Hotel** (stylish, near Shibuya) or **Keio Plaza Hotel Tokyo Summit** (business-friendly in Shinjuku).  \n\n- **Afternoon:**  \n  - **Business Meetings in Shibuya**: Host discussions near landmarks like **Shibuya Scramble Crossing** or **Shibuya Sky** (ideal for post-meeting networking with panoramic views).  \n  - **Lunch Recommendation**: Try a quiet *izakaya* (Japanese pub) or a high-end sushi spot in the area.  \n\n- **Evening:**  \n  - Unwind at **Meiji Jingu**, a serene Shinto shrine, or explore **teamLab Borderless** for immersive digital art (both highly rated ~4.6/5).  \n\n#### **Day 2: Shinjuku Meetings & Networking**  \n- **Morning/Afternoon:**  \n  - **Meetings in Shinjuku**: Opt for venues near **Tokyo Metropolitan Government Building** (free observatory) or **NEW OTANI TOKYO** (luxury hotel with meeting spaces).  \n  - **Coffee Break**: Café hopping in Shinjuku’s Golden Gai area for a local vibe.  \n\n- **Evening:**  \n  - Dinner at **Omoide Yokocho** (nostalgic alley with yakitori) or a rooftop bar like **Park Hyatt’s New York Bar** (iconic city views).  \n\n#### **Day 3: Flexible Wrap-Up & Departure**  \n- **Morning:**  \n  - Light sightseeing: **Imperial Palace** (4.4/5) for a historic stroll or **Roppongi Hills** (4.2/5) for art galleries.  \n  - Last-minute meetings or coworking spaces in Shinjuku/Shibuya.  \n\n- **Afternoon:**  \n  - Departure: Choose a **UA flight** (113-minute option recommended for balance of speed/price).  \n\n---\n\n### **Key Recommendations**  \n- **Hotels**: Prioritize **The Gate Hotel** (Shibuya) or **Keio Plaza** (Shinjuku) for proximity to meetings.  \n- **Flights**: UA’s 85-minute flight is fastest; WS offers budget-friendly alternatives.  \n- **Downtime Activities**: Blend culture (Meiji Jingu) with modern experiences (teamLab Borderless).  \n\n**Pro Tip**: Use Tokyo’s efficient metro system (Suica card) for quick transit between Shibuya/Shinjuku.  \n\nLet me know if you’d like adjustments to bookings or additional details! Safe travels.",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Tokyo",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "50c1374b-5890-4d6e-b9cf-e0bdd33f22b0",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 88.57403206825256,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Tokyo",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T10:52:52.521273",
+    "error_message": null
+  },
+  {
+    "test_id": "e2870293-0ed3-4c9d-b767-a4d24a0a2ab4",
+    "test_type": "single_session",
+    "session_id": "57ba8217-1f8f-42d7-aa94-92500a7990c8",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 5-day family trip to Singapore with 2 adults and 2 children (ages 8 and 12)",
+      "session_id": "57ba8217-1f8f-42d7-aa94-92500a7990c8",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s your **5-day family-friendly Singapore itinerary** for 2 adults and 2 children (ages 8 and 12), blending must-see attractions, cultural experiences, and practical recommendations based on current data:\n\n---\n\n### **Day 1: Iconic Landmarks & City Exploration**  \n**Morning:**  \n- **Marina Bay Sands & Gardens by the Bay** (Rating: 4.7)  \n  Start at the iconic Marina Bay Sands SkyPark for panoramic views, then explore the futuristic Gardens by the Bay. Kids will love the Cloud Forest’s waterfall and the Flower Dome.  \n- **Merlion Park** (Rating: 4.6)  \n  Snap family photos with Singapore’s famous half-lion, half-fish statue.  \n\n**Afternoon:**  \n- **Lau Pa Sat** (Rating: 4.4)  \n  Try local hawker fare like satay or chicken rice at this historic food center.  \n\n**Evening:**  \n- **Clarke Quay** (Rating: 4.5)  \n  Stroll along the riverfront, or take a family-friendly bumboat cruise to see the city lights.  \n\n---\n\n### **Day 2: Wildlife & Adventure**  \n**Full Day at Mandai Wildlife Reserve:**  \n- **Singapore Zoo** (Rating: 4.6)  \n  Meet orangutans and pygmy hippos at this open-concept zoo. Add-on: River Wonders or Night Safari for extra adventure.  \n\n**Evening:**  \n- **Maxwell Food Centre** (Rating: 4.4)  \n  Sample more local dishes like Hainanese chicken rice.  \n\n---\n\n### **Day 3: Culture & Creativity**  \n**Morning:**  \n- **National Gallery Singapore** (Rating: 4.6)  \n  Interactive art exhibits will engage kids, while adults appreciate Southeast Asian masterpieces.  \n\n**Afternoon:**  \n- **Singapore Botanic Gardens** (Rating: 4.7)  \n  Picnic by Swan Lake or explore the Jacob Ballas Children’s Garden (with water play areas).  \n\n**Evening:**  \n- **Holiday Inn Singapore Orchard** (or similar)  \n  Relax at a family-friendly hotel with a pool.  \n\n---\n\n### **Day 4: Sentosa Island Fun**  \n**Full Day on Sentosa:**  \n- **Universal Studios Singapore** (Thrill rides for teens + kiddie zones)  \n- **S.E.A. Aquarium** or Adventure Cove Waterpark  \n- **Palawan Beach** for sandcastle-building.  \n\n**Dinner:**  \n- **Din Tai Fung** at Resorts World Sentosa for kid-friendly dumplings.  \n\n---\n\n### **Day 5: Relax & Souvenir Shopping**  \n**Morning:**  \n- **Chinatown** for colorful streets and child-friendly souvenir shops.  \n- **Buddha Tooth Relic Temple** (cultural pitstop).  \n\n**Afternoon:**  \n- **Flight Prep**: Consider staying at **Crowne Plaza Changi Airport** (Rating: N/A) if you have an early departure, with its airport-connected convenience.  \n\n---\n\n### **Practical Tips**  \n- **Flights**: Current options start at **$2,545 USD** (e.g., WS/AC airlines, ~5-hour flights).  \n- **Hotels**: Family-friendly picks:  \n  - **Holiday Inn Singapore Orchard** (central location)  \n  - **Carlton Hotel Singapore** (near Marina Bay)  \n- **Transport**: Use the MRT (subway) for affordability; taxis are also family-friendly.  \n- **Visa**: Check requirements based on nationality.  \n\nThis itinerary balances excitement and downtime, with attractions rated 4.4+ by visitors. Let me know if you’d like adjustments or additional bookings!  \n\n---  \n*Note: Hotel ratings/prices were unavailable; I’ve prioritized locations near key attractions. Confirm details closer to your travel dates.*",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Singapore",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "57ba8217-1f8f-42d7-aa94-92500a7990c8",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 108.68474507331848,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Singapore",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T10:54:42.222685",
+    "error_message": null
+  },
+  {
+    "test_id": "68b46368-f8cf-4340-89e9-e3d56573f54b",
+    "test_type": "single_session",
+    "session_id": "9bd9a655-561f-48f2-81a2-e0ffd357781d",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Create a 14-day backpacking itinerary across Europe for a student with a $1500 budget",
+      "session_id": "9bd9a655-561f-48f2-81a2-e0ffd357781d",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s a meticulously crafted **14-day backpacking itinerary across Europe** for a student with a **$1500 budget**, blending cost-effective travel strategies, must-see attractions, and current flight/hotel data:\n\n---\n\n### **🌍 14-Day Europe Backpacking Itinerary (Budget: $1500)**\n**Route:** London → Paris → Berlin → Rome → Barcelona → Amsterdam → Vienna → Prague  \n\n#### **Day 1-2: London, UK**  \n- **Flights:** Start with YYZ → LON ($313.80, 3h 6m).  \n- **Stay:** Budget hostels near Kensington (Holiday Inn Kensington Forum area) or Camden.  \n- **Explore:**  \n  - Tower Bridge (free to walk across, £12 for exhibition).  \n  - Free museums (British Museum, Tate Modern).  \n  - Cheap eats at Borough Market.  \n- **Next:** Fly to Paris ($89.20, 1h 25m).  \n\n#### **Day 3-4: Paris, France**  \n- **Stay:** Latin Quarter hostels (~$30/night).  \n- **Explore:**  \n  - Musée d’Orsay (€16, free for EU students under 26).  \n  - Picnic by the Seine (grab baguettes from local bakeries).  \n  - Free walking tours (tip-based).  \n- **Next:** Fly to Berlin ($162.80, 1h 55m).  \n\n#### **Day 5-6: Berlin, Germany**  \n- **Stay:** Friedrichshain hostels (~$25/night).  \n- **Explore:**  \n  - Free street art tours in East Side Gallery.  \n  - Budget currywurst stands (~€3).  \n  - Reichstag dome (free, book ahead).  \n- **Next:** Fly to Rome ($137.90, 2h 55m).  \n\n#### **Day 7-8: Rome, Italy**  \n- **Stay:** Trastevere hostels (~$28/night).  \n- **Explore:**  \n  - Pantheon (free), St. Peter’s Basilica (free).  \n  - €1 pizza slices near Termini Station.  \n  - Roman Forum (€16 combo ticket with Colosseum).  \n- **Next:** Fly to Barcelona ($68.20, 1h 50m).  \n\n#### **Day 9-10: Barcelona, Spain**  \n- **Stay:** Gothic Quarter hostels (~$30/night).  \n- **Explore:**  \n  - Sagrada Família (€26, book online for discounts).  \n  - Free beach day at Barceloneta.  \n  - Tapas bars (€2-3 per plate).  \n- **Next:** Fly to Amsterdam ($90.20, 2h 15m).  \n\n#### **Day 11-12: Amsterdam, Netherlands**  \n- **Stay:** Jordaan district hostels (~$35/night).  \n- **Explore:**  \n  - Van Stapele Koekmakerij (must-try cookies, ~€3).  \n  - Free ferry to NDSM Wharf.  \n  - Rent a bike (~€10/day).  \n- **Next:** Fly to Vienna ($228.80, 3h 5m).  \n\n#### **Day 13: Vienna, Austria**  \n- **Stay:** Mariahilf hostels (~$32/night).  \n- **Explore:**  \n  - Kunsthistorisches Museum (€18, student discounts).  \n  - Cheap schnitzel at Figlmüller (€12).  \n- **Next:** Fly to Prague ($140.60, 2h 40m).  \n\n#### **Day 14: Prague, Czechia**  \n- **Explore:**  \n  - Charles Bridge (free at sunrise).  \n  - Old Town Square (free, avoid overpriced cafés).  \n  - Trdelník (€2 from street vendors).  \n- **Fly Home:** PRG → YYZ ($526.40, 3h 55m).  \n\n---\n\n### **💰 Budget Breakdown (Total: ~$1450)**  \n- **Flights:** $1,758.90 (use multi-city booking tools like Kiwi for discounts).  \n- **Accommodation:** ~$300 (hostels at ~$25/night).  \n- **Food/Activities:** ~$400 (€30/day for meals + attractions).  \n- **Transport:** ~$100 (local trains/buses).  \n\n### **🎒 Pro Tips for Students:**  \n1. **Rail Passes:** Consider Eurail for flexibility (compare with budget flights).  \n2. **Student Discounts:** Always ask (ISIC card helps).  \n3. **Free Walking Tours:** Tip-based and informative.  \n4. **Overnight Buses/Trains:** Save on accommodation.  \n\nLet me know if you’d like adjustments for specific interests (art, history, nightlife)! Safe travels! ✈️",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Europe",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "9bd9a655-561f-48f2-81a2-e0ffd357781d",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 151.33697533607483,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Europe",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T10:57:14.574373",
+    "error_message": null
+  },
+  {
+    "test_id": "6019e761-f690-44ad-a629-d2066fc1634e",
+    "test_type": "single_session",
+    "session_id": "fbc1cc38-8f33-49e8-95a7-6bf1db1b9f0a",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a luxury 4-day trip to Dubai for celebrating our anniversary, budget is flexible",
+      "session_id": "fbc1cc38-8f33-49e8-95a7-6bf1db1b9f0a",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "**Luxury 4-Day Anniversary Trip to Dubai – A Curated Experience**  \n\nCongratulations on your anniversary! Dubai is the perfect destination for a lavish celebration, and I’ve crafted a bespoke itinerary blending luxury, romance, and unforgettable experiences. Here’s your tailored plan:  \n\n---\n\n### **Day 1: Arrival & Iconic Luxury**  \n**Accommodation:**  \n- **The Ritz-Carlton Residences** (Ultra-luxury, perfect for privacy and indulgence)  \n- **Fairmont Dubai** (Sophisticated elegance with world-class service)  \n\n**Evening:**  \n- **Burj Khalifa at Sunset** (Priority access to the At the Top SKY lounge for champagne and panoramic views)  \n- **Dinner at At.mosphere** (Michelin-starred dining on the 122nd floor of Burj Khalifa)  \n- **The Dubai Fountain Show** (Private abra boat ride for a romantic front-row view)  \n\n---\n\n### **Day 2: Desert Romance & Cultural Gems**  \n**Morning:**  \n- Private hot air balloon ride over the desert with a gourmet breakfast (exclusive operators like Balloon Adventures Dubai)  \n\n**Afternoon:**  \n- **Museum of the Future** (A futuristic marvel—book VIP guided tours)  \n- **Lunch at Al Hadheerah** (Authentic Emirati cuisine in a desert oasis at Bab Al Shams)  \n\n**Evening:**  \n- **Private Desert Safari** (Luxury SUV, bespoke dune dinner under the stars with live music)  \n\n---\n\n### **Day 3: Coastal Indulgence & Exclusive Experiences**  \n**Morning:**  \n- Yacht charter along Dubai Marina (4-hour private cruise with catering)  \n\n**Afternoon:**  \n- **AYA Universe** (Immersive digital art experience—ideal for couples)  \n- **Gold Souk & Spice Souk** (Private shopping tour with a concierge)  \n\n**Evening:**  \n- **Dinner at Pierchic** (Overwater fine dining at Al Qasr Hotel)  \n\n---\n\n### **Day 4: Relaxation & Farewell in Style**  \n**Morning:**  \n- Spa day at **Talise Ottoman Spa** (Burj Al Arab’s award-winning hammam)  \n\n**Afternoon:**  \n- Helicopter tour (12-minute \"Iconic Dubai\" route for aerial photos)  \n- Departure transfer in a chauffeured Rolls-Royce  \n\n---\n\n### **Logistics & Pro Tips**  \n**Flights:**  \n- Best options: **Qatar Airways (5-star service, $1605)** or **EgyptAir (shorter flight, $1325)**  \n\n**Visa & Etiquette:**  \n- Check UAE visa requirements (many nationalities get 30-day visa on arrival).  \n- Dress modestly in public areas; luxury venues are more relaxed.  \n\n**Transport:**  \n- Pre-book private transfers or a luxury chauffeur service (e.g., Emirates Executive).  \n\n**Extras:**  \n- Surprise your partner with a private butler or a rose petal turndown service (arrange with your hotel).  \n\nLet me know if you’d like adjustments—I can secure reservations or add VIP perks! 🌟",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Dubai",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "fbc1cc38-8f33-49e8-95a7-6bf1db1b9f0a",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 82.66679978370667,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Dubai",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T10:58:38.257307",
+    "error_message": null
+  },
+  {
+    "test_id": "aa967bf8-df7d-4e67-bdbb-ae2f198896a5",
+    "test_type": "single_session",
+    "session_id": "1c36d7c2-3aec-477a-aff6-ed23b6596640",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "I'm planning a solo trip to Barcelona for 6 days, interested in art, architecture, and nightlife",
+      "session_id": "1c36d7c2-3aec-477a-aff6-ed23b6596640",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s your expertly crafted 6-day solo trip plan for Barcelona, blending art, architecture, and nightlife with current recommendations:\n\n---\n\n### **Barcelona Solo Travel Plan (6 Days)**  \n**Tailored for Art, Architecture & Nightlife Enthusiasts**  \n\n#### **🌍 Pre-Trip Essentials**  \n- **Visa/Entry**: Check Schengen visa requirements based on your nationality.  \n- **Transport**: Get an **Hola BCN! card** (unlimited metro/bus rides) or use the T-mobilitat app.  \n- **Etiquette**: Learn basic Catalan phrases; dinner starts late (9 PM+).  \n\n---\n\n### **🏨 Accommodation Recommendations**  \n*(Based on proximity to your interests)*  \n- **Eurostars BCN Design**: Stylish, near Passeig de Gràcia (Gaudí landmarks).  \n- **Catalonia Sagrada Família**: Budget-friendly, steps from Sagrada Família.  \n- **Silken Gran Havana**: Rooftop bar, central for nightlife.  \n\n*Note: Check prices directly as they fluctuate.*  \n\n---\n\n### **🎨 Art & Architecture Itinerary**  \n**Day 1-2: Gaudí Immersion**  \n- **Morning**: **Sagrada Família** (4.8/5) – Book a tower tour for city views.  \n- **Afternoon**: **Casa Batlló** (4.7/5) & **La Pedrera** (4.6/5) – Audio guides highly recommended.  \n- **Evening**: Sunset at **Park Güell** (4.4/5) – Pre-book tickets.  \n\n**Day 3: Gothic & Modernist Mix**  \n- **Morning**: **Cathedral of Barcelona** (4.6/5) + explore El Born’s galleries.  \n- **Afternoon**: **Arc de Triomf** (4.6/5) + **Ciutadella Park** (4.6/5).  \n- **Evening**: **Plaça de Catalunya** (4.5/5) for people-watching.  \n\n**Day 4: Hidden Gems**  \n- **Morning**: **Palau de la Música Catalana** (UNESCO-listed concert hall).  \n- **Afternoon**: **Mercat de la Boqueria** (4.5/5) – Try fresh juices and tapas.  \n\n---\n\n### **🌙 Nightlife Highlights**  \n- **Poble Sec**: **El Paraigua** (speakeasy vibe) or **Bar Olimpic** for locals.  \n- **Gràcia**: **Sala Apolo** (indie/electronic) or **Otto Zutz** (multi-floor club).  \n- **Beach Clubs**: **Opium Mar** (dress code enforced).  \n\n*Tip: Nightlife peaks post-midnight; solo travelers can join pub crawls for safety.*  \n\n---\n\n### **✈️ Flight Options (Round-Trip)**  \n- **Best Value**: **S4 @ $388** (82 min).  \n- **Alternative**: **AT @ $467** (445 min).  \n\n*Book soon for price stability.*  \n\n---\n\n### **🔍 Pro Tips**  \n- **Safety**: Avoid La Rambla at night; use cross-body bags.  \n- **Tickets**: Pre-book **Sagrada Família** and **Park Güell** to skip lines.  \n- **Local Insight**: Free entry to **MNAC** (art museum) on Saturdays after 3 PM.  \n\nLet me know if you’d like adjustments or deeper dives into specific areas! Enjoy Barcelona’s vibrant energy.  \n\n---  \n*Response fused from: Official tourism guidelines, current hotel/flight data, and curated attraction ratings.*",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Barcelona",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "1c36d7c2-3aec-477a-aff6-ed23b6596640",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 93.06974720954895,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Barcelona",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T11:00:12.345753",
+    "error_message": null
+  },
+  {
+    "test_id": "cc7f958e-817c-4a5d-bd97-c0217948b19a",
+    "test_type": "single_session",
+    "session_id": "61e155e6-6a48-4b4d-bbb8-915ab770f75d",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 5-day ski trip to the Swiss Alps for 4 people in February",
+      "session_id": "61e155e6-6a48-4b4d-bbb8-915ab770f75d",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s a meticulously crafted 5-day ski trip plan for your group of 4 to the Swiss Alps in February, blending expert insights with current data for a seamless experience:\n\n---\n\n### **5-Day Swiss Alps Ski Itinerary**  \n**Destination:** Swiss Alps  \n**Travel Dates:** February (peak snow conditions)  \n**Group Size:** 4  \n\n#### **Day 1: Arrival & Alpine Immersion**  \n- **Flights:** Consider routing through major hubs like Munich (MUC) or Vienna (VIE) for connections to Swiss airports (e.g., Zurich or Geneva). Sample flight options:  \n  - *YYZ → MUC* (WS 252, ~$2749 USD, 2h9m)  \n  - *MUC → Zurich* (train or short flight, ~1.5h)  \n- **Transfer:** Private shuttle or train to your resort (e.g., Zermatt or St. Moritz). Swiss Travel Pass recommended for group flexibility.  \n- **Evening:** Settle into a cozy alpine lodge (hotel options below) and enjoy fondue at a traditional restaurant.  \n\n#### **Day 2-4: Skiing & Adventure**  \n- **Resorts:** Top picks for February:  \n  - *Zermatt:* Iconic Matterhorn views, 360km of slopes.  \n  - *Verbier:* Challenging off-piste terrain.  \n  - *St. Moritz:* Luxury amenities + cross-country trails.  \n- **Lift Passes:** Book online for group discounts (e.g., 4-day pass ~$300-$400/person).  \n- **Après-Ski:** Thermal baths (e.g., Leukerbad) or scenic train rides (Glacier Express).  \n\n#### **Day 5: Departure & Cultural Touch**  \n- **Morning:** Last runs or visit local attractions (e.g., Jungfraujoch for panoramic views).  \n- **Flights Return:** Sample route:  \n  - *Zurich → VIE* (KL 1858, ~$793 USD, 1h35m)  \n  - *VIE → YYZ* (LO 226, ~$2251 USD, 1h15m).  \n\n---\n\n### **Current Recommendations**  \n#### **Accommodations**  \nWhile specific Swiss hotels weren’t found in dynamic data, consider:  \n- *Luxury:* The Omnia (Zermatt) – Alpine chic with spa.  \n- *Mid-range:* Hotel Eden (St. Moritz) – Ski-in/ski-out access.  \n- *Budget:* Youth hostels (e.g., Zermatt Youth Hostel) for group savings.  \n\n#### **Dining & Culture**  \n- Try *raclette* and *rösti* at mountain huts.  \n- Visit local museums (e.g., Zermatt’s Matterhorn Museum).  \n\n#### **Pro Tips**  \n- Pack layers: February temps range -5°C to 5°C.  \n- Book ski rentals in advance for group discounts.  \n- Validate travel insurance covers off-piste skiing.  \n\nLet me know if you’d like adjustments or specific bookings! 🎿✨  \n\n---  \n*Note: Flight/hotel prices are dynamic; confirm closer to travel dates.*",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for Swiss Alps",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "61e155e6-6a48-4b4d-bbb8-915ab770f75d",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 99.39222478866577,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for Swiss Alps",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T11:02:06.044907",
+    "error_message": null
+  },
+  {
+    "test_id": "8fe52031-f4fc-426e-94b6-404ad2d1726e",
+    "test_type": "single_session",
+    "session_id": "e532eff4-4b52-4b37-a86a-5bbe94c43553",
+    "query_index": 0,
+    "test_name": "single_session_query_0",
+    "request_data": {
+      "message": "Plan a 7-day trip to Berlin and Munich for 2 people with a budget of $7000 in this summer",
+      "session_id": "e532eff4-4b52-4b37-a86a-5bbe94c43553",
+      "enable_refinement": false
+    },
+    "response_data": {
+      "success": true,
+      "content": "Here’s a meticulously crafted 7-day itinerary for Berlin and Munich, designed for two travelers with a $7,000 budget this summer. The plan balances iconic sights, cultural immersion, and practical logistics, leveraging both authoritative knowledge and current data for a seamless experience.\n\n---\n\n### **Trip Overview**  \n- **Destinations**: Berlin (4 days) → Munich (3 days)  \n- **Budget Allocation**:  \n  - Flights: ~$3,002 (roundtrip YYZ→BER, MUC→YYZ + internal flight)  \n  - Accommodation: ~$1,500 (mid-range hotels, estimated $200/night)  \n  - Activities/Dining/Transport: ~$2,500 ($350/day for meals, attractions, and local transit)  \n\n---\n\n### **Day 1-4: Berlin**  \n**Accommodation**:  \n- **Scandic Berlin Kurfürstendamm** or **Motel One Berlin-Tiergarten** (central locations, modern amenities). *Note: Check real-time pricing via hotel websites for summer availability*.  \n\n**Highlights**:  \n1. **Brandenburg Gate & Reichstag Building** (4.7/5): Start with Berlin’s iconic landmarks. Book a free Reichstag dome visit in advance.  \n2. **East Side Gallery** (4.6/5): Walk along the preserved Berlin Wall murals.  \n3. **Berlin Cathedral** (4.6/5): Climb the dome for panoramic views.  \n4. **Charlottenburg Palace** (4.6/5): Baroque grandeur with lush gardens.  \n\n**Cultural Tip**: Pair museum visits (e.g., Pergamon Museum) with a relaxed evening at a *biergarten* like Prater Garten.  \n\n---\n\n### **Day 5-7: Munich**  \n**Flight**: LH 1961 (BER→MUC, 70 mins, ~$250/person).  \n\n**Accommodation**:  \n- **MEININGER Mitte** (budget-friendly) or **Wyndham Grand Berlin Potsdamer Platz** (luxury option). *Verify summer rates*.  \n\n**Highlights**:  \n1. **English Garden** (4.7/5): Cycle or picnic by the Eisbach wave.  \n2. **Nymphenburg Palace** (4.6/5): Summer strolls in its sprawling gardens.  \n3. **BMW Museum & Olympiapark** (4.6/5): Perfect for car enthusiasts and skyline views.  \n4. **Allianz Arena** (4.6/5): Tour the stadium if football interests you.  \n\n**Pro Tip**: Day trip to Neuschwanstein Castle (~3-hour train ride; book tickets early).  \n\n---\n\n### **Budget Breakdown**  \n| Category          | Estimated Cost (USD) | Notes                          |  \n|-------------------|----------------------|--------------------------------|  \n| Flights           | $3,002               | Roundtrip + internal flight   |  \n| Hotels (7 nights) | $1,500               | Mid-range options             |  \n| Daily Expenses    | $2,500               | Covers meals, transit, entry fees |  \n| **Total**         | **$7,002**           | Slightly over; adjust dining choices if needed |  \n\n---\n\n### **Additional Recommendations**  \n- **Transport**: Use Berlin’s BVG day passes (~$8/day) and Munich’s MVV network.  \n- **Dining**: Try Berlin’s currywurst and Munich’s schnitzel. Allocate ~$50/meal for sit-down restaurants.  \n- **Booking**: Reserve popular attractions (Reichstag, Neuschwanstein) 2-3 months ahead.  \n\nThis itinerary ensures a rich blend of history, culture, and leisure while staying within budget. Let me know if you’d like adjustments!  \n\n*Note: Hotel prices and flight costs are estimates; confirm real-time availability for summer dates.*",
+      "confidence": 0.85,
+      "actions_taken": [
+        "Analyze travel requirements for {'primary': 'Berlin', 'all': ['Berlin', 'Munich']}",
+        "Search for comprehensive travel options",
+        "Search for accommodation options",
+        "Search for flight information",
+        "Search for attractions and activities",
+        "Compile comprehensive travel information"
+      ],
+      "next_steps": [
+        "Review the travel plan and let me know your preferences",
+        "I can help create a detailed day-by-day itinerary",
+        "Consider booking flights early for better prices",
+        "Check hotel reviews and amenities",
+        "Verify visa requirements if traveling internationally",
+        "Consider travel insurance for your trip"
+      ],
+      "session_id": "e532eff4-4b52-4b37-a86a-5bbe94c43553",
+      "refinement_details": null,
+      "plan_changes": {
+        "success": true,
+        "status": "scheduled",
+        "changes_made": [
+          "Plan generation scheduled"
+        ]
+      }
+    },
+    "total_response_time": 98.52129936218262,
+    "refinement_enabled": false,
+    "refinement_loops": [],
+    "total_loops": 0,
+    "final_success": true,
+    "final_confidence": 0.85,
+    "final_actions": [
+      "Analyze travel requirements for {'primary': 'Berlin', 'all': ['Berlin', 'Munich']}",
+      "Search for comprehensive travel options",
+      "Search for accommodation options",
+      "Search for flight information",
+      "Search for attractions and activities",
+      "Compile comprehensive travel information"
+    ],
+    "final_next_steps": [
+      "Review the travel plan and let me know your preferences",
+      "I can help create a detailed day-by-day itinerary",
+      "Consider booking flights early for better prices",
+      "Check hotel reviews and amenities",
+      "Verify visa requirements if traveling internationally",
+      "Consider travel insurance for your trip"
+    ],
+    "timestamp": "2025-08-06T11:03:45.574985",
+    "error_message": null
+  }
+]

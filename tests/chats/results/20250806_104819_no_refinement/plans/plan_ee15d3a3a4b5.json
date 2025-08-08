@@ -1,0 +1,525 @@
+{
+  "plan_id": "plan_ee15d3a3a4b5",
+  "session_id": "4f746358-554f-4e02-8866-f12d869fa714",
+  "events": [
+    {
+      "id": "flight_YYZ_to_New York_c11fe00e",
+      "title": "Flight: Toronto \u2192 New York",
+      "description": "Departure from Toronto to New York - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:39",
+      "end_time": "2025-08-07T09:52:00",
+      "location": "Toronto \u2192 New York",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 4,
+        "origin": "YYZ",
+        "destination": "New York",
+        "airline": "AC",
+        "price": {
+          "amount": 151.41,
+          "currency": "USD"
+        },
+        "flight_number": "8556",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "73e7182e-d492-469d-944e-505c467f65eb",
+      "title": "Dinner at Le Bernardin Priv\u00e9",
+      "description": "Michelin-starred elegance with private dining rooms ideal for discreet meetings.",
+      "event_type": "meal",
+      "start_time": "2025-08-07T19:00:00",
+      "end_time": "2025-08-07T21:00:00",
+      "location": "Midtown, New York",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "9113d528-51a3-4e56-bc07-a8f71a128c2f",
+      "title": "AirTrain + Subway to Manhattan",
+      "description": "Transportation from JFK to Manhattan using AirTrain and Subway",
+      "event_type": "transportation",
+      "start_time": "2025-08-07T10:30:00",
+      "end_time": "2025-08-07T14:30:00",
+      "location": "JFK to Manhattan",
+      "details": {
+        "cost": "$10.75",
+        "duration": "45 mins"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "f6c05371-c815-4750-acff-42aeb4cece5b",
+      "title": "Lunch at The Grill",
+      "description": "Power-lunch staple with Art Deco flair; known for dry-aged steaks and expedited service.",
+      "event_type": "meal",
+      "start_time": "2025-08-08T12:00:00",
+      "end_time": "2025-08-08T13:30:00",
+      "location": "Midtown, New York",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "b4278435-330f-4d7a-b963-96e956cce41a",
+      "title": "Work Session at Joe Coffee",
+      "description": "Morning work session at a caf\u00e9 with strong Wi-Fi",
+      "event_type": "activity",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T11:30:00",
+      "location": "Bryant Park, New York",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "flight_New York_to_Chicago_cb0a645b",
+      "title": "Flight: New York \u2192 Chicago",
+      "description": "Connecting flight from New York to Chicago",
+      "event_type": "flight",
+      "start_time": "2025-08-12T14:00:39",
+      "end_time": "2025-08-12T16:37:00",
+      "location": "New York \u2192 Chicago",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 4,
+        "origin": "New York",
+        "destination": "Chicago",
+        "airline": "B6",
+        "price": {
+          "amount": 84.46,
+          "currency": "USD"
+        },
+        "flight_number": "905",
+        "duration_minutes": 120
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "f45aaf81-236e-4bb3-bb30-bbbca33fe29e",
+      "title": "Dinner at Maple & Ash",
+      "description": "Steakhouse with a 'no rules' tasting menu\u2014ideal for impressing clients near Millennium Park.",
+      "event_type": "meal",
+      "start_time": "2025-08-12T19:00:00",
+      "end_time": "2025-08-12T21:00:00",
+      "location": "Gold Coast, Chicago",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Chicago_1_6d4a2acf",
+      "title": "Visit Wrigley Field",
+      "description": "Wrigley Field is a sports & recreation located at 1060 W Addison St, Chicago, IL 60613, USA with a 4.8/5 rating based on 32890 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T09:00:00",
+      "end_time": "2025-08-12T11:30:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Sports & Recreation",
+        "place_id": "ChIJId-a5bLTD4gRRtbdduE-6hw"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "4d9cb5b5-324d-410c-9297-90058243cdaf",
+      "title": "Lunch at RL Restaurant",
+      "description": "Classic American fare with quiet, clubby ambiance for deal-making.",
+      "event_type": "meal",
+      "start_time": "2025-08-13T12:00:00",
+      "end_time": "2025-08-13T13:30:00",
+      "location": "Magnificent Mile, Chicago",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Chicago_3_f58a5d9a",
+      "title": "Visit The Art Institute of Chicago",
+      "description": "The Art Institute of Chicago is a museum located at 111 S Michigan Ave, Chicago, IL 60603, USA with a 4.8/5 rating based on 35975 reviews (Expensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-13T09:00:00",
+      "end_time": "2025-08-13T11:30:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Museum",
+        "place_id": "ChIJlUbZ4qMsDogR3tCinMzzKUg"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Chicago_5_1fede4c7",
+      "title": "Visit Field Museum",
+      "description": "Field Museum is a tourist attraction located at 1400 S Lake Shore Dr, Chicago, IL 60605, USA with a 4.7/5 rating based on 28390 reviews (Expensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-14T09:00:00",
+      "end_time": "2025-08-14T12:30:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJV0AwM30rDogR2sd-X0cgErU"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Chicago_7_a4ba52bb",
+      "title": "Visit Lincoln Park Zoo",
+      "description": "Lincoln Park Zoo is a zoo located at Chicago, IL 60614, USA with a 4.6/5 rating based on 36478 reviews (Free).",
+      "event_type": "attraction",
+      "start_time": "2025-08-15T09:00:00",
+      "end_time": "2025-08-15T11:30:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Zoo",
+        "place_id": "ChIJB5o6CWvTD4gR25QC-QbMQAk"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "4b347906-5c08-481f-bc57-cf98c52b7500",
+      "title": "Blue Line to Downtown Chicago",
+      "description": "Transportation from ORD to Downtown Chicago using Blue Line",
+      "event_type": "transportation",
+      "start_time": "2025-08-15T12:30:00",
+      "end_time": "2025-08-15T16:00:00",
+      "location": "ORD to Downtown Chicago",
+      "details": {
+        "cost": "$5",
+        "duration": "45 mins"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Chicago_9_c5f071de",
+      "title": "Visit Shedd Aquarium",
+      "description": "Shedd Aquarium is a aquarium located at 1200 S DuSable Lake Shore Dr, Chicago, IL 60605, USA with a 4.5/5 rating based on 31150 reviews (Expensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-16T09:00:00",
+      "end_time": "2025-08-16T13:00:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 5,
+        "attraction_of_day": 1,
+        "rating": 4.5,
+        "category": "Aquarium",
+        "place_id": "ChIJ-XW3X2MrDogR3_tQ3-OdBTI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Chicago_to_Los Angeles_c60235d2",
+      "title": "Flight: Chicago \u2192 Los Angeles",
+      "description": "Connecting flight from Chicago to Los Angeles",
+      "event_type": "flight",
+      "start_time": "2025-08-17T14:00:39",
+      "end_time": "2025-08-17T18:34:00",
+      "location": "Chicago \u2192 Los Angeles",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 3,
+        "total_flights": 4,
+        "origin": "Chicago",
+        "destination": "Los Angeles",
+        "airline": "AS",
+        "price": {
+          "amount": 144.0,
+          "currency": "USD"
+        },
+        "flight_number": "413",
+        "duration_minutes": 240
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "079e05e4-8a39-4615-8a01-e05dc9764007",
+      "title": "Dinner at Gwen Butcher Shop & Restaurant",
+      "description": "Chef Curtis Stone\u2019s hybrid butcher shop/steakhouse with private dry-aging room tours.",
+      "event_type": "meal",
+      "start_time": "2025-08-17T19:00:00",
+      "end_time": "2025-08-17T21:00:00",
+      "location": "Hollywood, Los Angeles",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "attraction_Los Angeles_1_ca7a1722",
+      "title": "Visit Natural History Museum of Los Angeles County",
+      "description": "Natural History Museum of Los Angeles County is a tourist attraction located at 900 Exposition Blvd, Los Angeles, CA 90007, USA with a 4.8/5 rating based on 13302 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-17T09:00:00",
+      "end_time": "2025-08-17T11:00:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJXzARBf3HwoARJyT7uZSV-G4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_3_81f785d3",
+      "title": "Visit Dodger Stadium",
+      "description": "Dodger Stadium is a sports & recreation located at 1000 Vin Scully Ave, Los Angeles, CA 90012, USA with a 4.7/5 rating based on 47807 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-18T09:00:00",
+      "end_time": "2025-08-18T13:00:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Sports & Recreation",
+        "place_id": "ChIJdVYAVPnGwoAR3wmcg09VlJ4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_5_e93f6d76",
+      "title": "Visit California Science Center",
+      "description": "California Science Center is a tourist attraction located at 700 Exposition Park Dr, Los Angeles, CA 90037, USA with a 4.7/5 rating based on 19292 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-19T09:00:00",
+      "end_time": "2025-08-19T12:30:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ21yHTgjIwoARcrUbrsffOB4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Chicago_4_0108ff36",
+      "title": "Visit Cloud Gate",
+      "description": "Cloud Gate is a tourist attraction located at 201 E Randolph St, Chicago, IL 60602, USA with a 4.7/5 rating based on 35550 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-19T13:00:00",
+      "end_time": "2025-08-19T15:00:00",
+      "location": "ORD",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ9Sszh6YsDogRUUo6zu8_TQY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_7_220be296",
+      "title": "Visit The Greek Theatre",
+      "description": "The Greek Theatre is a tourist attraction located at 2700 N Vermont Ave, Los Angeles, CA 90027, USA with a 4.7/5 rating based on 6425 reviews (Expensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-20T09:00:00",
+      "end_time": "2025-08-20T12:00:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJRUJ9pJjAwoARhqQ6EhQynzs"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "db6147fb-c868-4a79-bfa0-aeae8bb4d9c0",
+      "title": "FlyAway Bus to Downtown LA",
+      "description": "Transportation from LAX to Downtown LA using FlyAway Bus",
+      "event_type": "transportation",
+      "start_time": "2025-08-20T13:00:00",
+      "end_time": "2025-08-20T16:30:00",
+      "location": "LAX to Downtown LA",
+      "details": {
+        "cost": "$9.75",
+        "duration": "45 mins"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "flight_Los Angeles_to_YYZ_8c96093f",
+      "title": "Return Flight: Los Angeles \u2192 Toronto",
+      "description": "Return journey from Los Angeles to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-21T18:00:39",
+      "end_time": "2025-08-21T22:53:00",
+      "location": "Los Angeles \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 4,
+        "total_flights": 4,
+        "origin": "Los Angeles",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "New York",
+          "Chicago",
+          "Los Angeles"
+        ],
+        "airline": "PD",
+        "price": {
+          "amount": 100.5,
+          "currency": "USD"
+        },
+        "flight_number": "662",
+        "duration_minutes": 240
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_6_15152f86",
+      "title": "Visit Walt Disney Concert Hall",
+      "description": "Walt Disney Concert Hall is a tourist attraction located at 111 S Grand Ave, Los Angeles, CA 90012, USA with a 4.7/5 rating based on 10521 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-21T09:00:00",
+      "end_time": "2025-08-21T11:00:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ0xG7n03GwoARsDH_OyyMcrM"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Los Angeles_2_1754b525",
+      "title": "Visit Griffith Observatory",
+      "description": "Griffith Observatory is a tourist attraction located at 2800 E Observatory Rd, Los Angeles, CA 90027, USA with a 4.7/5 rating based on 16570 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-21T12:30:00",
+      "end_time": "2025-08-21T15:30:00",
+      "location": "LAX",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 3,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJywjU6WG_woAR3NrWwrEH_3M"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "36b81519-3320-477b-95f0-8510e8b08b62",
+      "title": "The Peninsula, New York",
+      "description": "Luxury business hotel near Midtown Manhattan",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:00",
+      "end_time": "2025-08-12T11:00:00",
+      "location": "400 Fifth Ave, New York, NY",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "70da0228-6003-4dc3-a2a4-b2a5af6ba4b6",
+      "title": "The Hoxton, Chicago",
+      "description": "Business hotel in River North, Chicago",
+      "event_type": "hotel",
+      "start_time": "2025-08-12T15:00:00",
+      "end_time": "2025-08-17T11:00:00",
+      "location": "521 N Rush St, Chicago, IL",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "57caeaa7-a2de-4349-a319-5eec3f096d67",
+      "title": "Freehand, Los Angeles",
+      "description": "Business hotel in Downtown LA",
+      "event_type": "hotel",
+      "start_time": "2025-08-17T15:00:00",
+      "end_time": "2025-08-21T11:00:00",
+      "location": "900 W Olympic Blvd, Los Angeles, CA",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    }
+  ],
+  "metadata": {
+    "destination": {
+      "primary": "New York",
+      "all": [
+        "New York",
+        "Chicago",
+        "Los Angeles"
+      ]
+    },
+    "duration_days": 14,
+    "travelers": 1,
+    "budget": 2100,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T11:45:44.903592",
+    "confidence": 0.88,
+    "completion_status": "partial"
+  },
+  "created_at": "2025-08-06T15:35:20.370316",
+  "updated_at": "2025-08-06T15:45:44.903879"
+}

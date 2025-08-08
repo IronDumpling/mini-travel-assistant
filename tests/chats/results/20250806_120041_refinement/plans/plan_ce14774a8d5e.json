@@ -1,0 +1,385 @@
+{
+  "plan_id": "plan_ce14774a8d5e",
+  "session_id": "b70618ce-a5c4-4931-8a98-46dd7c161910",
+  "events": [
+    {
+      "id": "flight_YYZ_to_Caribbean_fe394940",
+      "title": "Flight: Toronto \u2192 Caribbean",
+      "description": "Departure from Toronto to Caribbean - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:07.089127",
+      "end_time": "2025-08-07T11:00:07.089127",
+      "location": "Toronto \u2192 Caribbean",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 2,
+        "origin": "YYZ",
+        "destination": "Caribbean",
+        "airline": "WS",
+        "price": {
+          "amount": 1255.2,
+          "currency": "USD"
+        },
+        "flight_number": "328",
+        "duration_minutes": 180
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "b09093fa-b223-4eb4-b898-0a56c71a427e",
+      "title": "Dinner at Resort Restaurant",
+      "description": "Dinner at the resort's kid-friendly restaurant with options for picky eaters",
+      "event_type": "meal",
+      "start_time": "2025-08-07T19:00:00",
+      "end_time": "2025-08-07T21:00:00",
+      "location": "HOLIDAY INN MAYFAIR, Caribbean",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "activity_Caribbean_day1_eb48e1ec",
+      "title": "Explore Caribbean - Day 1",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-07T11:30:00",
+      "end_time": "2025-08-07T15:00:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 1,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "de8cfc6a-6be6-4351-a761-8dc4e9fd02bc",
+      "title": "Lunch at Beachside Shack",
+      "description": "Casual lunch at a beachside shack with simple options like grilled fish and fries",
+      "event_type": "meal",
+      "start_time": "2025-08-08T12:00:00",
+      "end_time": "2025-08-08T13:30:00",
+      "location": "Beachside Shack, Caribbean",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "8778e229-81cd-40cb-86a3-e64d95aad3bd",
+      "title": "Lunch at Jellyfish Restaurant",
+      "description": "Casual beachfront meal with fresh seafood and kid-friendly options",
+      "event_type": "meal",
+      "start_time": "2025-08-08T12:00:00",
+      "end_time": "2025-08-08T13:30:00",
+      "location": "Jellyfish Restaurant, Caribbean",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "activity_Caribbean_day2_73826c0e",
+      "title": "Explore Caribbean - Day 2",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T11:30:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 2,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "5689a037-0c22-43e3-b6cd-b0ad12a33492",
+      "title": "Beach Time at B\u00e1varo Beach",
+      "description": "Relaxation and play at one of the Caribbean's best beaches",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T14:00:00",
+      "end_time": "2025-08-08T16:30:00",
+      "location": "B\u00e1varo Beach, Caribbean",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "activity_Caribbean_day3_82f8e2c5",
+      "title": "Explore Caribbean - Day 3",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T12:00:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 3,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "85a2ead4-c38b-4551-89d9-7a71d71cec2e",
+      "title": "Visit to Manat\u00ed Park",
+      "description": "Family-friendly eco-park with cultural shows and animal encounters",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T12:30:00",
+      "end_time": "2025-08-09T14:30:00",
+      "location": "Manat\u00ed Park, Caribbean",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "activity_Caribbean_day4_eda0c69d",
+      "title": "Explore Caribbean - Day 4",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T12:00:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 4,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "3afb1610-1f14-4841-a7ce-57f121e1b445",
+      "title": "Grocery Shopping for Picky Eaters",
+      "description": "Purchase familiar foods and snacks for picky eaters at a local supermarket",
+      "event_type": "activity",
+      "start_time": "2025-08-10T13:00:00",
+      "end_time": "2025-08-10T15:00:00",
+      "location": "Local Supermarket, Caribbean",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "activity_Caribbean_day5_52be331f",
+      "title": "Explore Caribbean - Day 5",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T12:00:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 5,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "activity_Caribbean_day6_d57e8e99",
+      "title": "Explore Caribbean - Day 6",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T09:00:00",
+      "end_time": "2025-08-12T11:30:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 6,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "activity_Caribbean_day7_214e41fc",
+      "title": "Explore Caribbean - Day 7",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-13T09:00:00",
+      "end_time": "2025-08-13T11:00:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 7,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "activity_Caribbean_day8_0edb7066",
+      "title": "Explore Caribbean - Day 8",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-14T09:00:00",
+      "end_time": "2025-08-14T13:00:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 8,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "activity_Caribbean_day9_29f51962",
+      "title": "Explore Caribbean - Day 9",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-15T09:00:00",
+      "end_time": "2025-08-15T11:00:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 9,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "activity_Caribbean_day10_6f6bd50f",
+      "title": "Explore Caribbean - Day 10",
+      "description": "Discover attractions and culture in Caribbean",
+      "event_type": "attraction",
+      "start_time": "2025-08-16T09:00:00",
+      "end_time": "2025-08-16T12:00:00",
+      "location": "Caribbean",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 10,
+        "destination_sequence": 1,
+        "total_days_in_destination": 10,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Caribbean_to_YYZ_6787591b",
+      "title": "Return Flight: Caribbean \u2192 Toronto",
+      "description": "Return journey from Caribbean to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-17T18:00:07.089127",
+      "end_time": "2025-08-17T21:00:07.089127",
+      "location": "Caribbean \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 2,
+        "origin": "Caribbean",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Caribbean"
+        ],
+        "airline": "WS",
+        "price": {
+          "amount": 1255.2,
+          "currency": "USD"
+        },
+        "flight_number": "328",
+        "duration_minutes": 180
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Caribbean_b457f51f",
+      "title": "HOLIDAY INN MAYFAIR",
+      "description": "Accommodation in Caribbean for 10 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:07",
+      "end_time": "2025-08-17T11:00:07",
+      "location": "Caribbean",
+      "details": {
+        "accommodation_type": "resort",
+        "family_friendly": true,
+        "amenities": [
+          "pools",
+          "beach access",
+          "kids' clubs"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": "Punta Cana",
+    "duration_days": 10,
+    "travelers": 2,
+    "budget": 3000,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T12:49:48.263411",
+    "confidence": 0.88,
+    "completion_status": "partial"
+  },
+  "created_at": "2025-08-06T16:40:13.181573",
+  "updated_at": "2025-08-06T16:49:48.263651"
+}

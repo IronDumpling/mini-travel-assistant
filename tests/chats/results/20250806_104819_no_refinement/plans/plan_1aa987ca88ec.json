@@ -1,0 +1,18 @@
+{
+  "plan_id": "plan_1aa987ca88ec",
+  "session_id": "a444768c-34dc-4b75-b1e9-09a6f6266234",
+  "events": [],
+  "metadata": {
+    "destination": "Paris",
+    "duration_days": null,
+    "travelers": 2,
+    "budget": null,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T10:51:19.928752",
+    "confidence": 0.8,
+    "completion_status": "partial"
+  },
+  "created_at": "2025-08-06T14:49:59.298912",
+  "updated_at": "2025-08-06T14:51:19.929003"
+}

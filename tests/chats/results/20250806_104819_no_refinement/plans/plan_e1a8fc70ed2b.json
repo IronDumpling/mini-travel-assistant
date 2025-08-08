@@ -1,0 +1,254 @@
+{
+  "plan_id": "plan_e1a8fc70ed2b",
+  "session_id": "1c36d7c2-3aec-477a-aff6-ed23b6596640",
+  "events": [
+    {
+      "id": "flight_YYZ_to_Barcelona_391e64f9",
+      "title": "Flight: Toronto \u2192 Barcelona",
+      "description": "Departure from Toronto to Barcelona - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:59.777030",
+      "end_time": "2025-08-07T09:00:59.777030",
+      "location": "Toronto \u2192 Barcelona",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 2,
+        "origin": "YYZ",
+        "destination": "Barcelona",
+        "airline": "S4",
+        "price": {
+          "amount": 388.3,
+          "currency": "USD"
+        },
+        "flight_number": "7027",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_1_937e52ab",
+      "title": "Visit Bas\u00edlica de la Sagrada Fam\u00edlia",
+      "description": "Bas\u00edlica de la Sagrada Fam\u00edlia is a tourist attraction located at Carrer de Mallorca, 401, L'Eixample, 08013 Barcelona, Spain with a 4.8/5 rating based on 295254 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-07T09:30:00",
+      "end_time": "2025-08-07T13:30:00",
+      "location": "Carrer de Mallorca, 401, L'Eixample, 08013 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJk_s92NyipBIRUMnDG8Kq2Js"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_3_093fe271",
+      "title": "Visit La Pedrera - Casa Mil\u00e0",
+      "description": "La Pedrera - Casa Mil\u00e0 is a tourist attraction located at Pg. de Gr\u00e0cia, 92, L'Eixample, 08008 Barcelona, Spain with a 4.6/5 rating based on 103528 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T12:30:00",
+      "location": "Pg. de Gr\u00e0cia, 92, L'Eixample, 08008 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ1eGKmZOipBIRah43T2Kjn8Q"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_5_51686d9e",
+      "title": "Visit Cathedral of Barcelona",
+      "description": "Cathedral of Barcelona is a tourist attraction located at Pla de la Seu, s/n, Ciutat Vella, 08002 Barcelona, Spain with a 4.6/5 rating based on 76411 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T11:00:00",
+      "location": "Pla de la Seu, s/n, Ciutat Vella, 08002 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJg2xxlvmipBIRg1jhdSQR9hY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_6_992e24a1",
+      "title": "Visit Ciutadella Park",
+      "description": "Ciutadella Park is a park located at Ciutat Vella, 08003 Barcelona, Spain with a 4.6/5 rating based on 74829 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T11:30:00",
+      "end_time": "2025-08-09T15:00:00",
+      "location": "Ciutat Vella, 08003 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Park",
+        "place_id": "ChIJ4QmWQ_2ipBIRcD1a5hhhOEI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_7_11310cfc",
+      "title": "Visit Arc de Triomf",
+      "description": "Arc de Triomf is a tourist attraction located at Passeig de Llu\u00eds Companys, Ciutat Vella, 08003 Barcelona, Spain with a 4.6/5 rating based on 93063 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T11:00:00",
+      "location": "Passeig de Llu\u00eds Companys, Ciutat Vella, 08003 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJoXZqNuOipBIRsZU39a8r_qk"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_8_a025b6fb",
+      "title": "Visit Pla\u00e7a de Catalunya",
+      "description": "Pla\u00e7a de Catalunya is a tourist attraction located at Pla\u00e7a de Catalunya, L'Eixample, 08002 Barcelona, Spain with a 4.5/5 rating based on 205541 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T12:30:00",
+      "end_time": "2025-08-10T16:00:00",
+      "location": "Pla\u00e7a de Catalunya, L'Eixample, 08002 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJGUgrYPGipBIRS9ZgHK_C7B4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_9_6bda6d80",
+      "title": "Visit Mercat de la Boqueria",
+      "description": "Mercat de la Boqueria is a tourist attraction located at La Rambla, 91, Ciutat Vella, 08001 Barcelona, Spain with a 4.5/5 rating based on 197843 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T12:30:00",
+      "location": "La Rambla, 91, Ciutat Vella, 08001 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 5,
+        "attraction_of_day": 1,
+        "rating": 4.5,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJAVoetfeipBIR1a1z3FTGCoY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Barcelona_10_b86518bb",
+      "title": "Visit Park G\u00fcell",
+      "description": "Park G\u00fcell is a park located at Gr\u00e0cia, 08024 Barcelona, Spain with a 4.4/5 rating based on 217841 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T13:00:00",
+      "end_time": "2025-08-11T15:30:00",
+      "location": "Gr\u00e0cia, 08024 Barcelona, Spain",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 5,
+        "attraction_of_day": 2,
+        "rating": 4.4,
+        "category": "Park",
+        "place_id": "ChIJq0HUUq6ipBIRWM6qGqALmok"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Barcelona_to_YYZ_895eda67",
+      "title": "Return Flight: Barcelona \u2192 Toronto",
+      "description": "Return journey from Barcelona to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-13T18:00:59.777030",
+      "end_time": "2025-08-13T19:00:59.777030",
+      "location": "Barcelona \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 2,
+        "origin": "Barcelona",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Barcelona"
+        ],
+        "airline": "S4",
+        "price": {
+          "amount": 388.3,
+          "currency": "USD"
+        },
+        "flight_number": "7027",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Barcelona_44997ecc",
+      "title": "ALEXANDRA BARCELONA A DT BY HILTON",
+      "description": "Accommodation in Barcelona for 6 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:59.777030",
+      "end_time": "2025-08-13T11:00:59.777030",
+      "location": "BARCELONA",
+      "details": {
+        "source": "hotel_search",
+        "nights": 6,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": "Barcelona",
+    "duration_days": 6,
+    "travelers": 1,
+    "budget": 900,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T10:59:59.850320",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T14:58:39.273874",
+  "updated_at": "2025-08-06T14:58:39.273875"
+}
