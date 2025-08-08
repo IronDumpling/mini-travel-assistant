@@ -1,0 +1,62 @@
+{
+  "session_id": "4c7b7c30-57ca-4d63-97e1-0f484cbb0a23",
+  "title": "Single Test: london_7_days_budget",
+  "description": "Single query test for london_7_days_budget",
+  "status": "active",
+  "created_at": "2025-08-06 14:48:19.294852+00:00",
+  "last_activity": "2025-08-06 14:49:44.745101+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Generated 9 events from tool results"
+      ],
+      "events_added": 9,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_generation_method": "fast_tool_based",
+      "duration": 7,
+      "travelers": 2
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "4c7b7c30-57ca-4d63-97e1-0f484cbb0a23_0",
+      "user_message": "Plan a 7-day trip to London for 2 people with a budget of $3000",
+      "agent_response": "Here\u2019s your expertly crafted 7-day London itinerary for two people, designed to maximize your $3,000 budget while delivering a rich blend of culture, history, and modern experiences. The plan includes current hotel options, flight prices, and top-rated attractions to ensure a seamless trip.\n\n---\n\n### **Trip Overview**  \n- **Destination**: London, UK  \n- **Duration**: 7 days  \n- **Budget**: $3,000 (for two)  \n- **Focus**: Culture, history, and local experiences  \n\n---\n\n### **Flights** (Round-trip for two)  \nCurrent flight options from the U.S. to London:  \n- **WestJet (WS)**: $627.60 per person (3h 6m flight)  \n- **SATA (S4)**: $953.20 per person (5h 55m flight)  \n- **Air Transat (TS)**: $965.20 per person (7h flight)  \n\n*Recommendation*: The WestJet option offers the best value, leaving ~$1,750 for accommodations and activities after flights.  \n\n---\n\n### **Accommodations**  \nCentrally located hotels (exact prices unavailable, but these are well-rated options):  \n1. **Holiday Inn Mayfair** \u2013 Prime location for exploring central London.  \n2. **Holiday Inn Kensington Forum** \u2013 Close to museums and Hyde Park.  \n3. **London Marriott Regents Park** \u2013 Ideal for quieter stays near Camden.  \n4. **Radisson Blu Hampshire** \u2013 Luxury option in the West End.  \n\n*Budget Tip*: Aim for ~$150\u2013$200/night to stay within budget, leaving room for activities.  \n\n---\n\n### **7-Day Itinerary**  \n\n#### **Day 1: Arrival & Iconic Sights**  \n- **Morning**: Arrive in London; check into your hotel.  \n- **Afternoon**: Visit **Big Ben** (4.6/5) and **London Eye** (4.5/5).  \n- **Evening**: Stroll along the Thames; dinner at Borough Market (4.6/5).  \n\n#### **Day 2: Royal & Historic London**  \n- **Morning**: Tour **Buckingham Palace** (4.5/5); watch the Changing of the Guard.  \n- **Afternoon**: Explore **Westminster Abbey** and **Houses of Parliament**.  \n- **Evening**: Pub dinner in Covent Garden.  \n\n#### **Day 3: Museums & Culture**  \n- **Morning**: **British Museum** (4.7/5) \u2013 free entry!  \n- **Afternoon**: **Natural History Museum** (4.7/5) in South Kensington.  \n- **Evening**: Camden Market (4.6/5) for street food and live music.  \n\n#### **Day 4: East London & Modern Vibes**  \n- **Morning**: Walk across **Tower Bridge** (4.8/5); visit the Tower of London.  \n- **Afternoon**: Explore Shoreditch\u2019s street art and boutique shops.  \n- **Evening**: Dinner in Brick Lane (famous for curry houses).  \n\n#### **Day 5: Day Trip to Greenwich**  \n- **Morning**: Take a Thames clipper to **Greenwich**; visit the Royal Observatory.  \n- **Afternoon**: Picnic in Greenwich Park with skyline views.  \n- **Evening**: Return to London; relax at your hotel.  \n\n#### **Day 6: Shopping & Leisure**  \n- **Morning**: Window-shop at **Harrods** (4.4/5) or Oxford Street.  \n- **Afternoon**: Hyde Park picnic or boat ride on the Serpentine.  \n- **Evening**: West End show (book discounted tickets in advance).  \n\n#### **Day 7: Farewell London**  \n- **Morning**: Last-minute souvenir shopping at Portobello Road Market.  \n- **Afternoon**: Depart for the airport.  \n\n---\n\n### **Budget Breakdown** (Estimate)  \n- **Flights**: ~$1,250 (WestJet for two)  \n- **Hotels**: ~$1,050 ($150/night \u00d7 7 nights)  \n- **Activities/Food**: ~$700 ($100/day for two)  \n\n*Total*: $3,000 (flexible based on hotel prices and dining choices).  \n\n---\n\n### **Pro Tips**  \n- Use an **Oyster Card** for affordable public transport.  \n- Book free attractions (e.g., museums) early to avoid crowds.  \n- Pre-book tickets for paid attractions (e.g., London Eye) for discounts.  \n\nLet me know if you\u2019d like adjustments or additional details! Enjoy your London adventure!",
+      "timestamp": "2025-08-06 14:49:44.745062+00:00",
+      "metadata": {
+        "confidence": 0.85,
+        "actions_taken": [
+          "Analyze travel requirements for London",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "refinement_used": false,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.85,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.85,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

@@ -1,0 +1,321 @@
+{
+  "plan_id": "plan_52fc0222c425",
+  "session_id": "61e155e6-6a48-4b4d-bbb8-915ab770f75d",
+  "events": [
+    {
+      "id": "flight_YYZ_to_MUC_37b20fda",
+      "title": "Flight: Toronto \u2192 Munich",
+      "description": "Departure from Toronto to Munich - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:48.874788",
+      "end_time": "2025-08-07T10:00:48.874788",
+      "location": "Toronto \u2192 Munich",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 3,
+        "origin": "YYZ",
+        "destination": "MUC",
+        "airline": "WS",
+        "price": {
+          "amount": 2749.6,
+          "currency": "USD"
+        },
+        "flight_number": "252",
+        "duration_minutes": 120
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_MUC_1_0f062165",
+      "title": "Visit Olympiapark M\u00fcnchen",
+      "description": "Olympiapark M\u00fcnchen is a park located at Spiridon-Louis-Ring 21, 80809 M\u00fcnchen, Germany with a 4.7/5 rating based on 75589 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-07T10:30:00",
+      "end_time": "2025-08-07T14:00:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Park",
+        "place_id": "ChIJM7U-OGN2nkcRS91BCoGkObE"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_MUC_3_28ba1556",
+      "title": "Visit Allianz Arena",
+      "description": "Allianz Arena is a sports & recreation located at Franz-Beckenbauer-Platz 5, 80939 M\u00fcnchen, Germany with a 4.6/5 rating based on 80316 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T13:00:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Sports & Recreation",
+        "place_id": "ChIJHyWKEoVznkcRI8QyjkJgTe0"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_MUC_2_c3c05d7b",
+      "title": "Visit English Garden",
+      "description": "English Garden is a park located at Munich, Germany with a 4.7/5 rating based on 65503 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T13:30:00",
+      "end_time": "2025-08-08T15:30:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Park",
+        "place_id": "ChIJayv4lZd1nkcR0e_vfGLfm8k"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_MUC_5_4660af54",
+      "title": "Visit BMW Museum",
+      "description": "BMW Museum is a tourist attraction located at Am Olympiapark 2, 80809 M\u00fcnchen, Germany with a 4.6/5 rating based on 42447 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T11:30:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJa0ubVnx2nkcRiGkSeL3MxpU"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_MUC_4_13509ceb",
+      "title": "Visit Nymphenburg Palace",
+      "description": "Nymphenburg Palace is a tourist attraction located at 80638 Munich, Germany with a 4.6/5 rating based on 36093 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T13:00:00",
+      "end_time": "2025-08-09T15:00:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJLWiif8x3nkcRZm0epRZWTCc"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_MUC_to_VIE_2217c4b6",
+      "title": "Flight: Munich \u2192 Vienna",
+      "description": "Connecting flight from Munich to Vienna",
+      "event_type": "flight",
+      "start_time": "2025-08-10T14:00:48.874788",
+      "end_time": "2025-08-10T15:00:48.874788",
+      "location": "Munich \u2192 Vienna",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 3,
+        "origin": "MUC",
+        "destination": "VIE",
+        "airline": "KL",
+        "price": {
+          "amount": 793.2,
+          "currency": "USD"
+        },
+        "flight_number": "1858",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_VIE_1_a0654d07",
+      "title": "Visit Kunsthistorisches Museum Wien",
+      "description": "Kunsthistorisches Museum Wien is a museum located at Maria-Theresien-Platz, 1010 Wien, Austria with a 4.8/5 rating based on 31118 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T12:30:00",
+      "location": "VIE",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.8,
+        "category": "Museum",
+        "place_id": "ChIJ8XfPY5oHbUcRQbimbLVSYG8"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_VIE_3_0d53ac73",
+      "title": "Visit Belvedere Palace",
+      "description": "Belvedere Palace is a museum located at 1030 Vienna, Austria with a 4.7/5 rating based on 79349 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T12:30:00",
+      "location": "VIE",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Museum",
+        "place_id": "ChIJpZ4LAn0HbUcRB3aToFL8ZUo"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_VIE_to_YYZ_ec6a0d47",
+      "title": "Return Flight: Vienna \u2192 Toronto",
+      "description": "Return journey from Vienna to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-12T18:00:48.874788",
+      "end_time": "2025-08-12T19:00:48.874788",
+      "location": "Vienna \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 3,
+        "total_flights": 3,
+        "origin": "VIE",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "MUC",
+          "VIE"
+        ],
+        "airline": "LO",
+        "price": {
+          "amount": 2251.2,
+          "currency": "USD"
+        },
+        "flight_number": "226",
+        "duration_minutes": 60
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_VIE_2_50637b5c",
+      "title": "Visit Sch\u00f6nbrunn Palace",
+      "description": "Sch\u00f6nbrunn Palace is a tourist attraction located at Sch\u00f6nbrunner Schlo\u00dfstra\u00dfe 47, 1130 Wien, Austria with a 4.7/5 rating based on 167496 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T09:00:00",
+      "end_time": "2025-08-12T12:00:00",
+      "location": "VIE",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 2,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJv3zAHAmobUcRyYvq5F26aU4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_MUC_6_bd685e74",
+      "title": "Visit Munich Residence",
+      "description": "Munich Residence is a tourist attraction located at Residenzstra\u00dfe 1, 80333 M\u00fcnchen, Germany with a 4.6/5 rating based on 19843 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T12:30:00",
+      "end_time": "2025-08-12T15:00:00",
+      "location": "MUC",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJrWV_DYx1nkcRD_tKgCHVad4"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_MUC_bbe4f76f",
+      "title": "MONTREE HOTEL",
+      "description": "Accommodation in Munich for 3 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:48.874788",
+      "end_time": "2025-08-10T11:00:48.874788",
+      "location": "MUNICH",
+      "details": {
+        "source": "hotel_search",
+        "nights": 3,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_VIE_83a71163",
+      "title": "MGALLERY KONZERTHAUS",
+      "description": "Accommodation in Vienna for 2 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-10T15:00:48.874788",
+      "end_time": "2025-08-12T11:00:48.874788",
+      "location": "VIENNA",
+      "details": {
+        "source": "hotel_search",
+        "nights": 2,
+        "destination_sequence": 2,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": "MUC",
+    "duration_days": 5,
+    "travelers": 4,
+    "budget": 3000,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T11:01:48.983459",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T15:00:26.650142",
+  "updated_at": "2025-08-06T15:00:26.650143"
+}

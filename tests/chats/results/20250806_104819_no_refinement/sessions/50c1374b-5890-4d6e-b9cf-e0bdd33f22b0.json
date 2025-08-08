@@ -1,0 +1,62 @@
+{
+  "session_id": "50c1374b-5890-4d6e-b9cf-e0bdd33f22b0",
+  "title": "Single Test: tokyo_business_trip",
+  "description": "Single query test for tokyo_business_trip",
+  "status": "active",
+  "created_at": "2025-08-06 14:51:23.944489+00:00",
+  "last_activity": "2025-08-06 14:52:35.233412+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Generated 9 events from tool results"
+      ],
+      "events_added": 9,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_generation_method": "fast_tool_based",
+      "duration": 3,
+      "travelers": 1
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "50c1374b-5890-4d6e-b9cf-e0bdd33f22b0_0",
+      "user_message": "I need a 3-day business trip to Tokyo with meetings in Shibuya and Shinjuku areas",
+      "agent_response": "Here\u2019s your **comprehensive 3-day business trip plan for Tokyo**, optimized for meetings in **Shibuya and Shinjuku**, with seamless logistics, strategic downtime, and curated local experiences:\n\n---\n\n### **Tokyo 3-Day Business Trip Itinerary**  \n**Focus:** Efficiency, productivity, and balanced exploration  \n\n#### **Day 1: Arrival & Shibuya Meetings**  \n- **Morning:**  \n  - Arrive via **United Airlines (UA)** for a quick 85-minute flight (~$556) or **WestJet (WS)** for a longer but economical option (~$466).  \n  - Check into a centrally located hotel like **The Gate Hotel** (stylish, near Shibuya) or **Keio Plaza Hotel Tokyo Summit** (business-friendly in Shinjuku).  \n\n- **Afternoon:**  \n  - **Business Meetings in Shibuya**: Host discussions near landmarks like **Shibuya Scramble Crossing** or **Shibuya Sky** (ideal for post-meeting networking with panoramic views).  \n  - **Lunch Recommendation**: Try a quiet *izakaya* (Japanese pub) or a high-end sushi spot in the area.  \n\n- **Evening:**  \n  - Unwind at **Meiji Jingu**, a serene Shinto shrine, or explore **teamLab Borderless** for immersive digital art (both highly rated ~4.6/5).  \n\n#### **Day 2: Shinjuku Meetings & Networking**  \n- **Morning/Afternoon:**  \n  - **Meetings in Shinjuku**: Opt for venues near **Tokyo Metropolitan Government Building** (free observatory) or **NEW OTANI TOKYO** (luxury hotel with meeting spaces).  \n  - **Coffee Break**: Caf\u00e9 hopping in Shinjuku\u2019s Golden Gai area for a local vibe.  \n\n- **Evening:**  \n  - Dinner at **Omoide Yokocho** (nostalgic alley with yakitori) or a rooftop bar like **Park Hyatt\u2019s New York Bar** (iconic city views).  \n\n#### **Day 3: Flexible Wrap-Up & Departure**  \n- **Morning:**  \n  - Light sightseeing: **Imperial Palace** (4.4/5) for a historic stroll or **Roppongi Hills** (4.2/5) for art galleries.  \n  - Last-minute meetings or coworking spaces in Shinjuku/Shibuya.  \n\n- **Afternoon:**  \n  - Departure: Choose a **UA flight** (113-minute option recommended for balance of speed/price).  \n\n---\n\n### **Key Recommendations**  \n- **Hotels**: Prioritize **The Gate Hotel** (Shibuya) or **Keio Plaza** (Shinjuku) for proximity to meetings.  \n- **Flights**: UA\u2019s 85-minute flight is fastest; WS offers budget-friendly alternatives.  \n- **Downtime Activities**: Blend culture (Meiji Jingu) with modern experiences (teamLab Borderless).  \n\n**Pro Tip**: Use Tokyo\u2019s efficient metro system (Suica card) for quick transit between Shibuya/Shinjuku.  \n\nLet me know if you\u2019d like adjustments to bookings or additional details! Safe travels.",
+      "timestamp": "2025-08-06 14:52:35.233400+00:00",
+      "metadata": {
+        "confidence": 0.85,
+        "actions_taken": [
+          "Analyze travel requirements for Tokyo",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "refinement_used": false,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.85,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.85,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

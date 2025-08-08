@@ -638,9 +638,9 @@ class TravelAgent(BaseAgent):
             conversation_history = message.metadata.get("conversation_history", [])
             session_id = message.metadata.get("session_id")
 
-            # Update agent's memory with conversation context
+            # Extract agent context from conversation history (read-only)
             if conversation_history:
-                self._update_agent_memory_from_history(conversation_history, session_id)
+                self._extract_agent_context_from_history(conversation_history, session_id)
 
             # 1. Understand user intent (with conversation context)
             intent = await self._analyze_user_intent(
@@ -711,15 +711,15 @@ class TravelAgent(BaseAgent):
                 metadata={"error": str(e)},
             )
 
-    def _update_agent_memory_from_history(
+    def _extract_agent_context_from_history(
         self, conversation_history: List[Dict], session_id: str
     ):
-        """Update agent's memory and preferences from conversation history"""
+        """Extract agent context and preferences from conversation history (read-only)"""
         logger.debug(
-            f"Updating agent memory from {len(conversation_history)} conversation entries"
+            f"Extracting agent context from {len(conversation_history)} conversation entries"
         )
 
-        # Update current planning context with session info
+        # Extract current planning context with session info (temporary, in-memory only)
         if not self.current_planning_context:
             self.current_planning_context = {}
 
@@ -727,7 +727,7 @@ class TravelAgent(BaseAgent):
             {
                 "session_id": session_id,
                 "conversation_history": conversation_history,
-                "last_updated": datetime.now().isoformat(),
+                "last_extracted": datetime.now().isoformat(),
             }
         )
 
@@ -773,7 +773,7 @@ class TravelAgent(BaseAgent):
                 set(self.user_preferences_history["visited_destinations"])
             )
 
-        logger.debug(f"Updated user preferences: {self.user_preferences_history}")
+        logger.debug(f"Extracted user preferences: {self.user_preferences_history}")
 
     async def _analyze_user_intent(
         self, user_message: str, conversation_history: List[Dict] = None

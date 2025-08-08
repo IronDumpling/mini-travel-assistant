@@ -1,0 +1,64 @@
+{
+  "session_id": "8263002a-0ab4-4c4b-9cd7-ce721ea1d575",
+  "title": "Single Test: paris_romantic_weekend",
+  "description": "Single query test for paris_romantic_weekend",
+  "status": "inactive",
+  "created_at": "2025-08-06 16:02:13.105877+00:00",
+  "last_activity": "2025-08-06 16:04:29.466795+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Added 3 new events",
+        "Applied time conflict resolution",
+        "Updated plan metadata"
+      ],
+      "events_added": 3,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_modifications": {
+        "reason": "User requested a romantic weekend in Paris focusing on fine dining and cultural experiences",
+        "impact": "Added high-end dining and cultural attractions while maintaining romantic atmosphere"
+      }
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "8263002a-0ab4-4c4b-9cd7-ce721ea1d575_0",
+      "user_message": "Plan a romantic weekend in Paris for 2 people, focusing on fine dining and cultural experiences",
+      "agent_response": "To provide you with the best travel planning assistance, I'll need a bit more information about your trip. Could you share details like your destination, travel dates, budget, and any specific interests or preferences you have? This will help me tailor recommendations for flights, accommodations, activities, and dining options that suit your needs perfectly.",
+      "timestamp": "2025-08-06 16:04:29.466764+00:00",
+      "metadata": {
+        "confidence": 1.0,
+        "actions_taken": [
+          "Request destination details",
+          "Ask for travel dates",
+          "Inquire about budget range",
+          "Gather information on traveler preferences",
+          "Identify any special requirements"
+        ],
+        "refinement_used": true,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 1.0,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 1.0,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

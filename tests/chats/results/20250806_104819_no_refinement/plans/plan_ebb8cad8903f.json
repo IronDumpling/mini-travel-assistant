@@ -1,0 +1,218 @@
+{
+  "plan_id": "plan_ebb8cad8903f",
+  "session_id": "b33f4d08-c760-45c6-96b7-07b124cd4302",
+  "events": [
+    {
+      "id": "flight_NRT_to_Tokyo_952a19f6",
+      "title": "Flight: NRT \u2192 Tokyo",
+      "description": "Departure from NRT to Tokyo - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:14.842590",
+      "end_time": "2025-08-07T12:00:14.842590",
+      "location": "NRT \u2192 Tokyo",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 2,
+        "origin": "NRT",
+        "destination": "Tokyo",
+        "airline": "WS",
+        "price": {
+          "amount": 931.8,
+          "currency": "USD"
+        },
+        "flight_number": "657",
+        "duration_minutes": 240
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "fec24f12-cb1b-425f-9544-e72eb41419fa",
+      "title": "Purchase Pasmo/Suica IC Card",
+      "description": "Purchase a reloadable IC card for convenient travel on Tokyo's public transportation system.",
+      "event_type": "transportation",
+      "start_time": "2025-08-07T12:30:00",
+      "end_time": "2025-08-07T15:30:00",
+      "location": "Narita Airport or Tokyo Station",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "f3d5260f-1630-4f68-b377-b50a64f9e5f0",
+      "title": "Lunch at Uobei Shibuya",
+      "description": "Conveyor-belt sushi experience.",
+      "event_type": "meal",
+      "start_time": "2025-08-08T12:00:00",
+      "end_time": "2025-08-08T13:30:00",
+      "location": "Japan, \u3012150-0042 Tokyo, Shibuya City, Udagawacho, 23\u22123 B1F",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "19727b33-04ac-4ebe-9e3e-c04e7533775b",
+      "title": "Dinner at Tempura Kondo",
+      "description": "2-Michelin-starred tempura mastery",
+      "event_type": "meal",
+      "start_time": "2025-08-08T19:00:00",
+      "end_time": "2025-08-08T21:00:00",
+      "location": "Ginza, Tokyo",
+      "details": {
+        "cuisine": "tempura",
+        "price_range": "\u00a58,000+",
+        "reservation_required": true
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "ad595e01-a3cc-4df2-b134-4af5cbbaa650",
+      "title": "Visit Meiji Jingu",
+      "description": "Start your day at this serene Shinto shrine nestled in Yoyogi Park.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T12:00:00",
+      "location": "1-1 Yoyogikamizonocho, Shibuya City, Tokyo 151-8557, Japan",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "fda62f34-55b9-434f-a67f-fcb8f13a74b2",
+      "title": "Harajuku & Takeshita Street",
+      "description": "Stroll through Harajuku for quirky fashion and street food.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T14:00:00",
+      "end_time": "2025-08-08T17:00:00",
+      "location": "Takeshita Street, Shibuya City, Tokyo, Japan",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "4044aa9c-693f-4f6c-a415-7752adea86c0",
+      "title": "Visit teamLab Borderless",
+      "description": "Immerse yourself in digital art at this interactive museum.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T13:00:00",
+      "location": "Odaiba Palette Town, 1-ch\u014dme-3-8 Aomi, Koto City, Tokyo 135-0064, Japan",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "ac36fa0d-b130-4319-9962-e43ab60ce6eb",
+      "title": "Tsukiji Outer Market",
+      "description": "Sample fresh sushi, tamagoyaki, and matcha desserts.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T13:30:00",
+      "end_time": "2025-08-09T16:00:00",
+      "location": "4-ch\u014dme-16-2 Tsukiji, Chuo City, Tokyo 104-0045, Japan",
+      "details": {},
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "618ea53a-a10a-4fea-838f-aa28aa3cb493",
+      "title": "Day Trip to Mount Fuji (Fuji Five Lakes Region)",
+      "description": "Visit iconic Mount Fuji and explore the Fuji Five Lakes region, including Lake Kawaguchiko and Chureito Pagoda.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T12:30:00",
+      "location": "Fuji Five Lakes Region, Japan",
+      "details": {
+        "transportation": "Take JR Chuo Line to Otsuki, then Fujikyuko Line to Kawaguchiko (2 hours; \u00a54,000 round-trip).",
+        "activities": "Hiking, photography, boat rides on Lake Kawaguchiko, visit Chureito Pagoda."
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "337a5c47-6698-4876-bdd7-556a7edd4047",
+      "title": "Day Trip to Hakone",
+      "description": "Explore Hakone's hot springs, open-air museums, and Lake Ashi with views of Mount Fuji.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T12:30:00",
+      "location": "Hakone, Japan",
+      "details": {
+        "transportation": "Odakyu Romancecar from Shinjuku (85 mins; \u00a52,300 one-way).",
+        "activities": "Visit Hakone Open-Air Museum, Owakudani Volcanic Valley, and take a pirate ship on Lake Ashi."
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "flight_Tokyo_to_NRT_f9019525",
+      "title": "Return Flight: Tokyo \u2192 NRT",
+      "description": "Return journey from Tokyo to NRT - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-14T18:00:14.842590",
+      "end_time": "2025-08-14T22:00:14.842590",
+      "location": "Tokyo \u2192 NRT",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 2,
+        "origin": "Tokyo",
+        "destination": "NRT",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Tokyo"
+        ],
+        "airline": "WS",
+        "price": {
+          "amount": 931.8,
+          "currency": "USD"
+        },
+        "flight_number": "657",
+        "duration_minutes": 240
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Tokyo_c58883ea",
+      "title": "PALACE STUDIO SHINJUKU PARKSID",
+      "description": "Accommodation in Tokyo for 7 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:14.842590",
+      "end_time": "2025-08-14T11:00:14.842590",
+      "location": "TOKYO",
+      "details": {
+        "source": "hotel_search",
+        "nights": 7,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": {
+      "primary": "Tokyo",
+      "all": [
+        "Tokyo",
+        "Mount Fuji"
+      ]
+    },
+    "duration_days": 7,
+    "travelers": 2,
+    "budget": 2100,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T11:14:43.133802",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T15:03:46.584370",
+  "updated_at": "2025-08-06T15:14:43.134039"
+}

@@ -1,0 +1,18 @@
+{
+  "plan_id": "plan_fb3de5be26ac",
+  "session_id": "17b308c8-790c-4f3e-b940-540884247245",
+  "events": [],
+  "metadata": {
+    "destination": null,
+    "duration_days": null,
+    "travelers": 1,
+    "budget": null,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T14:48:54.084645",
+    "confidence": 0.8,
+    "completion_status": "draft"
+  },
+  "created_at": "2025-08-06T14:48:54.084662",
+  "updated_at": "2025-08-06T14:48:54.084665"
+}

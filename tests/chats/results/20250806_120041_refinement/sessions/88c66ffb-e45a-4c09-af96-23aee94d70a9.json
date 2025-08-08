@@ -1,0 +1,62 @@
+{
+  "session_id": "88c66ffb-e45a-4c09-af96-23aee94d70a9",
+  "title": "Single Test: tokyo_business_trip",
+  "description": "Single query test for tokyo_business_trip",
+  "status": "inactive",
+  "created_at": "2025-08-06 16:04:41.114882+00:00",
+  "last_activity": "2025-08-06 16:05:51.010800+00:00",
+  "total_messages": 1,
+  "travel_context": {
+    "plan_generation_status": "completed",
+    "plan_update_result": {
+      "success": true,
+      "changes_made": [
+        "Generated 9 events from tool results"
+      ],
+      "events_added": 9,
+      "events_updated": 0,
+      "events_deleted": 0,
+      "metadata_updated": true,
+      "plan_generation_method": "fast_tool_based",
+      "duration": 3,
+      "travelers": 1
+    }
+  },
+  "tags": [],
+  "messages": [
+    {
+      "id": "88c66ffb-e45a-4c09-af96-23aee94d70a9_0",
+      "user_message": "I need a 3-day business trip to Tokyo with meetings in Shibuya and Shinjuku areas",
+      "agent_response": "Here\u2019s your **comprehensive 3-day business trip plan for Tokyo**, meticulously tailored for meetings in **Shibuya and Shinjuku**, with seamless logistics, strategic downtime, and curated local experiences:\n\n---\n\n### **Tokyo 3-Day Business Trip Itinerary**  \n**Focus:** Efficiency, productivity, and authentic local immersion  \n\n#### **Day 1: Arrival & Shibuya Meetings**  \n- **Morning:**  \n  - Arrive via **United Airlines (UA)** for optimal efficiency (85\u2013113 min flight time, ~$556 USD).  \n  - Check into **Cerulean Tower Tokyu Hotel** (Shibuya) or **Palace Hotel Tokyo** (central location) for proximity to meetings.  \n- **Afternoon:**  \n  - Meetings in Shibuya (e.g., Shibuya Scramble Square or nearby offices).  \n  - Lunch at **Shibuya Sky\u2019s rooftop restaurants** (4.6/5 rating) with panoramic city views.  \n- **Evening:**  \n  - Unwind at **Meiji Jingu** (4.6/5), a serene shrine near Shibuya, or explore **teamLab Borderless** (4.6/5) for immersive digital art.  \n\n#### **Day 2: Shinjuku Meetings & Networking**  \n- **Morning/Afternoon:**  \n  - Meetings in Shinjuku (e.g., Shinjuku Nomura Building or Tokyo Opera City).  \n  - Coffee break at **Tokyo Metropolitan Government Building\u2019s observatory** (free skyline views).  \n- **Evening:**  \n  - Dinner in **Golden Gai** (iconic alleyway bars) or **Omoide Yokocho** for local izakaya fare.  \n  - Optional: Visit **Tokyo Tower** (4.5/5) for\u591c\u666f (night views).  \n\n#### **Day 3: Wrap-Up & Departure**  \n- **Morning:**  \n  - Final meetings or coworking at **Roppongi Hills** (4.2/5) for modern amenities.  \n  - Quick cultural stop at **Imperial Palace** (4.4/5) en route to the airport.  \n- **Afternoon:**  \n  - Depart via **United Airlines (UA)** or **WestJet (WS)** (~$465\u2013556 USD).  \n\n---\n\n### **Key Recommendations**  \n1. **Hotels:** Prioritize **Cerulean Tower Tokyu Hotel** (Shibuya) or **Palace Hotel Tokyo** (central) for convenience.  \n2. **Transport:** Use Tokyo\u2019s efficient metro; consider a **Pasmo card** for seamless travel.  \n3. **Downtime:** Balance work with visits to **Shibuya Sky**, **teamLab Borderless**, or **Meiji Jingu**.  \n4. **Dining:** Leverage Shibuya/Shinjuku\u2019s diverse options\u2014from sushi bars to ramen joints.  \n\n*Pro Tip:* Confirm meeting venues in advance\u2014Shibuya and Shinjuku stations are hubs but can be crowded.  \n\nLet me know if you\u2019d like adjustments (e.g., hotel price checks, flight alternatives, or extended cultural activities). Safe travels!",
+      "timestamp": "2025-08-06 16:05:51.010785+00:00",
+      "metadata": {
+        "confidence": 0.85,
+        "actions_taken": [
+          "Analyze travel requirements for Tokyo",
+          "Search for comprehensive travel options",
+          "Search for accommodation options",
+          "Search for flight information",
+          "Search for attractions and activities",
+          "Compile comprehensive travel information"
+        ],
+        "refinement_used": true,
+        "plan_changes": {
+          "success": true,
+          "status": "scheduled",
+          "changes_made": [
+            "Plan generation scheduled"
+          ]
+        }
+      },
+      "intent": null,
+      "confidence": 0.85,
+      "topics": [],
+      "importance_score": 0.5
+    }
+  ],
+  "learned_preferences": {},
+  "main_topics": [],
+  "satisfaction_score": 0.85,
+  "complexity_score": 0.1,
+  "resolution_status": "ongoing"
+}

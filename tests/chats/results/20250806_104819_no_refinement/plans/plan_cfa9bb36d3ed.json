@@ -1,0 +1,294 @@
+{
+  "plan_id": "plan_cfa9bb36d3ed",
+  "session_id": "57ba8217-1f8f-42d7-aa94-92500a7990c8",
+  "events": [
+    {
+      "id": "flight_SIN_to_Singapore_7b3c7a62",
+      "title": "Flight: Singapore \u2192 Singapore",
+      "description": "Departure from Singapore to Singapore - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:20.016647",
+      "end_time": "2025-08-07T13:00:20.016647",
+      "location": "Singapore \u2192 Singapore",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 2,
+        "origin": "SIN",
+        "destination": "Singapore",
+        "airline": "WS",
+        "price": {
+          "amount": 2545.6,
+          "currency": "USD"
+        },
+        "flight_number": "723",
+        "duration_minutes": 300
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_3_64018366",
+      "title": "Visit Merlion",
+      "description": "Merlion is a tourist attraction located at Singapore with a 4.7/5 rating based on 47937 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T11:00:00",
+      "location": "Singapore",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ29omWQgZ2jEROEz2yZFzQp8"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_4_02221ab9",
+      "title": "Visit Singapore Botanic Gardens",
+      "description": "Singapore Botanic Gardens is a tourist attraction located at 1 Cluny Rd, Singapore 259569 with a 4.7/5 rating based on 44488 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T11:30:00",
+      "end_time": "2025-08-08T14:30:00",
+      "location": "1 Cluny Rd, Singapore 259569",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 2,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJvWDbfRwa2jERgNnTOpAU3-o"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_5_2ad92064",
+      "title": "Visit Merlion Park",
+      "description": "Merlion Park is a park located at 1 Fullerton Rd, Singapore 049213 with a 4.6/5 rating based on 71362 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T09:00:00",
+      "end_time": "2025-08-09T12:00:00",
+      "location": "1 Fullerton Rd, Singapore 049213",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Park",
+        "place_id": "ChIJBTYg1g4Z2jERp_MBbu5erWY"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_2_54b3deb2",
+      "title": "Visit Gardens by the Bay",
+      "description": "Gardens by the Bay is a tourist attraction located at 18 Marina Gardens Dr, Singapore 018953 with a 4.7/5 rating based on 149976 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-09T13:00:00",
+      "end_time": "2025-08-09T15:30:00",
+      "location": "18 Marina Gardens Dr, Singapore 018953",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 2,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJMxZ-kwQZ2jERdsqftXeWCWI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_7_7435ca81",
+      "title": "Visit National Gallery Singapore",
+      "description": "National Gallery Singapore is a museum located at Singapore 178957 with a 4.6/5 rating based on 15589 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T09:00:00",
+      "end_time": "2025-08-10T12:00:00",
+      "location": "Singapore 178957",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 1,
+        "rating": 4.6,
+        "category": "Museum",
+        "place_id": "ChIJFQzeR6cZ2jERgM6--iWeY-U"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_8_216f4281",
+      "title": "Visit Clarke Quay",
+      "description": "Clarke Quay is a shopping located at 3 River Valley Rd, Singapore 179024 with a 4.5/5 rating based on 44379 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-10T12:30:00",
+      "end_time": "2025-08-10T14:30:00",
+      "location": "3 River Valley Rd, Singapore 179024",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 4,
+        "attraction_of_day": 2,
+        "rating": 4.5,
+        "category": "Shopping",
+        "place_id": "ChIJnXwAOKAZ2jERAs-MHs1aDgI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_9_1611eb0c",
+      "title": "Visit Lau Pa Sat",
+      "description": "Lau Pa Sat is a tourist attraction located at 18 Raffles Quay, Singapore 048582 with a 4.4/5 rating based on 33987 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T11:00:00",
+      "location": "18 Raffles Quay, Singapore 048582",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 5,
+        "attraction_of_day": 1,
+        "rating": 4.4,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJ5Y6l4Q0Z2jERYL0KDIjT6v0"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_10_2d2acc53",
+      "title": "Visit Maxwell Food Centre",
+      "description": "Maxwell Food Centre is a tourist attraction located at 1 Kadayanallur St, Singapore 069184 with a 4.4/5 rating based on 21002 reviews (Inexpensive).",
+      "event_type": "attraction",
+      "start_time": "2025-08-11T11:30:00",
+      "end_time": "2025-08-11T14:30:00",
+      "location": "1 Kadayanallur St, Singapore 069184",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 5,
+        "attraction_of_day": 2,
+        "rating": 4.4,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJseQsTQ0Z2jERqpBTWF0Zf84"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "flight_Singapore_to_SIN_98045747",
+      "title": "Return Flight: Singapore \u2192 Singapore",
+      "description": "Return journey from Singapore to Singapore - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-12T18:00:20.016647",
+      "end_time": "2025-08-12T23:00:20.016647",
+      "location": "Singapore \u2192 Singapore",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 2,
+        "origin": "Singapore",
+        "destination": "SIN",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Singapore"
+        ],
+        "airline": "WS",
+        "price": {
+          "amount": 2545.6,
+          "currency": "USD"
+        },
+        "flight_number": "723",
+        "duration_minutes": 300
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_6_b5160148",
+      "title": "Visit Singapore Zoo",
+      "description": "Singapore Zoo is a zoo located at 80 Mandai Lake Rd, Singapore 729826 with a 4.6/5 rating based on 48617 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T09:00:00",
+      "end_time": "2025-08-12T11:30:00",
+      "location": "80 Mandai Lake Rd, Singapore 729826",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 3,
+        "attraction_of_day": 2,
+        "rating": 4.6,
+        "category": "Zoo",
+        "place_id": "ChIJr9wqENkT2jERkRs7pMj6FLQ"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "attraction_Singapore_1_a89fd7b1",
+      "title": "Visit Marina Bay Sands Singapore",
+      "description": "Marina Bay Sands Singapore is a tourist attraction located at 10 Bayfront Ave, Singapore 018956 with a 4.7/5 rating based on 58063 reviews.",
+      "event_type": "attraction",
+      "start_time": "2025-08-12T12:00:00",
+      "end_time": "2025-08-12T15:30:00",
+      "location": "10 Bayfront Ave, Singapore 018956",
+      "details": {
+        "source": "attraction_search",
+        "destination_sequence": 1,
+        "day_in_destination": 1,
+        "attraction_of_day": 1,
+        "rating": 4.7,
+        "category": "Tourist Attraction",
+        "place_id": "ChIJA5LATO4Z2jER111V-v6abAI"
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Singapore_2a79383c",
+      "title": "IBIS SINGAPORE ON BENCOOLEN",
+      "description": "Accommodation in Singapore for 5 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:20.016647",
+      "end_time": "2025-08-12T11:00:20.016647",
+      "location": "SINGAPORE",
+      "details": {
+        "source": "hotel_search",
+        "nights": 5,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": "Singapore",
+    "duration_days": 5,
+    "travelers": 2,
+    "budget": 1500,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T10:54:20.118527",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T14:52:53.535248",
+  "updated_at": "2025-08-06T14:52:53.535249"
+}

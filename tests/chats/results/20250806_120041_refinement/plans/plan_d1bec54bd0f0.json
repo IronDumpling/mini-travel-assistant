@@ -1,0 +1,168 @@
+{
+  "plan_id": "plan_d1bec54bd0f0",
+  "session_id": "5ff070c6-2b07-4adc-914c-5bf129d7c86b",
+  "events": [
+    {
+      "id": "flight_YYZ_to_Southeast Asia_686bb659",
+      "title": "Flight: Toronto \u2192 Southeast Asia",
+      "description": "Departure from Toronto to Southeast Asia - Start of multi-city adventure",
+      "event_type": "flight",
+      "start_time": "2025-08-07T08:00:27.196599",
+      "end_time": "2025-08-07T13:00:27.196599",
+      "location": "Toronto \u2192 Southeast Asia",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 1,
+        "total_flights": 2,
+        "origin": "YYZ",
+        "destination": "Southeast Asia",
+        "airline": "WS",
+        "price": {
+          "amount": 1272.8,
+          "currency": "USD"
+        },
+        "flight_number": "723",
+        "duration_minutes": 300
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "activity_Southeast Asia_day2_82e875d7",
+      "title": "Pai Motorbike Loop",
+      "description": "Rent scooters to explore hot springs, canyons, and waterfalls at your pace",
+      "event_type": "attraction",
+      "start_time": "2025-08-08T09:00:00",
+      "end_time": "2025-08-08T11:00:00",
+      "location": "Southeast Asia",
+      "details": {
+        "source": "multi_destination_planning_fallback",
+        "day_in_destination": 2,
+        "destination_sequence": 1,
+        "total_days_in_destination": 21,
+        "recommendations": [
+          "Visit main attractions",
+          "Try local cuisine",
+          "Explore cultural sites"
+        ]
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "f7e4aee8-2ed7-45b9-a927-98e7de5881d9",
+      "title": "Northern Thailand Jungle Trek",
+      "description": "3-day small-group eco-tour including hill tribe visits, waterfall hikes, and bamboo rafting",
+      "event_type": "activity",
+      "start_time": "2025-08-08T12:00:00",
+      "end_time": "2025-08-08T14:00:00",
+      "location": "Chiang Mai, Thailand",
+      "details": {
+        "cost": "$150-200",
+        "type": "guided"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "fe074dca-8bc2-4971-b7fb-492edb710c51",
+      "title": "Ao Phang Nga Sea Kayaking",
+      "description": "Full-day guided tour paddling through limestone caves with marine biologists",
+      "event_type": "activity",
+      "start_time": "2025-08-11T09:00:00",
+      "end_time": "2025-08-11T11:30:00",
+      "location": "Phuket, Thailand",
+      "details": {
+        "cost": "$75",
+        "type": "guided"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "7f5f996d-266b-48e4-8354-bdebc3979417",
+      "title": "Khao Sok National Park Overnight",
+      "description": "Floating bungalow package including guided night safari and lake exploration",
+      "event_type": "activity",
+      "start_time": "2025-08-12T09:00:00",
+      "end_time": "2025-08-12T11:00:00",
+      "location": "Khao Sok National Park, Thailand",
+      "details": {
+        "cost": "$120",
+        "type": "guided"
+      },
+      "confidence": 0.8,
+      "source": "agent"
+    },
+    {
+      "id": "flight_Southeast Asia_to_YYZ_0b2ea6c7",
+      "title": "Return Flight: Southeast Asia \u2192 Toronto",
+      "description": "Return journey from Southeast Asia to Toronto - End of multi-city trip",
+      "event_type": "flight",
+      "start_time": "2025-08-28T18:00:27.196599",
+      "end_time": "2025-08-28T23:00:27.196599",
+      "location": "Southeast Asia \u2192 Toronto",
+      "details": {
+        "source": "multi_destination_planning",
+        "flight_sequence": 2,
+        "total_flights": 2,
+        "origin": "Southeast Asia",
+        "destination": "YYZ",
+        "trip_conclusion": true,
+        "cities_visited": [
+          "Southeast Asia"
+        ],
+        "airline": "WS",
+        "price": {
+          "amount": 1272.8,
+          "currency": "USD"
+        },
+        "flight_number": "723",
+        "duration_minutes": 300
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    },
+    {
+      "id": "hotel_Southeast Asia_94cb8a66",
+      "title": "Budget Hotel in Singapore",
+      "description": "Accommodation in Southeast Asia for 21 nights",
+      "event_type": "hotel",
+      "start_time": "2025-08-07T15:00:27.196599",
+      "end_time": "2025-08-28T11:00:27.196599",
+      "location": "SINGAPORE",
+      "details": {
+        "source": "hotel_search",
+        "nights": 21,
+        "destination_sequence": 1,
+        "rating": null,
+        "price_per_night": {
+          "amount": null,
+          "currency": null
+        }
+      },
+      "confidence": 0.8,
+      "source": "llm_plan_modification"
+    }
+  ],
+  "metadata": {
+    "destination": {
+      "primary": "Thailand",
+      "all": [
+        "Thailand",
+        "Vietnam",
+        "Singapore"
+      ]
+    },
+    "duration_days": 21,
+    "travelers": 2,
+    "budget": 6300,
+    "budget_currency": "USD",
+    "interests": [],
+    "last_updated": "2025-08-06T13:12:08.024251",
+    "confidence": 0.88,
+    "completion_status": "complete"
+  },
+  "created_at": "2025-08-06T16:59:26.689434",
+  "updated_at": "2025-08-06T17:12:08.024489"
+}
