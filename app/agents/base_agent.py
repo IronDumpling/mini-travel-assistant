@@ -99,9 +99,9 @@ class BaseAgent(ABC):
         self.is_healthy: bool = True
 
         # Simple state management
-        self.process_timeout_seconds: int = 80
-        self.refine_timeout_seconds: int = 80
-        self.assess_timeout_seconds: int = 20
+        self.process_timeout_seconds: int = 200
+        self.refine_timeout_seconds: int = 200
+        self.assess_timeout_seconds: int = 40
 
     @abstractmethod
     async def process_message(self, message: AgentMessage, skip_quality_check: bool = False) -> AgentResponse:
@@ -954,7 +954,7 @@ class AgentManager:
         self.is_running = False
         self.error_count: int = 0
         self.last_error: Optional[str] = None
-        self.global_timeout_seconds: int = 300  # Timeout for agent message processing
+        self.global_timeout_seconds: int = 800  # Timeout for agent message processing
 
     def register_agent(self, agent: BaseAgent):
         """Register agent"""
