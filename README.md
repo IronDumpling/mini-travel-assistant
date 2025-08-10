@@ -371,7 +371,7 @@ pip install -r requirements.txt
 
 ### 2. Configuration
 
-Create `.env` file in project root:
+Make sure there is an `.env` file in project root:
 
 ```env
 # LLM Service Keys
@@ -424,14 +424,28 @@ uvicorn app.main:app --reload
 # 5. Start conversation memory system
 # 6. Configure self-refinement system
 ```
+### 4. Launch the Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-### 4. Access the Application
+### 5. Access the Application
 
 - **API Documentation**: http://localhost:8000/docs
 - **System Status**: http://localhost:8000/system/status
 - **Chat Interface**: http://localhost:8000/api/chat
 - **Travel Plans**: http://localhost:8000/api/plans
 - **Agent Configuration**: http://localhost:8000/api/agent/configure
+
+### 6. Testing
+
+To test the travel agent and the plan agent.
+```bash
+cd tests/chats
+python test_runner.py
+```
 
 ## 🤖 Travel Agent Usage
 
@@ -689,11 +703,3 @@ DELETE /api/plans/{plan_id}
 ### RAG Configuration
 - **Document types**: Travel knowledge, conversation turns, tool knowledge
 - **Environment variables**: `CHROMA_DB_PATH`, `EMBEDDING_MODEL`, `RAG_TOP_K`
-
-## 🙏 Acknowledgments
-
-- **ChromaDB** for the excellent vector database
-- **SentenceTransformers** for high-quality embeddings
-- **FastAPI** for the modern web framework
-- **OpenAI, Anthropic, DeepSeek** for powerful language models
-- **Open source community** for the foundation libraries 
